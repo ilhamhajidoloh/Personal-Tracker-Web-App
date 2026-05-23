@@ -177,6 +177,7 @@ const toggleMobileMenu = () => {
 const navItems: NavItem[] = [
   { icon: '🏠', label: 'Dashboard', to: '/dashboard' },
   { icon: '💸', label: 'รายรับรายจ่าย', to: '/cashflow' },
+  { icon: '📚', label: 'ตารางเรียน', to: '/study-schedule' },
 ]
 
 const secondaryNav: NavItem[] = [
@@ -219,9 +220,11 @@ const handleLogout = async () => {
     }
 
     userMenuOpen.value = false
+    useAlert().toastSuccess('ออกจากระบบสำเร็จ')
     await router.push('/login')
   } catch (error: any) {
     console.error('Logout error:', error)
+    useAlert().toastError(error?.message || 'ออกจากระบบไม่สำเร็จ')
   } finally {
     isLoggingOut.value = false
   }

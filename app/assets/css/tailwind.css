@@ -79,10 +79,12 @@
 		color: #be123c !important;
 	}
 
+	:root.theme-light .text-sky-200,
 	:root.theme-light .text-sky-300 {
 		color: #0369a1 !important;
 	}
 
+	:root.theme-light .text-amber-200,
 	:root.theme-light .text-amber-300 {
 		color: #b45309 !important;
 	}

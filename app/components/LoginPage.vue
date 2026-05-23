@@ -238,12 +238,16 @@ if (import.meta.client) {
 }
 
 const showMessage = (message: string, type: 'error' | 'success') => {
+  const { toastSuccess, toastError } = useAlert()
+
   if (type === 'error') {
     errorMessage.value = message
     successMessage.value = ''
+    toastError(message)
   } else {
     successMessage.value = message
     errorMessage.value = ''
+    toastSuccess(message)
   }
 
   setTimeout(() => {

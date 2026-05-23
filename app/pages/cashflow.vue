@@ -38,12 +38,36 @@
         <div class="bg-gray-900 border border-gray-800 rounded-2xl p-5">
           <p class="text-xs text-gray-400">รายจ่ายรวมทั้งหมด</p>
           <p class="text-2xl font-bold text-rose-400 mt-2">{{ formatCurrency(totalExpense) }}</p>
+
+          <div class="mt-3">
+            <div class="h-2 w-full rounded-full bg-gray-800 overflow-hidden">
+              <div
+                class="h-full bg-rose-500 transition-all"
+                :style="{ width: `${expenseProgressPercent}%` }"
+              ></div>
+            </div>
+            <p class="text-xs text-gray-400 mt-1">
+              {{ expenseProgressText }}
+              <span v-if="overspentAmount > 0" class="text-amber-300">(เกิน {{ formatCurrency(overspentAmount) }})</span>
+            </p>
+          </div>
         </div>
         <div class="bg-gray-900 border border-gray-800 rounded-2xl p-5">
           <p class="text-xs text-gray-400">เงินคงเหลือ</p>
           <p class="text-2xl font-bold mt-2" :class="remainingBalance >= 0 ? 'text-sky-300' : 'text-amber-300'">
             {{ formatCurrency(remainingBalance) }}
           </p>
+
+          <div class="mt-3">
+            <div class="h-2 w-full rounded-full bg-gray-800 overflow-hidden">
+              <div
+                class="h-full transition-all"
+                :class="remainingBalance >= 0 ? 'bg-sky-500' : 'bg-amber-500'"
+                :style="{ width: `${remainingProgressPercent}%` }"
+              ></div>
+            </div>
+            <p class="text-xs text-gray-400 mt-1">{{ remainingProgressText }}</p>
+          </div>
         </div>
         <div class="bg-gray-900 border border-gray-800 rounded-2xl p-5">
           <p class="text-xs text-gray-400">รายจ่ายที่มากที่สุด</p>
@@ -110,6 +134,7 @@
                 <th class="py-2 pr-4 font-medium">หมวดหมู่</th>
                 <th class="py-2 pr-4 font-medium">รายละเอียด</th>
                 <th class="py-2 text-right font-medium">จำนวนเงิน</th>
+                <th class="py-2 text-right font-medium">จัดการ</th>
               </tr>
             </thead>
             <tbody>
@@ -132,6 +157,22 @@
                 <td class="py-2 text-right" :class="item.type === 'income' ? 'text-emerald-400' : 'text-rose-400'">
                   {{ formatCurrency(item.amount) }}
                 </td>
+                <td class="py-2 text-right space-x-1">
+                  <button
+                    @click="openEditTransactionModal(item)"
+                    :disabled="isDeletingId === item.id"
+                    class="px-3 py-1.5 rounded-lg text-xs bg-sky-500/20 text-sky-200 hover:bg-sky-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    แก้ไข
+                  </button>
+                  <button
+                    @click="deleteTransaction(item.id)"
+                    :disabled="isDeletingId === item.id"
+                    class="px-3 py-1.5 rounded-lg text-xs bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {{ isDeletingId === item.id ? 'กำลังลบ...' : 'ลบ' }}
+                  </button>
+                </td>
               </tr>
             </tbody>
           </table>
@@ -148,11 +189,11 @@
           <div class="relative w-full max-w-lg rounded-2xl border border-gray-700 bg-gray-900 shadow-2xl">
             <div class="flex items-center justify-between px-5 py-4 border-b border-gray-800">
               <div>
-                <h3 class="text-lg font-semibold text-white">เพิ่มรายการใหม่</h3>
-                <p class="text-xs text-gray-400 mt-1">บันทึกรายรับหรือรายจ่ายของแต่ละวัน</p>
+                <h3 class="text-lg font-semibold text-white">{{ modalTitle }}</h3>
+                <p class="text-xs text-gray-400 mt-1">{{ modalSubtitle }}</p>
               </div>
               <button
-                @click="isEntryModalOpen = false"
+                @click="() => { isEntryModalOpen = false; resetForm() }"
                 class="w-8 h-8 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300"
                 aria-label="ปิด"
               >
@@ -217,7 +258,7 @@
               <div class="pt-1 flex items-center justify-end gap-2">
                 <button
                   type="button"
-                  @click="isEntryModalOpen = false"
+                  @click="() => { isEntryModalOpen = false; resetForm() }"
                   class="px-4 py-2 rounded-xl bg-gray-800 hover:bg-gray-700 text-sm"
                 >
                   ยกเลิก
@@ -225,9 +266,9 @@
                 <button
                   type="submit"
                   :disabled="isSubmitting"
-                  class="px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+                  class="px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium flex-1"
                 >
-                  {{ isSubmitting ? 'กำลังบันทึก...' : 'บันทึกรายการ' }}
+                  {{ submitButtonText }}
                 </button>
               </div>
             </form>
@@ -275,6 +316,8 @@ const supabase = useSupabaseClient()
 const isLoading = ref(true)
 const isSubmitting = ref(false)
 const isEntryModalOpen = ref(false)
+const isDeletingId = ref('')
+const editingTransactionId = ref('')
 const errorMessage = ref('')
 const transactions = ref<TransactionRow[]>([])
 
@@ -310,6 +353,67 @@ const totalExpense = computed(() => transactions.value
   .reduce((sum, item) => sum + item.amount, 0))
 
 const remainingBalance = computed(() => totalIncome.value - totalExpense.value)
+
+const overspentAmount = computed(() => Math.max(totalExpense.value - totalIncome.value, 0))
+
+const formatPercent = (value: number) => new Intl.NumberFormat('th-TH', {
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 1,
+}).format(value)
+
+const expenseProgressPercent = computed(() => {
+  if (totalIncome.value <= 0) {
+    return totalExpense.value > 0 ? 100 : 0
+  }
+
+  const ratio = (totalExpense.value / totalIncome.value) * 100
+  return Math.min(ratio, 100)
+})
+
+const remainingProgressPercent = computed(() => {
+  if (totalIncome.value <= 0) {
+    return 0
+  }
+
+  const ratio = (remainingBalance.value / totalIncome.value) * 100
+  return Math.min(Math.max(ratio, 0), 100)
+})
+
+const expenseProgressText = computed(() => {
+  if (totalIncome.value <= 0) {
+    return totalExpense.value > 0 ? 'มีรายจ่าย แต่ยังไม่มีรายรับเป็นฐานคำนวณ' : 'รอข้อมูลรายรับ/รายจ่าย'
+  }
+
+  return `ใช้ไป ${formatPercent((totalExpense.value / totalIncome.value) * 100)}% ของรายรับ`
+})
+
+const remainingProgressText = computed(() => {
+  if (totalIncome.value <= 0) {
+    return 'รอข้อมูลรายรับเพื่อคำนวณเงินคงเหลือ'
+  }
+
+  if (remainingBalance.value < 0) {
+    return 'รายจ่ายเกินรายรับ'
+  }
+
+  return `คงเหลือ ${formatPercent((remainingBalance.value / totalIncome.value) * 100)}% ของรายรับ`
+})
+
+const isEditing = computed(() => Boolean(editingTransactionId.value))
+
+const modalTitle = computed(() => isEditing.value ? 'แก้ไขรายการ' : 'เพิ่มรายการใหม่')
+
+const modalSubtitle = computed(() => isEditing.value
+  ? 'ปรับข้อมูลรายรับ/รายจ่าย'
+  : 'บันทึกรายรับหรือรายจ่ายของแต่ละวัน')
+
+const submitButtonText = computed(() => {
+  if (isSubmitting.value) {
+    return isEditing.value ? 'กำลังบันทึกการแก้ไข...' : 'กำลังบันทึก...'
+  }
+
+  return isEditing.value ? 'บันทึกการแก้ไข' : 'บันทึกรายการ'
+})
 
 const topExpenseCategory = computed(() => {
   const categoryTotals = transactions.value
@@ -350,6 +454,15 @@ const dailySummaries = computed<DailySummary[]>(() => {
   return Object.values(grouped).sort((a, b) => b.date.localeCompare(a.date))
 })
 
+const resetForm = () => {
+  form.entryDate = new Date().toISOString().slice(0, 10)
+  form.type = 'expense'
+  form.category = ''
+  form.description = ''
+  form.amount = ''
+  editingTransactionId.value = ''
+}
+
 const normalizeRows = (rows: any[]): TransactionRow[] => rows.map((row) => ({
   id: String(row.id),
   user_id: String(row.user_id),
@@ -360,6 +473,17 @@ const normalizeRows = (rows: any[]): TransactionRow[] => rows.map((row) => ({
   amount: Number(row.amount || 0),
   created_at: String(row.created_at || ''),
 }))
+
+const openEditTransactionModal = (item: TransactionRow) => {
+  editingTransactionId.value = item.id
+  form.entryDate = item.entry_date
+  form.type = item.type
+  form.category = item.category || ''
+  form.description = item.description || ''
+  form.amount = String(item.amount)
+  errorMessage.value = ''
+  isEntryModalOpen.value = true
+}
 
 const loadTransactions = async () => {
   isLoading.value = true
@@ -407,15 +531,18 @@ const submitTransaction = async () => {
     return
   }
 
+  const { toastSuccess, toastError, toastWarning } = useAlert()
   const amount = Math.abs(Number(form.amount))
 
   if (!form.entryDate) {
     errorMessage.value = 'กรุณาเลือกวันที่'
+    toastWarning('กรุณาเลือกวันที่')
     return
   }
 
   if (!Number.isFinite(amount) || amount <= 0) {
     errorMessage.value = 'กรุณาระบุจำนวนเงินให้ถูกต้อง'
+    toastWarning('กรุณาระบุจำนวนเงินให้ถูกต้อง')
     return
   }
 
@@ -433,36 +560,107 @@ const submitTransaction = async () => {
       return
     }
 
-    const { error } = await supabase
-      .from('transactions')
-      .insert({
-        user_id: userData.user.id,
-        entry_date: form.entryDate,
-        type: form.type,
-        category: form.category.trim() || null,
-        description: form.description.trim() || null,
-        amount,
-      })
+    const payload = {
+      entry_date: form.entryDate,
+      type: form.type,
+      category: form.category.trim() || null,
+      description: form.description.trim() || null,
+      amount,
+    }
+
+    const { error } = isEditing.value
+      ? await supabase
+        .from('transactions')
+        .update(payload)
+        .eq('id', editingTransactionId.value)
+        .eq('user_id', userData.user.id)
+      : await supabase
+        .from('transactions')
+        .insert({
+          user_id: userData.user.id,
+          ...payload,
+        })
 
     if (error) {
       if (tableMissingCodes.has(error.code || '')) {
-        errorMessage.value = 'ยังไม่พบตาราง transactions ใน Supabase กรุณาสร้างตารางก่อนใช้งาน'
+        const msg = 'ยังไม่พบตาราง transactions ใน Supabase กรุณาสร้างตารางก่อนใช้งาน'
+        errorMessage.value = msg
+        toastError(msg)
         return
       }
 
       throw error
     }
+    
+    const successMsg = isEditing.value ? 'แก้ไขรายการสำเร็จ' : 'เพิ่มรายการสำเร็จ'
+    toastSuccess(successMsg)
 
     isEntryModalOpen.value = false
-    form.amount = ''
-    form.description = ''
-    form.category = ''
+    resetForm()
     await loadTransactions()
   } catch (error: any) {
-    console.error('Create transaction error:', error)
-    errorMessage.value = error?.message || 'บันทึกรายการไม่สำเร็จ'
+    console.error('Save transaction error:', error)
+    const msg = error?.message || 'บันทึกรายการไม่สำเร็จ'
+    errorMessage.value = msg
+    toastError(msg)
   } finally {
     isSubmitting.value = false
+  }
+}
+
+const deleteTransaction = async (transactionId: string) => {
+  if (!transactionId || isDeletingId.value) {
+    return
+  }
+
+  const { confirmDelete, toastSuccess, toastError } = useAlert()
+  const shouldDelete = import.meta.client
+    ? await confirmDelete('ยืนยันการลบรายการนี้?', 'สรุปยอดเงินจะถูกคำนวณใหม่')
+    : true
+
+  if (!shouldDelete) {
+    return
+  }
+
+  isDeletingId.value = transactionId
+  errorMessage.value = ''
+
+  try {
+    const { data: userData, error: userError } = await supabase.auth.getUser()
+    if (userError) {
+      throw userError
+    }
+
+    if (!userData.user) {
+      await router.push('/login')
+      return
+    }
+
+    const { error } = await supabase
+      .from('transactions')
+      .delete()
+      .eq('id', transactionId)
+      .eq('user_id', userData.user.id)
+
+    if (error) {
+      throw error
+    }
+
+    transactions.value = transactions.value.filter((item) => item.id !== transactionId)
+
+    if (editingTransactionId.value === transactionId) {
+      isEntryModalOpen.value = false
+      resetForm()
+    }
+    
+    toastSuccess('ลบรายการสำเร็จ')
+  } catch (error: any) {
+    console.error('Delete transaction error:', error)
+    const msg = error?.message || 'ลบรายการไม่สำเร็จ'
+    errorMessage.value = msg
+    toastError(msg)
+  } finally {
+    isDeletingId.value = ''
   }
 }
 
