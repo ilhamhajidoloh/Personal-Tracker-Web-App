@@ -195,7 +195,7 @@ const finishSessionCheck = () => {
 let stopAuthListener: (() => void) | undefined
 
 if (import.meta.client) {
-  const { data } = supabase.auth.onAuthStateChange((event, session) => {
+  const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
     if (!session) {
       if (event === 'SIGNED_OUT') {
         isRedirecting.value = false
