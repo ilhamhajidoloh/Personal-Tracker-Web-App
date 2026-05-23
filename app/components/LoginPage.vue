@@ -165,6 +165,7 @@ import { onBeforeUnmount, onMounted, ref } from 'vue'
 
 const route = useRoute()
 const router = useRouter()
+const config = useRuntimeConfig()
 const supabase = useSupabaseClient()
 
 const isSignUp = ref(false)
@@ -176,6 +177,20 @@ const password = ref('')
 const confirmPassword = ref('')
 const errorMessage = ref('')
 const successMessage = ref('')
+
+const getAppOrigin = () => {
+  const configuredAppUrl = config.public.appUrl?.trim().replace(/\/$/, '')
+
+  if (configuredAppUrl) {
+    return configuredAppUrl
+  }
+
+  if (import.meta.client) {
+    return window.location.origin
+  }
+
+  return ''
+}
 
 const redirectToDashboard = async () => {
   if (import.meta.server || isRedirecting.value) {
@@ -357,7 +372,13 @@ const handleGoogleSignIn = async () => {
     isLoading.value = true
     errorMessage.value = ''
 
-    const redirectUrl = `${window.location.origin}/auth/callback`
+    const appOrigin = getAppOrigin()
+
+    if (!appOrigin) {
+      throw new Error('ไม่พบ app URL สำหรับ redirect หลัง Google login')
+    }
+
+    const redirectUrl = `${appOrigin}/auth/callback`
     
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
