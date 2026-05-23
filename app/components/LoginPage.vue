@@ -252,6 +252,24 @@ const showMessage = (message: string, type: 'error' | 'success') => {
   }, 5000)
 }
 
+const getSignUpErrorMessage = (error: unknown) => {
+  if (typeof error !== 'object' || error === null) {
+    return 'สมัครสมาชิกไม่สำเร็จ'
+  }
+
+  const authError = error as {
+    code?: string
+    message?: string
+    status?: number
+  }
+
+  if (authError.code === 'over_email_send_rate_limit' || authError.status === 429) {
+    return 'ส่งอีเมลยืนยันบ่อยเกินไป กรุณารอสักครู่แล้วลองใหม่'
+  }
+
+  return authError.message || 'สมัครสมาชิกไม่สำเร็จ'
+}
+
 const hasOAuthCallbackParams = () => {
   return Boolean(route.query.code || route.query.access_token || route.hash.includes('access_token'))
 }
@@ -361,7 +379,7 @@ const handleSignUp = async () => {
     confirmPassword.value = ''
   } catch (error: any) {
     console.error('Sign up error:', error)
-    showMessage(error.message || 'สมัครสมาชิกไม่สำเร็จ', 'error')
+    showMessage(getSignUpErrorMessage(error), 'error')
   } finally {
     isLoading.value = false
   }
