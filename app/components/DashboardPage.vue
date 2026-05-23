@@ -1,377 +1,313 @@
 <template>
-  <div class="flex h-screen bg-gray-950 text-white overflow-hidden flex-col md:flex-row">
-
-    <!-- Mobile Header -->
-    <div class="md:hidden flex items-center justify-between px-6 py-4 border-b border-gray-800 bg-gray-900 shrink-0">
-      <div class="flex items-center gap-3">
-        <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-sm">✦</div>
-        <p class="font-bold text-white leading-none">MyLife</p>
+  <AppTabsLayout>
+    <header class="px-6 md:px-8 py-5 border-b border-gray-800 flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4">
+      <div>
+        <h1 class="text-2xl font-bold text-white">Dashboard การเงิน</h1>
+        <p class="text-sm text-gray-400 mt-1">{{ todayText }}</p>
       </div>
-      <button class="text-gray-400 hover:text-white transition-colors" @click="mobileMenuOpen = !mobileMenuOpen">
-        <svg v-if="!mobileMenuOpen" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-        </svg>
-        <svg v-else class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-        </svg>
-      </button>
-    </div>
+      <NuxtLink
+        to="/cashflow"
+        class="px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 border border-violet-500/40 text-sm font-medium transition-colors"
+      >
+        + เพิ่มรายรับรายจ่าย
+      </NuxtLink>
+    </header>
 
-    <!-- Sidebar -->
-    <aside :class="[
-      'w-full md:w-64 bg-gray-900 flex flex-col border-r border-gray-800 shrink-0 absolute md:relative z-20 h-[calc(100vh-65px)] md:h-auto transition-transform duration-300',
-      mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
-    ]">
-      <!-- Logo (Desktop only) -->
-      <div class="hidden md:block px-6 py-6 border-b border-gray-800">
-        <div class="flex items-center gap-3">
-          <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-lg">
-            ✦
-          </div>
-          <div>
-            <p class="font-bold text-white leading-none">MyLife</p>
-            <p class="text-xs text-gray-400 mt-0.5">Personal Tracker</p>
-          </div>
-        </div>
+    <div class="flex-1 overflow-y-auto px-6 md:px-8 py-6 space-y-6">
+      <div
+        v-if="errorMessage"
+        class="rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-amber-200 text-sm"
+      >
+        {{ errorMessage }}
       </div>
 
-      <!-- Nav -->
-      <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-        <p class="px-3 text-[10px] uppercase tracking-widest text-gray-500 font-semibold mb-2">Main</p>
-        <NuxtLink v-for="item in navItems" :key="item.label" :to="item.to || '#'"
-          :class="[
-            'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all cursor-pointer',
-            item.active
-              ? 'bg-violet-600/20 text-violet-300 border border-violet-500/30'
-              : 'text-gray-400 hover:text-white hover:bg-gray-800'
-          ]">
-          <span class="text-base">{{ item.icon }}</span>
-          {{ item.label }}
-          <span v-if="item.badge" class="ml-auto bg-violet-600 text-white text-xs px-2 py-0.5 rounded-full">{{ item.badge }}</span>
-        </NuxtLink>
-
-        <p class="px-3 text-[10px] uppercase tracking-widest text-gray-500 font-semibold mt-5 mb-2">Insights</p>
-        <NuxtLink v-for="item in secondaryNav" :key="item.label" :to="item.to || '#'"
-          class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-gray-800 transition-all cursor-pointer">
-          <span class="text-base">{{ item.icon }}</span>
-          {{ item.label }}
-        </NuxtLink>
-      </nav>
-
-      <!-- User Profile -->
-      <div class="px-4 py-4 border-t border-gray-800 relative">
-        <button
-          @click="userMenuOpen = !userMenuOpen"
-          class="w-full flex items-center gap-3 hover:opacity-80 transition-opacity"
-        >
-          <div class="w-9 h-9 rounded-full bg-gradient-to-br from-pink-400 to-orange-400 flex items-center justify-center font-bold text-sm">A</div>
-          <div class="flex-1 min-w-0 text-left">
-            <p class="text-sm font-medium text-white truncate">Alex Johnson</p>
-            <p class="text-xs text-gray-400 truncate">alex@mylife.app</p>
-          </div>
-          <span class="text-gray-500 hover:text-white transition-colors">⚙️</span>
-        </button>
-
-        <!-- User Menu Dropdown -->
-        <div
-          v-if="userMenuOpen"
-          class="absolute bottom-full left-0 right-0 mb-2 bg-gray-800 border border-gray-700 rounded-xl shadow-lg z-50"
-        >
-          <button
-            @click="handleLogout"
-            :disabled="isLoggingOut"
-            class="w-full px-4 py-3 text-left text-sm text-gray-300 hover:text-white hover:bg-gray-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed first:rounded-t-[calc(0.75rem-1px)] last:rounded-b-[calc(0.75rem-1px)]"
-          >
-            <span v-if="!isLoggingOut">🚪</span>
-            <span v-else class="inline-block w-4 h-4 border-2 border-gray-300 border-t-white rounded-full animate-spin"></span>
-            {{ isLoggingOut ? 'กำลังออกจากระบบ...' : 'ออกจากระบบ' }}
-          </button>
+      <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <div class="bg-gray-900 border border-gray-800 rounded-2xl p-5">
+          <p class="text-xs text-gray-400">รายรับรวมทั้งหมด</p>
+          <p class="text-2xl font-bold text-emerald-400 mt-2">{{ formatCurrency(totalIncome) }}</p>
+        </div>
+        <div class="bg-gray-900 border border-gray-800 rounded-2xl p-5">
+          <p class="text-xs text-gray-400">รายจ่ายรวมทั้งหมด</p>
+          <p class="text-2xl font-bold text-rose-400 mt-2">{{ formatCurrency(totalExpense) }}</p>
+        </div>
+        <div class="bg-gray-900 border border-gray-800 rounded-2xl p-5">
+          <p class="text-xs text-gray-400">เงินคงเหลือ</p>
+          <p class="text-2xl font-bold mt-2" :class="remainingBalance >= 0 ? 'text-sky-300' : 'text-amber-300'">
+            {{ formatCurrency(remainingBalance) }}
+          </p>
+        </div>
+        <div class="bg-gray-900 border border-gray-800 rounded-2xl p-5">
+          <p class="text-xs text-gray-400">รายจ่ายที่มากที่สุด</p>
+          <p class="text-lg font-semibold text-white mt-2 truncate">{{ topExpenseCategory.name }}</p>
+          <p class="text-sm text-gray-400 mt-1">{{ formatCurrency(topExpenseCategory.amount) }}</p>
         </div>
       </div>
-    </aside>
 
-    <!-- Main Content -->
-    <main class="flex-1 flex flex-col overflow-hidden relative z-0">
-
-      <!-- Top Bar -->
-      <header class="px-6 md:px-8 py-5 border-b border-gray-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-0 shrink-0">
-        <div>
-          <h1 class="text-xl font-bold text-white">Good morning, Alex 👋</h1>
-          <p class="text-sm text-gray-400 mt-0.5">{{ today }} · Week 21</p>
-        </div>
-        <div class="flex items-center gap-2 sm:gap-3 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
-          <button class="shrink-0 bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm px-4 py-2 rounded-xl transition-colors border border-gray-700">
-            📅 <span class="hidden sm:inline">This Week</span>
-          </button>
-          <button class="shrink-0 bg-violet-600 hover:bg-violet-500 text-white text-sm px-4 py-2 rounded-xl transition-colors font-medium">
-            + Add Entry
-          </button>
-          <div class="relative shrink-0 ml-auto sm:ml-0">
-            <button class="w-10 h-10 bg-gray-800 rounded-xl flex items-center justify-center border border-gray-700 hover:bg-gray-700 transition-colors">🔔</button>
-            <span class="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
-          </div>
-        </div>
-      </header>
-
-      <!-- Scrollable Body -->
-      <div class="flex-1 overflow-y-auto px-6 md:px-8 py-6 space-y-6">
-
-        <!-- Stat Cards -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div v-for="stat in stats" :key="stat.label"
-            class="bg-gray-900 border border-gray-800 rounded-2xl p-5 hover:border-gray-700 transition-all">
-            <div class="flex items-start justify-between mb-3">
-              <div :class="`w-10 h-10 rounded-xl flex items-center justify-center text-xl ${stat.bg}`">
-                {{ stat.icon }}
-              </div>
-              <span :class="`text-xs font-semibold px-2 py-1 rounded-full ${stat.change >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`">
-                {{ stat.change >= 0 ? '+' : '' }}{{ stat.change }}%
-              </span>
+      <div class="grid grid-cols-1 xl:grid-cols-5 gap-4">
+        <section class="xl:col-span-3 bg-gray-900 border border-gray-800 rounded-2xl p-5">
+          <div class="flex items-center justify-between gap-3 mb-4">
+            <div>
+              <h2 class="text-lg font-semibold text-white">สรุปรายรับรายจ่ายรายวัน</h2>
+              <p class="text-sm text-gray-400 mt-1">ภาพรวมรายวันล่าสุด</p>
             </div>
-            <p class="text-2xl font-bold text-white">{{ stat.value }}</p>
-            <p class="text-sm text-gray-400 mt-1">{{ stat.label }}</p>
+            <button
+              @click="loadTransactions"
+              :disabled="isLoading"
+              class="px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed border border-gray-700 text-xs"
+            >
+              {{ isLoading ? 'กำลังโหลด...' : 'รีเฟรช' }}
+            </button>
           </div>
-        </div>
 
-        <!-- Middle Row -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-
-          <!-- Habit Tracker -->
-          <div class="col-span-1 lg:col-span-2 bg-gray-900 border border-gray-800 rounded-2xl p-6">
-            <div class="flex items-center justify-between mb-5">
+          <div v-if="isLoading" class="text-sm text-gray-400">กำลังโหลดข้อมูล...</div>
+          <div v-else-if="!dailySummaries.length" class="text-sm text-gray-400">ยังไม่มีรายการรายรับรายจ่าย</div>
+          <div v-else class="space-y-3">
+            <div
+              v-for="day in dailySummaries.slice(0, 7)"
+              :key="day.date"
+              class="grid grid-cols-1 sm:grid-cols-4 gap-2 border border-gray-800 rounded-xl px-3 py-3"
+            >
               <div>
-                <h2 class="font-semibold text-white">Habit Tracker</h2>
-                <p class="text-xs text-gray-400 mt-0.5">This week's progress</p>
+                <p class="text-xs text-gray-500">วันที่</p>
+                <p class="text-sm text-white mt-1">{{ formatDate(day.date) }}</p>
               </div>
-              <span class="bg-emerald-500/10 text-emerald-400 text-xs px-3 py-1 rounded-full font-medium border border-emerald-500/20">
-                🔥 5 day streak
-              </span>
-            </div>
-            <div class="space-y-4">
-              <div v-for="habit in habits" :key="habit.name">
-                <div class="flex items-center justify-between mb-1.5">
-                  <div class="flex items-center gap-2">
-                    <span>{{ habit.icon }}</span>
-                    <span class="text-sm text-gray-300">{{ habit.name }}</span>
-                  </div>
-                  <span class="text-xs text-gray-400">{{ habit.done }}/{{ habit.total }} days</span>
-                </div>
-                <div class="h-2 bg-gray-800 rounded-full overflow-hidden">
-                  <div
-                    :class="`h-full rounded-full transition-all ${habit.color}`"
-                    :style="`width: ${(habit.done / habit.total) * 100}%`"
-                  ></div>
-                </div>
+              <div>
+                <p class="text-xs text-gray-500">รายรับ</p>
+                <p class="text-sm text-emerald-400 mt-1">{{ formatCurrency(day.income) }}</p>
+              </div>
+              <div>
+                <p class="text-xs text-gray-500">รายจ่าย</p>
+                <p class="text-sm text-rose-400 mt-1">{{ formatCurrency(day.expense) }}</p>
+              </div>
+              <div>
+                <p class="text-xs text-gray-500">คงเหลือสุทธิ</p>
+                <p class="text-sm mt-1" :class="day.balance >= 0 ? 'text-sky-300' : 'text-amber-300'">
+                  {{ formatCurrency(day.balance) }}
+                </p>
               </div>
             </div>
           </div>
+        </section>
 
-          <!-- Today's Tasks -->
-          <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6">
-            <div class="flex items-center justify-between mb-5">
-              <h2 class="font-semibold text-white">Today's Tasks</h2>
-              <span class="text-xs text-gray-400">{{ completedTasks }}/{{ tasks.length }}</span>
-            </div>
-            <div class="space-y-3">
-              <div v-for="task in tasks" :key="task.id"
-                class="flex items-start gap-3 group cursor-pointer"
-                @click="task.done = !task.done">
-                <div :class="[
-                  'w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 transition-all',
-                  task.done ? 'bg-violet-600 border-violet-600' : 'border-gray-600 group-hover:border-violet-500'
-                ]">
-                  <svg v-if="task.done" class="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
-                  </svg>
-                </div>
-                <div class="flex-1 min-w-0">
-                  <p :class="['text-sm truncate transition-all', task.done ? 'line-through text-gray-600' : 'text-gray-300']">
-                    {{ task.text }}
-                  </p>
-                  <p class="text-xs text-gray-500 mt-0.5">{{ task.time }}</p>
-                </div>
-                <span :class="`text-[10px] px-2 py-0.5 rounded-full ${task.tagColor}`">{{ task.tag }}</span>
-              </div>
-            </div>
-            <button class="mt-4 w-full py-2 text-sm text-gray-500 hover:text-violet-400 hover:bg-violet-500/10 rounded-xl transition-all border border-dashed border-gray-700 hover:border-violet-500/40">
-              + Add task
-            </button>
-          </div>
-        </div>
+        <section class="xl:col-span-2 bg-gray-900 border border-gray-800 rounded-2xl p-5">
+          <h2 class="text-lg font-semibold text-white">สรุปหมวดรายจ่ายสูงสุด</h2>
+          <p class="text-sm text-gray-400 mt-1 mb-4">เรียงจากใช้จ่ายมากไปน้อย</p>
 
-        <!-- Bottom Row -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-
-          <!-- Weekly Mood -->
-          <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6">
-            <h2 class="font-semibold text-white mb-1">Mood This Week</h2>
-            <p class="text-xs text-gray-400 mb-5">Daily emotional check-in</p>
-            <div class="flex items-end justify-between gap-2 h-24">
-              <div v-for="day in moodWeek" :key="day.label" class="flex flex-col items-center gap-2 flex-1">
-                <div class="relative w-full flex justify-center">
-                  <div
-                    :class="`w-8 rounded-t-lg transition-all ${day.color}`"
-                    :style="`height: ${day.value * 0.8}px`"
-                  ></div>
-                </div>
-                <span class="text-[10px] text-gray-500">{{ day.label }}</span>
-              </div>
-            </div>
-            <div class="mt-4 pt-4 border-t border-gray-800 flex items-center justify-between">
-              <p class="text-xs text-gray-400">Avg mood score</p>
-              <p class="text-sm font-bold text-violet-400">7.8 / 10</p>
+          <div v-if="!topExpenseCategories.length" class="text-sm text-gray-400">ยังไม่มีข้อมูลรายจ่าย</div>
+          <div v-else class="space-y-3">
+            <div
+              v-for="category in topExpenseCategories"
+              :key="category.name"
+              class="border border-gray-800 rounded-xl px-3 py-3"
+            >
+              <p class="text-sm text-white">{{ category.name }}</p>
+              <p class="text-xs text-rose-300 mt-1">{{ formatCurrency(category.amount) }}</p>
             </div>
           </div>
-
-          <!-- Health Metrics -->
-          <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6">
-            <h2 class="font-semibold text-white mb-1">Health Metrics</h2>
-            <p class="text-xs text-gray-400 mb-5">Today's overview</p>
-            <div class="space-y-4">
-              <div v-for="metric in healthMetrics" :key="metric.name" class="flex items-center gap-4">
-                <div :class="`w-10 h-10 rounded-xl flex items-center justify-center text-lg ${metric.bg} shrink-0`">
-                  {{ metric.icon }}
-                </div>
-                <div class="flex-1 min-w-0">
-                  <div class="flex items-center justify-between mb-1">
-                    <p class="text-xs text-gray-400">{{ metric.name }}</p>
-                    <p class="text-xs font-semibold text-white">{{ metric.value }}</p>
-                  </div>
-                  <div class="h-1.5 bg-gray-800 rounded-full overflow-hidden">
-                    <div :class="`h-full rounded-full ${metric.color}`" :style="`width: ${metric.pct}%`"></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Recent Journal -->
-          <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6">
-            <div class="flex items-center justify-between mb-5">
-              <h2 class="font-semibold text-white">Journal</h2>
-              <button class="text-xs text-violet-400 hover:text-violet-300 transition-colors">View all →</button>
-            </div>
-            <div class="space-y-4">
-              <div v-for="entry in journalEntries" :key="entry.date"
-                class="border-l-2 border-gray-700 pl-4 hover:border-violet-500 transition-all cursor-pointer">
-                <p class="text-xs text-gray-500 mb-1">{{ entry.date }}</p>
-                <p class="text-sm text-gray-300 leading-relaxed line-clamp-2">{{ entry.text }}</p>
-                <div class="flex gap-2 mt-2">
-                  <span v-for="tag in entry.tags" :key="tag"
-                    class="text-[10px] bg-gray-800 text-gray-400 px-2 py-0.5 rounded-full">
-                    {{ tag }}
-                  </span>
-                </div>
-              </div>
-            </div>
-            <button class="mt-4 w-full py-2.5 text-sm text-violet-400 hover:text-white bg-violet-600/10 hover:bg-violet-600 rounded-xl transition-all border border-violet-500/20 font-medium">
-              ✏️ Write Today's Entry
-            </button>
-          </div>
-        </div>
-
+        </section>
       </div>
-    </main>
-  </div>
+
+      <section class="bg-gray-900 border border-gray-800 rounded-2xl p-5">
+        <div class="flex items-center justify-between gap-3 mb-4">
+          <h2 class="text-lg font-semibold text-white">รายการล่าสุด</h2>
+          <NuxtLink to="/cashflow" class="text-xs text-violet-300 hover:text-violet-200">ไปหน้า รายรับรายจ่าย →</NuxtLink>
+        </div>
+
+        <div v-if="!transactions.length" class="text-sm text-gray-400">ยังไม่มีรายการ</div>
+        <div v-else class="overflow-x-auto">
+          <table class="min-w-full text-sm">
+            <thead>
+              <tr class="text-left text-gray-400 border-b border-gray-800">
+                <th class="py-2 pr-4 font-medium">วันที่</th>
+                <th class="py-2 pr-4 font-medium">ประเภท</th>
+                <th class="py-2 pr-4 font-medium">หมวดหมู่</th>
+                <th class="py-2 text-right font-medium">จำนวนเงิน</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="item in transactions.slice(0, 8)"
+                :key="item.id"
+                class="border-b border-gray-800/70"
+              >
+                <td class="py-2 pr-4 text-gray-300">{{ formatDate(item.entry_date) }}</td>
+                <td class="py-2 pr-4">
+                  <span
+                    class="inline-flex px-2 py-0.5 rounded-full text-xs"
+                    :class="item.type === 'income' ? 'bg-emerald-500/15 text-emerald-300' : 'bg-rose-500/15 text-rose-300'"
+                  >
+                    {{ item.type === 'income' ? 'รายรับ' : 'รายจ่าย' }}
+                  </span>
+                </td>
+                <td class="py-2 pr-4 text-gray-300">{{ item.category || '-' }}</td>
+                <td class="py-2 text-right" :class="item.type === 'income' ? 'text-emerald-400' : 'text-rose-400'">
+                  {{ formatCurrency(item.amount) }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </AppTabsLayout>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, onMounted, ref } from 'vue'
+
+type TransactionType = 'income' | 'expense'
+
+type TransactionRow = {
+  id: string
+  user_id: string
+  entry_date: string
+  type: TransactionType
+  category: string | null
+  description: string | null
+  amount: number
+  created_at: string
+}
+
+type DailySummary = {
+  date: string
+  income: number
+  expense: number
+  balance: number
+}
 
 const router = useRouter()
 const supabase = useSupabaseClient()
 
-const mobileMenuOpen = ref(false)
-const userMenuOpen = ref(false)
-const isLoggingOut = ref(false)
+const transactions = ref<TransactionRow[]>([])
+const isLoading = ref(true)
+const errorMessage = ref('')
 
-const today = new Date().toLocaleDateString('en-US', {
-  weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+const todayText = new Date().toLocaleDateString('th-TH', {
+  weekday: 'long',
+  day: '2-digit',
+  month: 'long',
+  year: 'numeric',
 })
 
-const navItems = [
-  { icon: '🏠', label: 'Dashboard', active: true, to: '/dashboard' },
-  { icon: '✅', label: 'Tasks', badge: '3' },
-  { icon: '🔁', label: 'Habits' },
-  { icon: '💪', label: 'Fitness' },
-  { icon: '🥗', label: 'Nutrition' },
-]
+const tableMissingCodes = new Set(['42P01', 'PGRST205'])
 
-const secondaryNav = [
-  { icon: '📊', label: 'Analytics' },
-  { icon: '📓', label: 'Journal' },
-  { icon: '🎯', label: 'Goals' },
-  { icon: '⚡', label: 'DB Test', to: '/supabase-test' },
-]
+const formatCurrency = (amount: number) => new Intl.NumberFormat('th-TH', {
+  style: 'currency',
+  currency: 'THB',
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+}).format(amount)
 
-const stats = [
-  { icon: '✅', label: 'Tasks Completed', value: '24', change: 12, bg: 'bg-violet-500/20' },
-  { icon: '🔥', label: 'Habit Streak', value: '5 days', change: 25, bg: 'bg-orange-500/20' },
-  { icon: '👣', label: 'Steps Today', value: '8,240', change: -5, bg: 'bg-sky-500/20' },
-  { icon: '😴', label: 'Sleep Last Night', value: '7h 20m', change: 8, bg: 'bg-indigo-500/20' },
-]
+const formatDate = (dateString: string) => new Date(dateString).toLocaleDateString('th-TH', {
+  day: '2-digit',
+  month: 'short',
+  year: 'numeric',
+})
 
-const habits = ref([
-  { icon: '🏃', name: 'Morning Run', done: 5, total: 7, color: 'bg-emerald-500' },
-  { icon: '📚', name: 'Reading (30 min)', done: 6, total: 7, color: 'bg-violet-500' },
-  { icon: '💧', name: 'Drink 8 glasses water', done: 4, total: 7, color: 'bg-sky-500' },
-  { icon: '🧘', name: 'Meditation', done: 3, total: 7, color: 'bg-pink-500' },
-  { icon: '🛌', name: 'Sleep by 11 PM', done: 5, total: 7, color: 'bg-amber-500' },
-])
+const totalIncome = computed(() => transactions.value
+  .filter((item) => item.type === 'income')
+  .reduce((sum, item) => sum + item.amount, 0))
 
-const tasks = ref([
-  { id: 1, text: 'Review weekly goals', time: '09:00 AM', done: true, tag: 'Focus', tagColor: 'bg-violet-500/20 text-violet-400' },
-  { id: 2, text: 'Workout — Leg Day', time: '10:30 AM', done: true, tag: 'Health', tagColor: 'bg-emerald-500/20 text-emerald-400' },
-  { id: 3, text: 'Read 30 pages of book', time: '01:00 PM', done: false, tag: 'Learn', tagColor: 'bg-sky-500/20 text-sky-400' },
-  { id: 4, text: 'Plan meals for next week', time: '03:00 PM', done: false, tag: 'Food', tagColor: 'bg-amber-500/20 text-amber-400' },
-  { id: 5, text: 'Evening meditation', time: '09:00 PM', done: false, tag: 'Mind', tagColor: 'bg-pink-500/20 text-pink-400' },
-])
+const totalExpense = computed(() => transactions.value
+  .filter((item) => item.type === 'expense')
+  .reduce((sum, item) => sum + item.amount, 0))
 
-const completedTasks = computed(() => tasks.value.filter((task) => task.done).length)
+const remainingBalance = computed(() => totalIncome.value - totalExpense.value)
 
-const moodWeek = [
-  { label: 'Mon', value: 75, color: 'bg-violet-500' },
-  { label: 'Tue', value: 90, color: 'bg-violet-500' },
-  { label: 'Wed', value: 60, color: 'bg-violet-400' },
-  { label: 'Thu', value: 85, color: 'bg-violet-500' },
-  { label: 'Fri', value: 95, color: 'bg-violet-600' },
-  { label: 'Sat', value: 80, color: 'bg-violet-500' },
-  { label: 'Sun', value: 70, color: 'bg-violet-400' },
-]
+const topExpenseCategories = computed(() => {
+  const categoryTotals = transactions.value
+    .filter((item) => item.type === 'expense')
+    .reduce<Record<string, number>>((acc, item) => {
+      const key = item.category?.trim() || 'ไม่ระบุหมวดหมู่'
+      acc[key] = (acc[key] || 0) + item.amount
+      return acc
+    }, {})
 
-const healthMetrics = [
-  { icon: '❤️', name: 'Heart Rate', value: '72 bpm', pct: 72, color: 'bg-red-500', bg: 'bg-red-500/10' },
-  { icon: '👣', name: 'Steps', value: '8,240', pct: 82, color: 'bg-sky-500', bg: 'bg-sky-500/10' },
-  { icon: '💧', name: 'Hydration', value: '1.8 / 2.5 L', pct: 72, color: 'bg-blue-500', bg: 'bg-blue-500/10' },
-  { icon: '🔥', name: 'Calories Burned', value: '420 kcal', pct: 60, color: 'bg-orange-500', bg: 'bg-orange-500/10' },
-]
+  return Object.entries(categoryTotals)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([name, amount]) => ({ name, amount }))
+})
 
-const journalEntries = [
-  {
-    date: 'Today, May 23',
-    text: 'Felt really productive this morning. Crushed my workout and got through my reading list. Need to work on staying off my phone after 9 PM.',
-    tags: ['#productive', '#fitness']
-  },
-  {
-    date: 'Yesterday, May 22',
-    text: 'Had a slow start but turned it around in the afternoon. Meditation really helped with afternoon slump.',
-    tags: ['#mindfulness', '#slow-day']
-  },
-]
+const topExpenseCategory = computed(() => topExpenseCategories.value[0] || { name: '-', amount: 0 })
 
-const handleLogout = async () => {
+const dailySummaries = computed<DailySummary[]>(() => {
+  const grouped = transactions.value.reduce<Record<string, DailySummary>>((acc, item) => {
+    if (!acc[item.entry_date]) {
+      acc[item.entry_date] = {
+        date: item.entry_date,
+        income: 0,
+        expense: 0,
+        balance: 0,
+      }
+    }
+
+    if (item.type === 'income') {
+      acc[item.entry_date].income += item.amount
+    } else {
+      acc[item.entry_date].expense += item.amount
+    }
+
+    acc[item.entry_date].balance = acc[item.entry_date].income - acc[item.entry_date].expense
+    return acc
+  }, {})
+
+  return Object.values(grouped).sort((a, b) => b.date.localeCompare(a.date))
+})
+
+const normalizeRows = (rows: any[]): TransactionRow[] => rows.map((row) => ({
+  id: String(row.id),
+  user_id: String(row.user_id),
+  entry_date: String(row.entry_date),
+  type: row.type === 'income' ? 'income' : 'expense',
+  category: typeof row.category === 'string' ? row.category : null,
+  description: typeof row.description === 'string' ? row.description : null,
+  amount: Number(row.amount || 0),
+  created_at: String(row.created_at || ''),
+}))
+
+const loadTransactions = async () => {
+  isLoading.value = true
+  errorMessage.value = ''
+
   try {
-    isLoggingOut.value = true
-    const { error } = await supabase.auth.signOut()
-    if (error) throw error
+    const { data: userData, error: userError } = await supabase.auth.getUser()
+    if (userError) {
+      throw userError
+    }
 
-    userMenuOpen.value = false
-    await router.push('/')
+    if (!userData.user) {
+      await router.push('/login')
+      return
+    }
+
+    const { data, error } = await supabase
+      .from('transactions')
+      .select('id, user_id, entry_date, type, category, description, amount, created_at')
+      .eq('user_id', userData.user.id)
+      .order('entry_date', { ascending: false })
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      if (tableMissingCodes.has(error.code || '')) {
+        errorMessage.value = 'ยังไม่พบตาราง transactions ใน Supabase กรุณาสร้างตารางก่อนใช้งาน'
+        transactions.value = []
+        return
+      }
+
+      throw error
+    }
+
+    transactions.value = normalizeRows(data || [])
   } catch (error: any) {
-    console.error('Logout error:', error)
+    console.error('Load dashboard finance error:', error)
+    errorMessage.value = error?.message || 'โหลดข้อมูล Dashboard ไม่สำเร็จ'
   } finally {
-    isLoggingOut.value = false
+    isLoading.value = false
   }
 }
+
+onMounted(() => {
+  loadTransactions()
+})
 </script>

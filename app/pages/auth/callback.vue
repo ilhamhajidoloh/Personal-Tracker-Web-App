@@ -17,6 +17,10 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
 
+useHead({
+  title: 'กำลังเข้าสู่ระบบ',
+})
+
 const router = useRouter()
 const supabase = useSupabaseClient()
 

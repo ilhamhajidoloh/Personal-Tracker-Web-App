@@ -1,3 +1,110 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+	:root.theme-night {
+		color-scheme: dark;
+	}
+
+	:root.theme-night .text-gray-500 {
+		color: #94a3b8 !important;
+	}
+
+	:root.theme-night .text-gray-400 {
+		color: #cbd5e1 !important;
+	}
+
+	:root.theme-night .text-gray-300 {
+		color: #e2e8f0 !important;
+	}
+
+	:root.theme-light {
+		color-scheme: light;
+	}
+
+	:root.theme-light .bg-gray-950 {
+		background-color: #f3f6fb !important;
+	}
+
+	:root.theme-light .bg-gray-900 {
+		background-color: #ffffff !important;
+	}
+
+	:root.theme-light .bg-gray-800 {
+		background-color: #edf2f7 !important;
+	}
+
+	:root.theme-light .border-gray-800 {
+		border-color: #d9e2ec !important;
+	}
+
+	:root.theme-light .border-gray-700 {
+		border-color: #cdd8e5 !important;
+	}
+
+	:root.theme-light .text-white {
+		color: #0f172a !important;
+	}
+
+	:root.theme-light .text-gray-600 {
+		color: #1f2937 !important;
+	}
+
+	:root.theme-light .text-gray-500 {
+		color: #334155 !important;
+	}
+
+	:root.theme-light .text-gray-400 {
+		color: #334155 !important;
+	}
+
+	:root.theme-light .text-gray-300 {
+		color: #1f2937 !important;
+	}
+
+	:root.theme-light .text-violet-300,
+	:root.theme-light .text-violet-400,
+	:root.theme-light .text-violet-500 {
+		color: #6d28d9 !important;
+	}
+
+	:root.theme-light .text-emerald-300,
+	:root.theme-light .text-emerald-400 {
+		color: #047857 !important;
+	}
+
+	:root.theme-light .text-rose-300,
+	:root.theme-light .text-rose-400 {
+		color: #be123c !important;
+	}
+
+	:root.theme-light .text-sky-300 {
+		color: #0369a1 !important;
+	}
+
+	:root.theme-light .text-amber-300 {
+		color: #b45309 !important;
+	}
+
+	:root.theme-light .hover\:bg-gray-800:hover {
+		background-color: #e2e8f0 !important;
+	}
+
+	:root.theme-light .hover\:bg-gray-700:hover {
+		background-color: #dbe4ee !important;
+	}
+
+	:root.theme-light .hover\:text-white:hover {
+		color: #0f172a !important;
+	}
+
+	:root.theme-light .bg-violet-600,
+	:root.theme-light .bg-violet-500,
+	:root.theme-light .bg-emerald-500,
+	:root.theme-light .bg-rose-500,
+	:root.theme-light .bg-sky-500,
+	:root.theme-light .bg-indigo-600 {
+		color: #ffffff !important;
+	}
+}
