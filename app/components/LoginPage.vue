@@ -364,7 +364,7 @@ const handleSignUp = async () => {
       return
     }
 
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email: email.value,
       password: password.value,
     })
@@ -373,7 +373,18 @@ const handleSignUp = async () => {
       throw error
     }
 
-    showMessage('สมัครสมาชิกสำเร็จ! กรุณายืนยันอีเมลของคุณก่อน', 'success')
+    if (data.session) {
+      if (data.session.access_token) {
+        localStorage.setItem('auth_token', data.session.access_token)
+        localStorage.setItem('auth_session', JSON.stringify(data.session))
+      }
+
+      showMessage('สมัครสมาชิกสำเร็จ กำลังพาไปที่ Dashboard...', 'success')
+      await redirectToDashboard()
+      return
+    }
+
+    showMessage('สมัครสมาชิกสำเร็จ แต่โปรเจ็กต์ยังเปิดการยืนยันอีเมลอยู่', 'success')
     email.value = ''
     password.value = ''
     confirmPassword.value = ''
