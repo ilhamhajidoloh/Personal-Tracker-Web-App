@@ -199,11 +199,19 @@ if (import.meta.client) {
       if (event === 'SIGNED_OUT') {
         isRedirecting.value = false
         finishSessionCheck()
+        // ล้าง token จาก localStorage เมื่อ sign out
+        localStorage.removeItem('auth_token')
+        localStorage.removeItem('auth_session')
       }
       return
     }
 
     if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+      // บันทึก token ไปยัง localStorage
+      if (session.access_token) {
+        localStorage.setItem('auth_token', session.access_token)
+        localStorage.setItem('auth_session', JSON.stringify(session))
+      }
       redirectToDashboard()
     }
   })
@@ -296,6 +304,12 @@ const handleSignIn = async () => {
       throw new Error('ไม่พบเซสชันหลังจากเข้าสู่ระบบ')
     }
 
+    // บันทึก token ไปยัง localStorage
+    if (data.session.access_token) {
+      localStorage.setItem('auth_token', data.session.access_token)
+      localStorage.setItem('auth_session', JSON.stringify(data.session))
+    }
+
     redirectToDashboard()
   } catch (error: any) {
     console.error('Sign in error:', error)
@@ -342,10 +356,12 @@ const handleGoogleSignIn = async () => {
     isLoading.value = true
     errorMessage.value = ''
 
+    const redirectUrl = `${window.location.origin}/auth/callback`
+    
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: window.location.origin,
+        redirectTo: redirectUrl,
       },
     })
 
