@@ -32,7 +32,7 @@ onMounted(async () => {
         localStorage.setItem('auth_session', JSON.stringify(data.session))
       }
       
-      // ไปที่ dashboard
+      // ไปที่ dashboard ใช้ router.push
       await router.push('/dashboard')
     } else {
       // ถ้าไม่มี session กลับไปที่ login

@@ -164,6 +164,7 @@
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 
 const route = useRoute()
+const router = useRouter()
 const supabase = useSupabaseClient()
 
 const isSignUp = ref(false)
@@ -176,13 +177,13 @@ const confirmPassword = ref('')
 const errorMessage = ref('')
 const successMessage = ref('')
 
-const redirectToDashboard = () => {
+const redirectToDashboard = async () => {
   if (import.meta.server || isRedirecting.value) {
     return
   }
 
   isRedirecting.value = true
-  window.location.replace('/dashboard')
+  await router.push('/dashboard')
 }
 
 const finishSessionCheck = () => {
@@ -212,7 +213,7 @@ if (import.meta.client) {
         localStorage.setItem('auth_token', session.access_token)
         localStorage.setItem('auth_session', JSON.stringify(session))
       }
-      redirectToDashboard()
+      await redirectToDashboard()
     }
   })
 
@@ -310,7 +311,7 @@ const handleSignIn = async () => {
       localStorage.setItem('auth_session', JSON.stringify(data.session))
     }
 
-    redirectToDashboard()
+    await redirectToDashboard()
   } catch (error: any) {
     console.error('Sign in error:', error)
     showMessage(error.message || 'เข้าสู่ระบบไม่สำเร็จ', 'error')
