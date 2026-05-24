@@ -177,7 +177,9 @@ const toggleMobileMenu = () => {
 const navItems: NavItem[] = [
   { icon: '🏠', label: 'Dashboard', to: '/dashboard' },
   { icon: '💸', label: 'รายรับรายจ่าย', to: '/cashflow' },
-  { icon: '📚', label: 'ตารางเรียน', to: '/study-schedule' },
+  { icon: '📅', label: 'ตารางเรียน', to: '/study-schedule' },
+  { icon: '✅', label: 'งานและ To-do', to: '/todos' },
+  { icon: '🎉', label: 'กิจกรรม', to: '/events' },
 ]
 
 const secondaryNav: NavItem[] = [

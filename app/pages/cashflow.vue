@@ -77,14 +77,28 @@
       </div>
 
       <section class="bg-gray-900 border border-gray-800 rounded-2xl p-5">
-        <div class="flex items-center justify-between gap-3 mb-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
           <div>
             <h2 class="text-lg font-semibold text-white">สรุปรายรับรายจ่ายรายวัน</h2>
             <p class="text-sm text-gray-400 mt-1">บอร์ดสรุปยอดเงินแต่ละวัน</p>
           </div>
-          <span class="text-xs bg-gray-800 text-gray-300 border border-gray-700 rounded-full px-3 py-1">
-            {{ dailySummaries.length }} วัน
-          </span>
+          <div class="flex items-center gap-2">
+            <input
+              v-model="summaryFilterMonth"
+              type="month"
+              class="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-violet-500"
+            />
+            <button
+              v-if="summaryFilterMonth"
+              @click="summaryFilterMonth = ''"
+              class="text-xs text-gray-400 hover:text-white px-2"
+            >
+              ล้าง
+            </button>
+            <span class="text-xs bg-gray-800 text-gray-300 border border-gray-700 rounded-full px-3 py-1 ml-1">
+              {{ dailySummaries.length }} วัน
+            </span>
+          </div>
         </div>
 
         <div v-if="isLoading" class="text-sm text-gray-400">กำลังโหลดข้อมูล...</div>
@@ -118,12 +132,36 @@
       </section>
 
       <section class="bg-gray-900 border border-gray-800 rounded-2xl p-5">
-        <div class="flex items-center justify-between gap-3 mb-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
           <h2 class="text-lg font-semibold text-white">รายการล่าสุด</h2>
-          <span class="text-xs text-gray-400">{{ transactions.length }} รายการ</span>
+          <div class="flex items-center gap-2 flex-wrap">
+            <select
+              v-model="transactionFilterMode"
+              class="bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-sm text-white focus:outline-none focus:border-violet-500"
+            >
+              <option value="all">ทั้งหมด</option>
+              <option value="day">รายวัน</option>
+              <option value="month">รายเดือน</option>
+            </select>
+            
+            <input
+              v-if="transactionFilterMode === 'day'"
+              v-model="transactionFilterDate"
+              type="date"
+              class="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-violet-500"
+            />
+            <input
+              v-if="transactionFilterMode === 'month'"
+              v-model="transactionFilterMonth"
+              type="month"
+              class="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-violet-500"
+            />
+            
+            <span class="text-xs text-gray-400 ml-1">{{ filteredTransactions.length }} รายการ</span>
+          </div>
         </div>
 
-        <div v-if="!transactions.length" class="text-sm text-gray-400">ยังไม่มีรายการ</div>
+        <div v-if="!filteredTransactions.length" class="text-sm text-gray-400">ยังไม่มีรายการ</div>
 
         <div v-else class="overflow-x-auto">
           <table class="min-w-full text-sm">
@@ -139,7 +177,7 @@
             </thead>
             <tbody>
               <tr
-                v-for="item in transactions"
+                v-for="item in filteredTransactions"
                 :key="item.id"
                 class="border-b border-gray-800/70"
               >
@@ -302,6 +340,14 @@ type DailySummary = {
   balance: number
 }
 
+type TransactionPayload = {
+  entry_date: string
+  type: TransactionType
+  category: string | null
+  description: string | null
+  amount: number
+}
+
 definePageMeta({
   middleware: 'auth',
 })
@@ -320,6 +366,11 @@ const isDeletingId = ref('')
 const editingTransactionId = ref('')
 const errorMessage = ref('')
 const transactions = ref<TransactionRow[]>([])
+
+const summaryFilterMonth = ref(new Date().toISOString().slice(0, 7))
+const transactionFilterMode = ref<'all' | 'day' | 'month'>('all')
+const transactionFilterDate = ref(new Date().toISOString().slice(0, 10))
+const transactionFilterMonth = ref(new Date().toISOString().slice(0, 7))
 
 const form = reactive({
   entryDate: new Date().toISOString().slice(0, 10),
@@ -431,27 +482,42 @@ const topExpenseCategory = computed(() => {
 })
 
 const dailySummaries = computed<DailySummary[]>(() => {
-  const grouped = transactions.value.reduce<Record<string, DailySummary>>((acc, item) => {
-    if (!acc[item.entry_date]) {
-      acc[item.entry_date] = {
+  let source = transactions.value
+  if (summaryFilterMonth.value) {
+    source = source.filter(item => item.entry_date.startsWith(summaryFilterMonth.value))
+  }
+
+  const grouped = source.reduce<Record<string, DailySummary>>((acc, item) => {
+    const daySummary = acc[item.entry_date] ?? {
         date: item.entry_date,
         income: 0,
         expense: 0,
         balance: 0,
       }
-    }
+
+    acc[item.entry_date] = daySummary
 
     if (item.type === 'income') {
-      acc[item.entry_date].income += item.amount
+      daySummary.income += item.amount
     } else {
-      acc[item.entry_date].expense += item.amount
+      daySummary.expense += item.amount
     }
 
-    acc[item.entry_date].balance = acc[item.entry_date].income - acc[item.entry_date].expense
+    daySummary.balance = daySummary.income - daySummary.expense
     return acc
   }, {})
 
   return Object.values(grouped).sort((a, b) => b.date.localeCompare(a.date))
+})
+
+const filteredTransactions = computed(() => {
+  if (transactionFilterMode.value === 'day' && transactionFilterDate.value) {
+    return transactions.value.filter(item => item.entry_date === transactionFilterDate.value)
+  }
+  if (transactionFilterMode.value === 'month' && transactionFilterMonth.value) {
+    return transactions.value.filter(item => item.entry_date.startsWith(transactionFilterMonth.value))
+  }
+  return transactions.value
 })
 
 const resetForm = () => {
@@ -560,7 +626,7 @@ const submitTransaction = async () => {
       return
     }
 
-    const payload = {
+    const payload: TransactionPayload = {
       entry_date: form.entryDate,
       type: form.type,
       category: form.category.trim() || null,
@@ -568,14 +634,14 @@ const submitTransaction = async () => {
       amount,
     }
 
+    const transactionsQuery = supabase.from('transactions') as any
+
     const { error } = isEditing.value
-      ? await supabase
-        .from('transactions')
+      ? await transactionsQuery
         .update(payload)
         .eq('id', editingTransactionId.value)
         .eq('user_id', userData.user.id)
-      : await supabase
-        .from('transactions')
+      : await transactionsQuery
         .insert({
           user_id: userData.user.id,
           ...payload,

@@ -210,18 +210,105 @@
       </section>
 
       <section class="bg-gray-900 border border-gray-800 rounded-2xl p-5">
-        <h2 class="text-lg font-semibold text-white">พื้นที่สำหรับโมดูลเพิ่มเติม</h2>
-        <p class="text-sm text-gray-400 mt-1 mb-4">สามารถเพิ่มส่วนอื่นได้โดยไม่ชนกับหน้าเงินและตารางเรียน</p>
-
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <div
-            v-for="module in futureModules"
-            :key="module.title"
-            class="border border-dashed border-gray-700 rounded-xl px-3 py-3"
+        <div class="flex items-center justify-between gap-3 mb-4">
+          <div>
+            <h2 class="text-lg font-semibold text-white">งานและ To-do (วันนี้ / ค้างส่ง)</h2>
+            <p class="text-sm text-gray-400 mt-1">สรุปงานสำคัญที่ต้องรีบจัดการ</p>
+          </div>
+          <NuxtLink
+            to="/todos"
+            class="px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 border border-gray-700 text-xs inline-flex items-center gap-1"
           >
-            <p class="text-sm font-medium text-white">{{ module.title }}</p>
-            <p class="text-xs text-gray-400 mt-1">{{ module.description }}</p>
-            <p class="text-[11px] text-violet-300 mt-2">{{ module.status }}</p>
+            ดูทั้งหมด
+          </NuxtLink>
+        </div>
+
+        <div
+          v-if="todosErrorMessage"
+          class="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-amber-200 text-xs mb-3"
+        >
+          {{ todosErrorMessage }}
+        </div>
+
+        <div v-if="isTodosLoading" class="text-sm text-gray-400">กำลังโหลดข้อมูลงาน...</div>
+        <div v-else-if="!todos.length" class="text-sm text-gray-400">ยังไม่มีงานใดๆ กดปุ่ม 'ดูทั้งหมด' เพื่อเพิ่มงานใหม่</div>
+        <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div
+            v-for="todo in dashboardTodos"
+            :key="todo.id"
+            class="border border-gray-700 rounded-xl px-4 py-3 bg-gray-800/30 flex flex-col justify-between"
+          >
+            <div>
+              <div class="flex items-start justify-between gap-2 mb-1">
+                <p class="text-sm font-medium text-white line-clamp-2">{{ todo.title }}</p>
+                <span v-if="todo.priority === 'high'" class="shrink-0 px-2 py-0.5 rounded text-[10px] bg-rose-500/20 text-rose-300 border border-rose-500/30">ด่วน</span>
+              </div>
+              <p class="text-[11px]" :class="getTodoDateColor(todo)">
+                {{ todo.due_date ? `กำหนด: ${formatDate(todo.due_date)}` : 'ไม่มีกำหนด' }}
+              </p>
+            </div>
+            
+            <div class="mt-3 flex items-center justify-between">
+              <span class="text-[10px] uppercase px-2 py-0.5 rounded-full border border-gray-600 bg-gray-700 text-gray-300">
+                {{ todo.status === 'in_progress' ? 'กำลังทำ' : 'รอทำ' }}
+              </span>
+              <button 
+                @click="markTodoDone(todo.id)"
+                class="text-[11px] text-emerald-400 hover:text-emerald-300 flex items-center gap-1"
+              >
+                <span>✓</span> เสร็จแล้ว
+              </button>
+            </div>
+          </div>
+          
+          <div
+            v-if="dashboardTodos.length === 0"
+            class="md:col-span-2 lg:col-span-3 border border-dashed border-gray-700 rounded-xl px-4 py-6 text-center"
+          >
+            <p class="text-sm text-gray-400">🎉 ไม่มีงานด่วนหรืองานค้างในวันนี้</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="bg-gray-900 border border-gray-800 rounded-2xl p-5">
+        <div class="flex items-center justify-between gap-3 mb-4">
+          <div>
+            <h2 class="text-lg font-semibold text-white">กิจกรรมและนัดหมาย</h2>
+            <p class="text-sm text-gray-400 mt-1">เหตุการณ์สำคัญที่กำลังจะมาถึง</p>
+          </div>
+          <NuxtLink
+            to="/events"
+            class="px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 border border-gray-700 text-xs inline-flex items-center gap-1"
+          >
+            ดูทั้งหมด
+          </NuxtLink>
+        </div>
+
+        <div
+          v-if="eventsErrorMessage"
+          class="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-amber-200 text-xs mb-3"
+        >
+          {{ eventsErrorMessage }}
+        </div>
+
+        <div v-if="isEventsLoading" class="text-sm text-gray-400">กำลังโหลดข้อมูลกิจกรรม...</div>
+        <div v-else-if="!dashboardEvents.length" class="text-sm text-gray-400">🎉 ยังไม่มีกิจกรรมที่กำลังจะมาถึง</div>
+        <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div
+            v-for="event in dashboardEvents"
+            :key="event.id"
+            class="border border-gray-700 rounded-xl px-4 py-3 bg-gray-800/30 flex items-center justify-between gap-4"
+          >
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-medium text-white line-clamp-1 mb-1">{{ event.title }}</p>
+              <p class="text-[11px] text-sky-400 font-medium">
+                {{ displayEventDateTimeShort(event) }}
+              </p>
+            </div>
+            <div class="shrink-0 text-center bg-gray-800 border border-gray-700 rounded-lg px-3 py-2">
+              <div class="text-[10px] text-rose-400 font-bold uppercase">{{ getMonthShort(event.start_date) }}</div>
+              <div class="text-lg text-white font-bold">{{ getDay(event.start_date) }}</div>
+            </div>
           </div>
         </div>
       </section>
@@ -261,16 +348,45 @@ type NextStudyClassMeta = {
   minutesUntil: number
 } | null
 
+type TodoStatus = 'pending' | 'in_progress' | 'completed'
+type TodoPriority = 'low' | 'medium' | 'high'
+
+type TodoRow = {
+  id: string
+  title: string
+  due_date: string | null
+  status: TodoStatus
+  priority: TodoPriority
+}
+
+type EventTypeType = 'same_day_time' | 'same_day_all_day' | 'multi_day'
+
+type DashboardEventRow = {
+  id: string
+  title: string
+  event_type: EventTypeType
+  start_date: string
+  start_time: string | null
+  end_date: string | null
+  end_time: string | null
+}
+
 const router = useRouter()
 const supabase = useSupabaseClient()
 
 const transactions = ref<TransactionRow[]>([])
 const studySchedules = ref<StudyScheduleRow[]>([])
+const todos = ref<TodoRow[]>([])
+const events = ref<DashboardEventRow[]>([])
 
 const isLoading = ref(true)
 const isScheduleLoading = ref(true)
+const isTodosLoading = ref(true)
+const isEventsLoading = ref(true)
 const errorMessage = ref('')
 const scheduleErrorMessage = ref('')
+const todosErrorMessage = ref('')
+const eventsErrorMessage = ref('')
 
 const todayText = new Date().toLocaleDateString('th-TH', {
   weekday: 'long',
@@ -298,24 +414,6 @@ const courseChipPalette = [
   'border-cyan-400/40 bg-cyan-500/15 text-cyan-100',
 ]
 
-const futureModules = [
-  {
-    title: 'งานและ To-do',
-    description: 'สรุปงานวันนี้, สิ่งที่ต้องส่ง, และงานค้าง',
-    status: 'Coming soon',
-  },
-  {
-    title: 'สุขภาพและกิจกรรม',
-    description: 'สรุปการออกกำลังกาย, น้ำดื่ม, และการนอน',
-    status: 'Coming soon',
-  },
-  {
-    title: 'นิสัยและเป้าหมาย',
-    description: 'ติดตาม streak และความคืบหน้าของเป้าหมายส่วนตัว',
-    status: 'Coming soon',
-  },
-]
-
 const tableMissingCodes = new Set(['42P01', 'PGRST205'])
 
 const formatCurrency = (amount: number) => new Intl.NumberFormat('th-TH', {
@@ -330,6 +428,9 @@ const formatDate = (dateString: string) => new Date(dateString).toLocaleDateStri
   month: 'short',
   year: 'numeric',
 })
+
+const getMonthShort = (dateString: string) => new Date(dateString).toLocaleDateString('th-TH', { month: 'short' })
+const getDay = (dateString: string) => new Date(dateString).toLocaleDateString('th-TH', { day: '2-digit' })
 
 const formatTime = (time: string) => time.slice(0, 5)
 
@@ -461,6 +562,51 @@ const todaysStudyClasses = computed(() => sortedStudySchedules.value
   .filter((item) => item.day_of_week === todayWeekday.value))
 
 const todaysStudyPreview = computed(() => todaysStudyClasses.value.slice(0, 4))
+
+const dashboardTodos = computed(() => {
+  const today = new Date().toISOString().slice(0, 10)
+  return todos.value
+    .filter(t => t.status !== 'completed' && (t.priority === 'high' || (t.due_date && t.due_date <= today)))
+    .sort((a, b) => {
+      if (a.due_date && b.due_date) return a.due_date.localeCompare(b.due_date)
+      if (a.due_date) return -1
+      return 1
+    })
+    .slice(0, 6)
+})
+
+const getTodoDateColor = (item: TodoRow) => {
+  if (!item.due_date) return 'text-gray-500'
+  const today = new Date().toISOString().slice(0, 10)
+  if (item.due_date < today) return 'text-rose-400 font-medium'
+  if (item.due_date === today) return 'text-amber-400 font-medium'
+  return 'text-gray-400'
+}
+
+const dashboardEvents = computed(() => {
+  const today = new Date().toISOString().slice(0, 10)
+  return events.value
+    .filter(e => {
+        const maxDate = e.end_date || e.start_date
+        return maxDate >= today
+    })
+    .sort((a, b) => a.start_date.localeCompare(b.start_date) || (a.start_time || '').localeCompare(b.start_time || ''))
+    .slice(0, 4)
+})
+
+const displayEventDateTimeShort = (item: DashboardEventRow) => {
+  const formatTimeStr = (t: string | null) => t ? t.slice(0, 5) + ' น.' : ''
+  if (item.event_type === 'same_day_all_day') {
+    return `${formatDate(item.start_date)} (ตลอดวัน)`
+  }
+  if (item.event_type === 'same_day_time') {
+    return `${formatDate(item.start_date)}  ${formatTimeStr(item.start_time)} - ${formatTimeStr(item.end_time)}`
+  }
+  if (item.event_type === 'multi_day') {
+    return `${formatDate(item.start_date)} ถึง ${formatDate(item.end_date || '')}`
+  }
+  return formatDate(item.start_date)
+}
 
 const nextStudyClassMeta = computed<NextStudyClassMeta>(() => {
   if (!sortedStudySchedules.value.length) {
@@ -687,10 +833,113 @@ const loadStudySchedules = async () => {
   }
 }
 
+const normalizeTodoRows = (rows: any[]): TodoRow[] => rows.map((row) => ({
+  id: String(row.id),
+  title: String(row.title),
+  due_date: row.due_date ? String(row.due_date) : null,
+  status: row.status as TodoStatus,
+  priority: row.priority as TodoPriority,
+}))
+
+const loadTodos = async () => {
+  isTodosLoading.value = true
+  todosErrorMessage.value = ''
+
+  try {
+    const { data: userData, error: userError } = await supabase.auth.getUser()
+    if (userError) throw userError
+    if (!userData.user) return
+
+    const { data, error } = await supabase
+      .from('todos')
+      .select('id, title, due_date, status, priority')
+      .eq('user_id', userData.user.id)
+
+    if (error) {
+      if (tableMissingCodes.has(error.code || '')) {
+        todosErrorMessage.value = 'ยังไม่พบตาราง todos ใน Supabase'
+        todos.value = []
+        return
+      }
+      throw error
+    }
+
+    todos.value = normalizeTodoRows(data || [])
+  } catch (error: any) {
+    console.error('Load todos error:', error)
+    todosErrorMessage.value = error?.message || 'โหลดข้อมูลงานไม่สำเร็จ'
+  } finally {
+    isTodosLoading.value = false
+  }
+}
+
+const markTodoDone = async (id: string) => {
+  try {
+    const { data: userData } = await supabase.auth.getUser()
+    if (!userData.user) return
+
+    const query = supabase.from('todos') as any
+    const { error } = await query
+      .update({ status: 'completed' })
+      .eq('id', id)
+      .eq('user_id', userData.user.id)
+
+    if (error) throw error
+    
+    todos.value = todos.value.map(t => t.id === id ? { ...t, status: 'completed' } : t)
+  } catch (err: any) {
+    console.error('Mark done error:', err)
+  }
+}
+
+const normalizeEventRows = (rows: any[]): DashboardEventRow[] => rows.map((row) => ({
+  id: String(row.id),
+  title: String(row.title),
+  event_type: row.event_type as EventTypeType,
+  start_date: String(row.start_date),
+  start_time: row.start_time ? String(row.start_time) : null,
+  end_date: row.end_date ? String(row.end_date) : null,
+  end_time: row.end_time ? String(row.end_time) : null,
+}))
+
+const loadEvents = async () => {
+  isEventsLoading.value = true
+  eventsErrorMessage.value = ''
+
+  try {
+    const { data: userData, error: userError } = await supabase.auth.getUser()
+    if (userError) throw userError
+    if (!userData.user) return
+
+    const { data, error } = await supabase
+      .from('events')
+      .select('id, title, event_type, start_date, start_time, end_date, end_time')
+      .eq('user_id', userData.user.id)
+
+    if (error) {
+      if (tableMissingCodes.has(error.code || '')) {
+        eventsErrorMessage.value = 'ยังไม่พบตาราง events ใน Supabase'
+        events.value = []
+        return
+      }
+      throw error
+    }
+
+    events.value = normalizeEventRows(data || [])
+  } catch (error: any) {
+    console.error('Load events error:', error)
+    eventsErrorMessage.value = error?.message || 'โหลดข้อมูลกิจกรรมไม่สำเร็จ'
+  } finally {
+    isEventsLoading.value = false
+  }
+}
+
 const refreshOverview = async () => {
   await Promise.all([
     loadTransactions(),
     loadStudySchedules(),
+    loadTodos(),
+    loadEvents()
   ])
 }
 
