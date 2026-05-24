@@ -49,20 +49,26 @@
           <div
             v-for="item in events"
             :key="item.id"
-            class="flex items-start gap-4 p-4 rounded-xl border border-gray-800/70 bg-gray-800/20"
+            class="flex items-start gap-4 p-4 rounded-xl border"
+            :class="getEventBoxClass(item.event_type)"
           >
-            <div class="mt-1 w-10 text-center shrink-0">
-              <div class="text-xs text-rose-400 font-bold uppercase">{{ getMonthShort(item.start_date) }}</div>
+            <div class="mt-1 w-12 text-center shrink-0 bg-gray-900/50 rounded-lg py-2 border border-gray-800">
+              <div class="text-[10px] font-bold uppercase" :class="getEventDateColor(item.event_type)">{{ getMonthShort(item.start_date) }}</div>
               <div class="text-xl text-white font-bold">{{ getDay(item.start_date) }}</div>
             </div>
 
             <div class="flex-1 min-w-0">
-              <h3 class="text-base font-medium text-white truncate">{{ item.title }}</h3>
-              <p class="text-xs text-sky-400 font-medium mt-0.5">{{ displayEventDateTime(item) }}</p>
+              <div class="flex items-center gap-2 mb-1">
+                <h3 class="text-base font-medium text-white truncate">{{ item.title }}</h3>
+                <span class="text-[10px] px-2 py-0.5 rounded-full border whitespace-nowrap" :class="getEventBadgeClass(item.event_type)">
+                  {{ getEventTypeName(item.event_type) }}
+                </span>
+              </div>
+              <p class="text-xs font-medium" :class="getEventTextColor(item.event_type)">{{ displayEventDateTime(item) }}</p>
               <p v-if="item.description" class="text-sm text-gray-400 mt-2 line-clamp-2">{{ item.description }}</p>
             </div>
 
-            <div class="flex items-center gap-1 shrink-0 bg-gray-800/50 rounded-lg p-1">
+            <div class="flex items-center gap-1 shrink-0 bg-gray-900/50 rounded-lg p-1 border border-gray-800">
               <button
                 @click="openEditModal(item)"
                 class="p-2 inline-flex items-center justify-center rounded text-sky-300 hover:bg-sky-500/20"
@@ -305,6 +311,41 @@ const getDay = (dateString: string) => {
 const formatTime = (timeString: string | null) => {
   if (!timeString) return ''
   return timeString.slice(0, 5) + ' น.'
+}
+
+const getEventBoxClass = (type: EventTypeType) => {
+  if (type === 'same_day_time') return 'border-sky-500/30 bg-sky-500/10'
+  if (type === 'same_day_all_day') return 'border-emerald-500/30 bg-emerald-500/10'
+  if (type === 'multi_day') return 'border-violet-500/30 bg-violet-500/10'
+  return 'border-gray-800/70 bg-gray-800/20'
+}
+
+const getEventBadgeClass = (type: EventTypeType) => {
+  if (type === 'same_day_time') return 'border-sky-500/30 bg-sky-500/20 text-sky-300'
+  if (type === 'same_day_all_day') return 'border-emerald-500/30 bg-emerald-500/20 text-emerald-300'
+  if (type === 'multi_day') return 'border-violet-500/30 bg-violet-500/20 text-violet-300'
+  return ''
+}
+
+const getEventTextColor = (type: EventTypeType) => {
+  if (type === 'same_day_time') return 'text-sky-300'
+  if (type === 'same_day_all_day') return 'text-emerald-300'
+  if (type === 'multi_day') return 'text-violet-300'
+  return 'text-sky-400'
+}
+
+const getEventDateColor = (type: EventTypeType) => {
+  if (type === 'same_day_time') return 'text-sky-400'
+  if (type === 'same_day_all_day') return 'text-emerald-400'
+  if (type === 'multi_day') return 'text-violet-400'
+  return 'text-rose-400'
+}
+
+const getEventTypeName = (type: EventTypeType) => {
+  if (type === 'same_day_time') return 'ระบุเวลา'
+  if (type === 'same_day_all_day') return 'ตลอดวัน'
+  if (type === 'multi_day') return 'ข้ามวัน'
+  return ''
 }
 
 const displayEventDateTime = (item: EventRow) => {
