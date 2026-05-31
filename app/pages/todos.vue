@@ -356,7 +356,7 @@ const toggleStatus = async (item: TodoRow) => {
     if (error) throw error
     
     const index = todos.value.findIndex(t => t.id === item.id)
-    if (index !== -1) {
+    if (index !== -1 && todos.value[index]) {
       todos.value[index].status = newStatus
     }
   } catch (err: any) {
