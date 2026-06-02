@@ -40,6 +40,7 @@ export default defineEventHandler(async (event) => {
   const sentAt = new Date().toLocaleString('th-TH', {
     dateStyle: 'medium',
     timeStyle: 'short',
+    timeZone: 'Asia/Bangkok',
   })
 
   await pushLineTextMessage(

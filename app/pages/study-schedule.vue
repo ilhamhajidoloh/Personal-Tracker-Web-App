@@ -308,6 +308,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
+import { nowTH } from '~/utils/date'
 
 type ScheduleRow = {
   id: string
@@ -403,7 +404,7 @@ const submitButtonText = computed(() => {
 })
 
 const todayWeekday = computed(() => {
-  const day = new Date().getDay()
+  const day = nowTH().getDay()
   return day === 0 ? 7 : day
 })
 
@@ -480,7 +481,7 @@ const nextClass = computed(() => {
     return null
   }
 
-  const now = new Date()
+  const now = nowTH()
   const currentDay = now.getDay() === 0 ? 7 : now.getDay()
   const currentMinutes = (now.getHours() * 60) + now.getMinutes()
 

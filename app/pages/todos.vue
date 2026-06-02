@@ -219,6 +219,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
+import { getTodayTH } from '~/utils/date'
 
 type TodoStatus = 'pending' | 'in_progress' | 'completed'
 type TodoPriority = 'low' | 'medium' | 'high'
@@ -277,7 +278,7 @@ const pendingTodos = computed(() => todos.value.filter(t => t.status !== 'comple
 const completedTodos = computed(() => todos.value.filter(t => t.status === 'completed'))
 
 const urgentTodos = computed(() => {
-  const today = new Date().toISOString().slice(0, 10)
+  const today = getTodayTH()
   return todos.value.filter(t => 
     t.status !== 'completed' && 
     (t.due_date && t.due_date <= today)
@@ -315,7 +316,7 @@ const getDueDateColor = (item: TodoRow) => {
   if (item.status === 'completed') return 'text-gray-500'
   if (!item.due_date) return 'text-gray-400'
   
-  const today = new Date().toISOString().slice(0, 10)
+  const today = getTodayTH()
   if (item.due_date < today) return 'text-rose-400 font-medium'
   if (item.due_date === today) return 'text-amber-400 font-medium'
   return 'text-sky-400'

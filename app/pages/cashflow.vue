@@ -319,6 +319,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
+import { getTodayTH, getThisMonthTH } from '~/utils/date'
 
 type TransactionType = 'income' | 'expense'
 
@@ -367,13 +368,13 @@ const editingTransactionId = ref('')
 const errorMessage = ref('')
 const transactions = ref<TransactionRow[]>([])
 
-const summaryFilterMonth = ref(new Date().toISOString().slice(0, 7))
+const summaryFilterMonth = ref(getThisMonthTH())
 const transactionFilterMode = ref<'all' | 'day' | 'month'>('all')
-const transactionFilterDate = ref(new Date().toISOString().slice(0, 10))
-const transactionFilterMonth = ref(new Date().toISOString().slice(0, 7))
+const transactionFilterDate = ref(getTodayTH())
+const transactionFilterMonth = ref(getThisMonthTH())
 
 const form = reactive({
-  entryDate: new Date().toISOString().slice(0, 10),
+  entryDate: getTodayTH(),
   type: 'expense' as TransactionType,
   category: '',
   description: '',
@@ -521,7 +522,7 @@ const filteredTransactions = computed(() => {
 })
 
 const resetForm = () => {
-  form.entryDate = new Date().toISOString().slice(0, 10)
+  form.entryDate = getTodayTH()
   form.type = 'expense'
   form.category = ''
   form.description = ''

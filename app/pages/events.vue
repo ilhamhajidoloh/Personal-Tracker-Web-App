@@ -216,6 +216,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
+import { getTodayTH } from '~/utils/date'
 
 type EventTypeType = 'same_day_time' | 'same_day_all_day' | 'multi_day'
 
@@ -263,9 +264,9 @@ const form = reactive({
   title: '',
   description: '',
   eventType: 'same_day_time' as EventTypeType,
-  startDate: new Date().toISOString().slice(0, 10),
+  startDate: getTodayTH(),
   startTime: '10:00',
-  endDate: new Date().toISOString().slice(0, 10),
+  endDate: getTodayTH(),
   endTime: '12:00',
 })
 
@@ -275,9 +276,9 @@ const resetForm = () => {
   form.title = ''
   form.description = ''
   form.eventType = 'same_day_time'
-  form.startDate = new Date().toISOString().slice(0, 10)
+  form.startDate = getTodayTH()
   form.startTime = '10:00'
-  form.endDate = new Date().toISOString().slice(0, 10)
+  form.endDate = getTodayTH()
   form.endTime = '12:00'
   editingId.value = ''
 }
@@ -287,9 +288,9 @@ const openEditModal = (item: EventRow) => {
   form.title = item.title
   form.description = item.description || ''
   form.eventType = item.event_type
-  form.startDate = item.start_date || new Date().toISOString().slice(0, 10)
+  form.startDate = item.start_date || getTodayTH()
   form.startTime = item.start_time ? item.start_time.slice(0, 5) : '10:00'
-  form.endDate = item.end_date || item.start_date || new Date().toISOString().slice(0, 10)
+  form.endDate = item.end_date || item.start_date || getTodayTH()
   form.endTime = item.end_time ? item.end_time.slice(0, 5) : '12:00'
   errorMessage.value = ''
   isEntryModalOpen.value = true

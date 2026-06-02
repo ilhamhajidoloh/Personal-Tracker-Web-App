@@ -318,6 +318,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { getTodayTH, nowTH } from '~/utils/date'
 
 type TransactionType = 'income' | 'expense'
 
@@ -388,7 +389,7 @@ const scheduleErrorMessage = ref('')
 const todosErrorMessage = ref('')
 const eventsErrorMessage = ref('')
 
-const todayText = new Date().toLocaleDateString('th-TH', {
+const todayText = nowTH().toLocaleDateString('th-TH', {
   weekday: 'long',
   day: '2-digit',
   month: 'long',
@@ -552,7 +553,7 @@ const sortedStudySchedules = computed(() => [...studySchedules.value].sort((a, b
 }))
 
 const todayWeekday = computed(() => {
-  const day = new Date().getDay()
+  const day = nowTH().getDay()
   return day === 0 ? 7 : day
 })
 
@@ -564,7 +565,7 @@ const todaysStudyClasses = computed(() => sortedStudySchedules.value
 const todaysStudyPreview = computed(() => todaysStudyClasses.value.slice(0, 4))
 
 const dashboardTodos = computed(() => {
-  const today = new Date().toISOString().slice(0, 10)
+  const today = getTodayTH()
   return todos.value
     .filter(t => t.status !== 'completed' && (t.priority === 'high' || (t.due_date && t.due_date <= today)))
     .sort((a, b) => {
@@ -577,14 +578,14 @@ const dashboardTodos = computed(() => {
 
 const getTodoDateColor = (item: TodoRow) => {
   if (!item.due_date) return 'text-gray-500'
-  const today = new Date().toISOString().slice(0, 10)
+  const today = getTodayTH()
   if (item.due_date < today) return 'text-rose-400 font-medium'
   if (item.due_date === today) return 'text-amber-400 font-medium'
   return 'text-gray-400'
 }
 
 const dashboardEvents = computed(() => {
-  const today = new Date().toISOString().slice(0, 10)
+  const today = getTodayTH()
   return events.value
     .filter(e => {
         const maxDate = e.end_date || e.start_date
@@ -613,7 +614,7 @@ const nextStudyClassMeta = computed<NextStudyClassMeta>(() => {
     return null
   }
 
-  const now = new Date()
+  const now = nowTH()
   const currentDay = now.getDay() === 0 ? 7 : now.getDay()
   const currentMinutes = (now.getHours() * 60) + now.getMinutes()
 

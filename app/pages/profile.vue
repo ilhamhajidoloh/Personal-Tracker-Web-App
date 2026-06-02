@@ -377,7 +377,7 @@ const createdAtText = computed(() => {
     return '-'
   }
 
-  return new Date(currentUser.value.created_at).toLocaleString('th-TH')
+  return new Date(currentUser.value.created_at).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })
 })
 
 const lastSignInText = computed(() => {
@@ -385,7 +385,7 @@ const lastSignInText = computed(() => {
     return '-'
   }
 
-  return new Date(currentUser.value.last_sign_in_at).toLocaleString('th-TH')
+  return new Date(currentUser.value.last_sign_in_at).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })
 })
 
 const importantProfileRows = computed(() => [
@@ -423,7 +423,7 @@ const lineConnectedAtText = computed(() => {
     return '-'
   }
 
-  return new Date(lineStatus.value.connectedAt).toLocaleString('th-TH')
+  return new Date(lineStatus.value.connectedAt).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })
 })
 
 const lineNotificationsText = computed(() => lineStatus.value.notificationsEnabled ? 'เปิดอยู่' : 'ปิดอยู่')
@@ -436,6 +436,7 @@ const lineLinkCodeExpiresAtText = computed(() => {
   return new Date(lineLinkCode.value.expiresAt).toLocaleTimeString('th-TH', {
     hour: '2-digit',
     minute: '2-digit',
+    timeZone: 'Asia/Bangkok',
   })
 })
 
