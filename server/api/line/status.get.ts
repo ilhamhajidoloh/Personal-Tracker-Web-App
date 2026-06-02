@@ -1,9 +1,8 @@
-import { serverSupabaseServiceRole, serverSupabaseUser } from '#supabase/server'
+import { serverSupabaseUser } from '#supabase/server'
 
 import { getLineConnectionStatus } from '../../utils/line'
 
 type LineAuthUser = {
-  id: string
   user_metadata?: Record<string, unknown>
 }
 
@@ -17,12 +16,5 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const supabaseAdmin = serverSupabaseServiceRole(event)
-  const { data: authUserData, error: authUserError } = await supabaseAdmin.auth.admin.getUserById(user.id)
-
-  if (authUserError || !authUserData.user) {
-    return getLineConnectionStatus({ user_metadata: user.user_metadata || {} })
-  }
-
-  return getLineConnectionStatus({ user_metadata: authUserData.user.user_metadata || {} })
+  return getLineConnectionStatus({ user_metadata: user.user_metadata || {} })
 })
