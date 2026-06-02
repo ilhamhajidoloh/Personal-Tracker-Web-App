@@ -7,6 +7,11 @@ type LineMetadataCarrier = {
   user_metadata?: Record<string, unknown>
 }
 
+type AuthUserIdCarrier = {
+  id?: unknown
+  sub?: unknown
+}
+
 export type LineConnectionStatus = {
   connected: boolean
   lineUserId: string
@@ -81,6 +86,11 @@ export const getLineConnectionStatus = (user: LineMetadataCarrier | null | undef
   }
 }
 
+export const getAuthUserId = (user: AuthUserIdCarrier | null | undefined) => {
+  const authUserId = [user?.id, user?.sub].find((value) => typeof value === 'string' && value.trim())
+  return typeof authUserId === 'string' ? authUserId.trim() : ''
+}
+
 export const withLineConnectionMetadata = (
   user: LineMetadataCarrier,
   lineUserId: string,
@@ -106,9 +116,13 @@ export const createLineLinkToken = async (
   secret: string,
   payload: Omit<LineLinkTokenPayload, 'version'>,
 ) => {
+  if (typeof payload.userId !== 'string' || !payload.userId.trim()) {
+    throw new Error('Missing MyLife user ID for LINE link token')
+  }
+
   const normalizedPayload: LineLinkTokenPayload = {
     version: 1,
-    userId: payload.userId,
+    userId: payload.userId.trim(),
     notificationsEnabled: payload.notificationsEnabled,
     expiresAt: payload.expiresAt,
   }

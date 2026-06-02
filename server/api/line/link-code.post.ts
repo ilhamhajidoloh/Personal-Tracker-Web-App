@@ -1,9 +1,10 @@
 import { serverSupabaseUser } from '#supabase/server'
 
-import { createLineLinkToken, getLineLinkMessage } from '../../utils/line'
+import { createLineLinkToken, getAuthUserId, getLineLinkMessage } from '../../utils/line'
 
 type LineAuthUser = {
-  id: string
+  id?: string
+  sub?: string
 }
 
 type LinkCodeBody = {
@@ -22,6 +23,15 @@ export default defineEventHandler(async (event) => {
     })
   }
 
+  const authUserId = getAuthUserId(user)
+
+  if (!authUserId) {
+    throw createError({
+      statusCode: 500,
+      statusMessage: 'ไม่พบรหัสผู้ใช้สำหรับสร้างโค้ดเชื่อมต่อ LINE',
+    })
+  }
+
   const config = useRuntimeConfig(event)
 
   if (!config.line.channelSecret) {
@@ -34,7 +44,7 @@ export default defineEventHandler(async (event) => {
   const body = await readBody<LinkCodeBody>(event)
   const expiresAt = Date.now() + LINE_LINK_CODE_TTL_MS
   const token = await createLineLinkToken(config.line.channelSecret, {
-    userId: user.id,
+    userId: authUserId,
     notificationsEnabled: body?.notificationsEnabled !== false,
     expiresAt,
   })

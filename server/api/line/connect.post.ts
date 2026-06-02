@@ -1,6 +1,7 @@
 import { serverSupabaseServiceRole, serverSupabaseUser } from '#supabase/server'
 
 import {
+  getAuthUserId,
   getLineConnectionStatus,
   normalizeLineUserId,
   withLineConnectionMetadata,
@@ -12,7 +13,8 @@ type ConnectLineBody = {
 }
 
 type LineAuthUser = {
-  id: string
+  id?: string
+  sub?: string
   user_metadata?: Record<string, unknown>
 }
 
@@ -23,6 +25,15 @@ export default defineEventHandler(async (event) => {
     throw createError({
       statusCode: 401,
       statusMessage: 'กรุณาเข้าสู่ระบบก่อนเชื่อมต่อ LINE',
+    })
+  }
+
+  const authUserId = getAuthUserId(user)
+
+  if (!authUserId) {
+    throw createError({
+      statusCode: 500,
+      statusMessage: 'ไม่พบรหัสผู้ใช้สำหรับเชื่อมต่อ LINE',
     })
   }
 
@@ -39,7 +50,7 @@ export default defineEventHandler(async (event) => {
   const lineUser = { user_metadata: user.user_metadata || {} }
   const metadata = withLineConnectionMetadata(lineUser, lineUserId, body?.notificationsEnabled !== false)
   const supabaseAdmin = serverSupabaseServiceRole(event)
-  const { error } = await supabaseAdmin.auth.admin.updateUserById(user.id, {
+  const { error } = await supabaseAdmin.auth.admin.updateUserById(authUserId, {
     user_metadata: metadata,
   })
 

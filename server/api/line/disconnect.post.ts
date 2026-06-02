@@ -1,9 +1,10 @@
 import { serverSupabaseServiceRole, serverSupabaseUser } from '#supabase/server'
 
-import { getLineConnectionStatus, withoutLineConnectionMetadata } from '../../utils/line'
+import { getAuthUserId, getLineConnectionStatus, withoutLineConnectionMetadata } from '../../utils/line'
 
 type LineAuthUser = {
-  id: string
+  id?: string
+  sub?: string
   user_metadata?: Record<string, unknown>
 }
 
@@ -17,10 +18,19 @@ export default defineEventHandler(async (event) => {
     })
   }
 
+  const authUserId = getAuthUserId(user)
+
+  if (!authUserId) {
+    throw createError({
+      statusCode: 500,
+      statusMessage: 'ไม่พบรหัสผู้ใช้สำหรับยกเลิกการเชื่อมต่อ LINE',
+    })
+  }
+
   const lineUser = { user_metadata: user.user_metadata || {} }
   const metadata = withoutLineConnectionMetadata(lineUser)
   const supabaseAdmin = serverSupabaseServiceRole(event)
-  const { error } = await supabaseAdmin.auth.admin.updateUserById(user.id, {
+  const { error } = await supabaseAdmin.auth.admin.updateUserById(authUserId, {
     user_metadata: metadata,
   })
 
