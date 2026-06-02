@@ -248,6 +248,7 @@ useHead({ title: 'กิจกรรม' })
 const router = useRouter()
 const supabase = useSupabaseClient()
 const { toastSuccess, toastError, confirmDelete } = useAlert()
+const { notify, buildEventSavedMessage } = useLineMessaging()
 
 const isLoading = ref(true)
 const isSubmitting = ref(false)
@@ -451,11 +452,22 @@ const submitEvent = async () => {
       }
       throw error
     }
+
+    const lineMessage = buildEventSavedMessage({
+      title: payload.title,
+      eventType: payload.event_type,
+      startDate: payload.start_date,
+      startTime: payload.start_time,
+      endDate: payload.end_date,
+      endTime: payload.end_time,
+      isEditing: isEditing.value,
+    })
     
     toastSuccess(isEditing.value ? 'แก้ไขกิจกรรมสำเร็จ' : 'เพิ่มกิจกรรมสำเร็จ')
     isEntryModalOpen.value = false
     resetForm()
     await loadEvents()
+    void notify(lineMessage)
   } catch (error: any) {
     console.error('Save event error:', error)
     errorMessage.value = error?.message || 'บันทึกกิจกรรมไม่สำเร็จ'

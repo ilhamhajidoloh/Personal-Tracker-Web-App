@@ -248,6 +248,7 @@ useHead({ title: 'งานและ To-do' })
 const router = useRouter()
 const supabase = useSupabaseClient()
 const { toastSuccess, toastError, confirmDelete } = useAlert()
+const { notify, buildTodoSavedMessage } = useLineMessaging()
 
 const isLoading = ref(true)
 const isSubmitting = ref(false)
@@ -447,11 +448,19 @@ const submitTodo = async () => {
       }
       throw error
     }
+
+    const lineMessage = buildTodoSavedMessage({
+      title: payload.title,
+      dueDate: payload.due_date,
+      priority: payload.priority,
+      isEditing: isEditing.value,
+    })
     
     toastSuccess(isEditing.value ? 'แก้ไขงานสำเร็จ' : 'เพิ่มงานสำเร็จ')
     isEntryModalOpen.value = false
     resetForm()
     await loadTodos()
+    void notify(lineMessage)
   } catch (error: any) {
     console.error('Save todo error:', error)
     errorMessage.value = error?.message || 'บันทึกงานไม่สำเร็จ'

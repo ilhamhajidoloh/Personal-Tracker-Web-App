@@ -159,7 +159,7 @@
             <div class="rounded-xl border px-3 py-3" :class="nextStudyAlertBoxClass">
               <div class="flex items-start justify-between gap-2">
                 <div>
-                  <p class="text-xs text-gray-200/90">คาบถัดไป</p>
+                  <p class="text-xs text-gray-400">คาบถัดไป</p>
                   <p class="text-sm font-medium text-white mt-1">{{ nextStudyClassTitle }}</p>
                   <p class="text-xs text-gray-300 mt-1">{{ nextStudyClassSubtitle }}</p>
                 </div>
