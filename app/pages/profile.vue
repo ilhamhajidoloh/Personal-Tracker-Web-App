@@ -522,6 +522,7 @@ const startLineStatusPolling = () => {
       return
     }
 
+    await supabase.auth.refreshSession()
     await loadLineStatus({ silent: true, notifyOnConnect: true })
   }, 4000)
 }
@@ -618,6 +619,7 @@ const openLineForConnection = async () => {
 }
 
 const refreshLineStatus = async () => {
+  await supabase.auth.refreshSession()
   await loadLineStatus({ notifyOnConnect: true })
 
   if (!lineStatus.value.connected) {
