@@ -1,8 +1,10 @@
 import { serverSupabaseUser } from '#supabase/server'
 
-import { getLineConnectionStatus, pushLineTextMessage } from '../../utils/line'
+import { getAuthUserId, getLineConnectionStatus, pushLineTextMessage } from '../../utils/line'
 
 type LineAuthUser = {
+  id?: string
+  sub?: string
   user_metadata?: Record<string, unknown>
 }
 
@@ -22,7 +24,7 @@ export default defineEventHandler(async (event) => {
   if (!connection.connected) {
     throw createError({
       statusCode: 400,
-      statusMessage: 'ยังไม่ได้เชื่อมต่อ LINE User ID',
+      statusMessage: 'ยังไม่ได้เชื่อมต่อ LINE - กรุณาไปที่หน้า Profile แล้วทำการเชื่อมต่อ LINE ก่อน',
     })
   }
 
