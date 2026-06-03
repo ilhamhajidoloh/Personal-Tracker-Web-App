@@ -1,319 +1,338 @@
 <template>
   <AppTabsLayout>
-    <div class="flex-1 overflow-y-auto px-6 md:px-8 py-6 space-y-6">
-      <header class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+    <div class="flex-1 overflow-y-auto">
+      <!-- Page Header -->
+      <header class="sticky top-0 z-10 px-6 md:px-8 py-5 border-b border-gray-800/80 bg-gray-900/95 backdrop-blur-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 class="text-2xl font-bold text-white">รายรับรายจ่าย</h1>
-          <p class="text-sm text-gray-400 mt-1">บันทึกรายการรายวัน พร้อมสรุปยอดเงินคงเหลือ</p>
+          <h1 class="text-xl font-bold text-white tracking-tight">รายรับรายจ่าย</h1>
+          <p class="text-xs text-gray-500 mt-0.5">บันทึกรายการรายวัน พร้อมสรุปยอดเงินคงเหลือ</p>
         </div>
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2 shrink-0">
           <button
             @click="isEntryModalOpen = true"
-            class="px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 border border-violet-500/40 text-sm font-medium"
+            class="px-4 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-sm font-semibold text-white shadow-md shadow-violet-500/20 transition-all flex items-center gap-1.5"
           >
-            + เพิ่มรายการ
+            <span>+</span> เพิ่มรายการ
           </button>
           <button
             @click="loadTransactions"
             :disabled="isLoading"
-            class="px-4 py-2 rounded-xl bg-gray-800 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed border border-gray-700 text-sm"
+            class="px-4 py-2 rounded-xl bg-gray-800/80 hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed border border-gray-700/60 text-sm text-gray-400 hover:text-white transition-all"
           >
-            {{ isLoading ? 'กำลังโหลด...' : 'รีเฟรชข้อมูล' }}
+            {{ isLoading ? 'กำลังโหลด...' : '↻ รีเฟรช' }}
           </button>
         </div>
       </header>
 
-      <div
-        v-if="errorMessage"
-        class="rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-amber-200 text-sm"
-      >
-        {{ errorMessage }}
-      </div>
-
-      <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        <div class="bg-gray-900 border border-gray-800 rounded-2xl p-5">
-          <p class="text-xs text-gray-400">รายรับรวมทั้งหมด</p>
-          <p class="text-2xl font-bold text-emerald-400 mt-2">{{ formatCurrency(totalIncome) }}</p>
+      <div class="px-6 md:px-8 py-6 space-y-5">
+        <!-- Error -->
+        <div
+          v-if="errorMessage"
+          class="rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-amber-200 text-sm flex items-center gap-2"
+        >
+          <span>⚠️</span><span>{{ errorMessage }}</span>
         </div>
-        <div class="bg-gray-900 border border-gray-800 rounded-2xl p-5">
-          <p class="text-xs text-gray-400">รายจ่ายรวมทั้งหมด</p>
-          <p class="text-2xl font-bold text-rose-400 mt-2">{{ formatCurrency(totalExpense) }}</p>
 
-          <div class="mt-3">
-            <div class="h-2 w-full rounded-full bg-gray-800 overflow-hidden">
-              <div
-                class="h-full bg-rose-500 transition-all"
-                :style="{ width: `${expenseProgressPercent}%` }"
-              ></div>
-            </div>
-            <p class="text-xs text-gray-400 mt-1">
-              {{ expenseProgressText }}
-              <span v-if="overspentAmount > 0" class="text-amber-300">(เกิน {{ formatCurrency(overspentAmount) }})</span>
-            </p>
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-2 xl:grid-cols-4 gap-3 md:gap-4">
+          <!-- Income -->
+          <div class="bg-gray-900 border border-gray-800/80 rounded-2xl p-4 md:p-5">
+            <div class="w-10 h-10 rounded-xl bg-emerald-500/15 flex items-center justify-center text-xl mb-3">📈</div>
+            <p class="text-[11px] text-gray-500 font-medium uppercase tracking-wide">รายรับรวม</p>
+            <p class="text-2xl font-bold text-emerald-400 mt-1">{{ formatCurrency(totalIncome) }}</p>
           </div>
-        </div>
-        <div class="bg-gray-900 border border-gray-800 rounded-2xl p-5">
-          <p class="text-xs text-gray-400">เงินคงเหลือ</p>
-          <p class="text-2xl font-bold mt-2" :class="remainingBalance >= 0 ? 'text-sky-300' : 'text-amber-300'">
-            {{ formatCurrency(remainingBalance) }}
-          </p>
 
-          <div class="mt-3">
-            <div class="h-2 w-full rounded-full bg-gray-800 overflow-hidden">
-              <div
-                class="h-full transition-all"
-                :class="remainingBalance >= 0 ? 'bg-sky-500' : 'bg-amber-500'"
-                :style="{ width: `${remainingProgressPercent}%` }"
-              ></div>
-            </div>
-            <p class="text-xs text-gray-400 mt-1">{{ remainingProgressText }}</p>
-          </div>
-        </div>
-        <div class="bg-gray-900 border border-gray-800 rounded-2xl p-5">
-          <p class="text-xs text-gray-400">รายจ่ายที่มากที่สุด</p>
-          <p class="text-lg font-semibold text-white mt-2 truncate">{{ topExpenseCategory.name }}</p>
-          <p class="text-sm text-gray-400 mt-1">{{ formatCurrency(topExpenseCategory.amount) }}</p>
-        </div>
-      </div>
-
-      <section class="bg-gray-900 border border-gray-800 rounded-2xl p-5">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-          <div>
-            <h2 class="text-lg font-semibold text-white">สรุปรายรับรายจ่ายรายวัน</h2>
-            <p class="text-sm text-gray-400 mt-1">บอร์ดสรุปยอดเงินแต่ละวัน</p>
-          </div>
-          <div class="flex items-center gap-2">
-            <input
-              v-model="summaryFilterMonth"
-              type="month"
-              class="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-violet-500"
-            />
-            <button
-              v-if="summaryFilterMonth"
-              @click="summaryFilterMonth = ''"
-              class="text-xs text-gray-400 hover:text-white px-2"
-            >
-              ล้าง
-            </button>
-            <span class="text-xs bg-gray-800 text-gray-300 border border-gray-700 rounded-full px-3 py-1 ml-1">
-              {{ dailySummaries.length }} วัน
-            </span>
-          </div>
-        </div>
-
-        <div v-if="isLoading" class="text-sm text-gray-400">กำลังโหลดข้อมูล...</div>
-        <div v-else-if="!dailySummaries.length" class="text-sm text-gray-400">ยังไม่มีข้อมูลรายรับรายจ่าย</div>
-        <div v-else class="space-y-3">
-          <div
-            v-for="day in dailySummaries"
-            :key="day.date"
-            class="grid grid-cols-1 sm:grid-cols-4 gap-2 border border-gray-800 rounded-xl px-3 py-3"
-          >
-            <div>
-              <p class="text-xs text-gray-500">วันที่</p>
-              <p class="text-sm text-white mt-1">{{ formatDate(day.date) }}</p>
-            </div>
-            <div>
-              <p class="text-xs text-gray-500">รายรับ</p>
-              <p class="text-sm text-emerald-400 mt-1">{{ formatCurrency(day.income) }}</p>
-            </div>
-            <div>
-              <p class="text-xs text-gray-500">รายจ่าย</p>
-              <p class="text-sm text-rose-400 mt-1">{{ formatCurrency(day.expense) }}</p>
-            </div>
-            <div>
-              <p class="text-xs text-gray-500">คงเหลือสุทธิ</p>
-              <p class="text-sm mt-1" :class="day.balance >= 0 ? 'text-sky-300' : 'text-amber-300'">
-                {{ formatCurrency(day.balance) }}
+          <!-- Expense -->
+          <div class="bg-gray-900 border border-gray-800/80 rounded-2xl p-4 md:p-5">
+            <div class="w-10 h-10 rounded-xl bg-rose-500/15 flex items-center justify-center text-xl mb-3">📉</div>
+            <p class="text-[11px] text-gray-500 font-medium uppercase tracking-wide">รายจ่ายรวม</p>
+            <p class="text-2xl font-bold text-rose-400 mt-1">{{ formatCurrency(totalExpense) }}</p>
+            <div class="mt-3">
+              <div class="h-1.5 w-full rounded-full bg-gray-800 overflow-hidden">
+                <div class="h-full bg-gradient-to-r from-rose-500 to-pink-400 transition-all duration-500" :style="{ width: `${expenseProgressPercent}%` }"></div>
+              </div>
+              <p class="text-[11px] text-gray-500 mt-1">
+                {{ expenseProgressText }}
+                <span v-if="overspentAmount > 0" class="text-amber-400"> (เกิน {{ formatCurrency(overspentAmount) }})</span>
               </p>
             </div>
           </div>
-        </div>
-      </section>
 
-      <section class="bg-gray-900 border border-gray-800 rounded-2xl p-5">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-          <h2 class="text-lg font-semibold text-white">รายการล่าสุด</h2>
-          <div class="flex items-center gap-2 flex-wrap">
-            <select
-              v-model="transactionFilterMode"
-              class="bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-sm text-white focus:outline-none focus:border-violet-500"
-            >
-              <option value="all">ทั้งหมด</option>
-              <option value="day">รายวัน</option>
-              <option value="month">รายเดือน</option>
-            </select>
-            
-            <input
-              v-if="transactionFilterMode === 'day'"
-              v-model="transactionFilterDate"
-              type="date"
-              class="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-violet-500"
-            />
-            <input
-              v-if="transactionFilterMode === 'month'"
-              v-model="transactionFilterMonth"
-              type="month"
-              class="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-violet-500"
-            />
-            
-            <span class="text-xs text-gray-400 ml-1">{{ filteredTransactions.length }} รายการ</span>
+          <!-- Balance -->
+          <div class="bg-gray-900 border border-gray-800/80 rounded-2xl p-4 md:p-5">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center text-xl mb-3" :class="remainingBalance >= 0 ? 'bg-sky-500/15' : 'bg-amber-500/15'">💰</div>
+            <p class="text-[11px] text-gray-500 font-medium uppercase tracking-wide">เงินคงเหลือ</p>
+            <p class="text-2xl font-bold mt-1" :class="remainingBalance >= 0 ? 'text-sky-300' : 'text-amber-300'">{{ formatCurrency(remainingBalance) }}</p>
+            <div class="mt-3">
+              <div class="h-1.5 w-full rounded-full bg-gray-800 overflow-hidden">
+                <div class="h-full transition-all duration-500" :class="remainingBalance >= 0 ? 'bg-gradient-to-r from-sky-500 to-cyan-400' : 'bg-gradient-to-r from-amber-500 to-orange-400'" :style="{ width: `${remainingProgressPercent}%` }"></div>
+              </div>
+              <p class="text-[11px] text-gray-500 mt-1">{{ remainingProgressText }}</p>
+            </div>
+          </div>
+
+          <!-- Top Category -->
+          <div class="bg-gray-900 border border-gray-800/80 rounded-2xl p-4 md:p-5">
+            <div class="w-10 h-10 rounded-xl bg-amber-500/15 flex items-center justify-center text-xl mb-3">🏷️</div>
+            <p class="text-[11px] text-gray-500 font-medium uppercase tracking-wide">หมวดสูงสุด</p>
+            <p class="text-lg font-bold text-white mt-1 truncate">{{ topExpenseCategory.name }}</p>
+            <p class="text-xs text-gray-500 mt-0.5">{{ formatCurrency(topExpenseCategory.amount) }}</p>
           </div>
         </div>
 
-        <div v-if="!filteredTransactions.length" class="text-sm text-gray-400">ยังไม่มีรายการ</div>
-
-        <div v-else class="overflow-x-auto">
-          <table class="min-w-full text-sm">
-            <thead>
-              <tr class="text-left text-gray-400 border-b border-gray-800">
-                <th class="py-2 pr-4 font-medium">วันที่</th>
-                <th class="py-2 pr-4 font-medium">ประเภท</th>
-                <th class="py-2 pr-4 font-medium">หมวดหมู่</th>
-                <th class="py-2 pr-4 font-medium">รายละเอียด</th>
-                <th class="py-2 text-right font-medium">จำนวนเงิน</th>
-                <th class="py-2 text-right font-medium">จัดการ</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="item in filteredTransactions"
-                :key="item.id"
-                class="border-b border-gray-800/70"
-              >
-                <td class="py-2 pr-4 text-gray-300">{{ formatDate(item.entry_date) }}</td>
-                <td class="py-2 pr-4">
-                  <span
-                    class="inline-flex px-2 py-0.5 rounded-full text-xs"
-                    :class="item.type === 'income' ? 'bg-emerald-500/15 text-emerald-300' : 'bg-rose-500/15 text-rose-300'"
-                  >
-                    {{ item.type === 'income' ? 'รายรับ' : 'รายจ่าย' }}
-                  </span>
-                </td>
-                <td class="py-2 pr-4 text-gray-300">{{ item.category || '-' }}</td>
-                <td class="py-2 pr-4 text-gray-400">{{ item.description || '-' }}</td>
-                <td class="py-2 text-right" :class="item.type === 'income' ? 'text-emerald-400' : 'text-rose-400'">
-                  {{ formatCurrency(item.amount) }}
-                </td>
-                <td class="py-2 text-right space-x-1">
-                  <button
-                    @click="openEditTransactionModal(item)"
-                    :disabled="isDeletingId === item.id"
-                    class="px-3 py-1.5 rounded-lg text-xs bg-sky-500/20 text-sky-200 hover:bg-sky-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    แก้ไข
-                  </button>
-                  <button
-                    @click="deleteTransaction(item.id)"
-                    :disabled="isDeletingId === item.id"
-                    class="px-3 py-1.5 rounded-lg text-xs bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {{ isDeletingId === item.id ? 'กำลังลบ...' : 'ลบ' }}
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <Teleport to="body">
-        <div
-          v-if="isEntryModalOpen"
-          class="fixed inset-0 z-50 flex items-center justify-center p-4"
-        >
-          <div class="absolute inset-0 bg-black/70" @click="isEntryModalOpen = false"></div>
-
-          <div class="relative w-full max-w-lg rounded-2xl border border-gray-700 bg-gray-900 shadow-2xl">
-            <div class="flex items-center justify-between px-5 py-4 border-b border-gray-800">
-              <div>
-                <h3 class="text-lg font-semibold text-white">{{ modalTitle }}</h3>
-                <p class="text-xs text-gray-400 mt-1">{{ modalSubtitle }}</p>
-              </div>
-              <button
-                @click="() => { isEntryModalOpen = false; resetForm() }"
-                class="w-8 h-8 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300"
-                aria-label="ปิด"
-              >
-                ✕
-              </button>
+        <!-- Daily Summary -->
+        <section class="bg-gray-900 border border-gray-800/80 rounded-2xl overflow-hidden">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 py-4 border-b border-gray-800/60">
+            <div>
+              <h2 class="text-base font-semibold text-white">สรุปรายวัน</h2>
+              <p class="text-xs text-gray-500 mt-0.5">ยอดรับจ่ายและคงเหลือแต่ละวัน</p>
             </div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <input
+                v-model="summaryFilterMonth"
+                type="month"
+                class="bg-gray-800/80 border border-gray-700/60 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 transition-all"
+              />
+              <button
+                v-if="summaryFilterMonth"
+                @click="summaryFilterMonth = ''"
+                class="text-xs text-gray-500 hover:text-white px-2 py-1 rounded-lg hover:bg-gray-800 transition-all"
+              >ล้าง ✕</button>
+              <span class="text-xs bg-gray-800/80 text-gray-400 border border-gray-700/60 rounded-full px-3 py-1">{{ dailySummaries.length }} วัน</span>
+            </div>
+          </div>
 
-            <form class="p-5 space-y-3" @submit.prevent="submitTransaction">
+          <div v-if="isLoading" class="p-5 space-y-2">
+            <div v-for="i in 3" :key="i" class="h-14 rounded-xl bg-gray-800/60 animate-pulse"></div>
+          </div>
+          <div v-else-if="!dailySummaries.length" class="flex flex-col items-center justify-center py-12 text-center px-5">
+            <div class="w-14 h-14 rounded-2xl bg-gray-800/70 flex items-center justify-center text-2xl mb-3">📊</div>
+            <p class="text-sm font-medium text-gray-400">ยังไม่มีข้อมูลรายรับรายจ่าย</p>
+          </div>
+          <div v-else class="divide-y divide-gray-800/50">
+            <div
+              v-for="day in dailySummaries"
+              :key="day.date"
+              class="grid grid-cols-4 gap-2 px-5 py-3.5 hover:bg-gray-800/20 transition-all"
+            >
               <div>
-                <label class="block text-xs text-gray-400 mb-1">วันที่</label>
+                <p class="text-[11px] text-gray-500">วันที่</p>
+                <p class="text-sm font-medium text-white mt-0.5">{{ formatDate(day.date) }}</p>
+              </div>
+              <div>
+                <p class="text-[11px] text-gray-500">รายรับ</p>
+                <p class="text-sm font-semibold text-emerald-400 mt-0.5">+{{ formatCurrency(day.income) }}</p>
+              </div>
+              <div>
+                <p class="text-[11px] text-gray-500">รายจ่าย</p>
+                <p class="text-sm font-semibold text-rose-400 mt-0.5">-{{ formatCurrency(day.expense) }}</p>
+              </div>
+              <div>
+                <p class="text-[11px] text-gray-500">คงเหลือ</p>
+                <p class="text-sm font-semibold mt-0.5" :class="day.balance >= 0 ? 'text-sky-300' : 'text-amber-300'">
+                  {{ formatCurrency(day.balance) }}
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Transaction List -->
+        <section class="bg-gray-900 border border-gray-800/80 rounded-2xl overflow-hidden">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 py-4 border-b border-gray-800/60">
+            <h2 class="text-base font-semibold text-white">รายการทั้งหมด</h2>
+            <div class="flex items-center gap-2 flex-wrap">
+              <select
+                v-model="transactionFilterMode"
+                class="bg-gray-800/80 border border-gray-700/60 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-violet-500 transition-all"
+              >
+                <option value="all">ทั้งหมด</option>
+                <option value="day">รายวัน</option>
+                <option value="month">รายเดือน</option>
+              </select>
+              <input
+                v-if="transactionFilterMode === 'day'"
+                v-model="transactionFilterDate"
+                type="date"
+                class="bg-gray-800/80 border border-gray-700/60 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-violet-500 transition-all"
+              />
+              <input
+                v-if="transactionFilterMode === 'month'"
+                v-model="transactionFilterMonth"
+                type="month"
+                class="bg-gray-800/80 border border-gray-700/60 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-violet-500 transition-all"
+              />
+              <span class="text-xs text-gray-500">{{ filteredTransactions.length }} รายการ</span>
+            </div>
+          </div>
+
+          <div v-if="!filteredTransactions.length" class="flex flex-col items-center justify-center py-12 text-center px-5">
+            <div class="w-14 h-14 rounded-2xl bg-gray-800/70 flex items-center justify-center text-2xl mb-3">💳</div>
+            <p class="text-sm font-medium text-gray-400">ยังไม่มีรายการ</p>
+          </div>
+
+          <div v-else class="overflow-x-auto">
+            <table class="min-w-full text-sm">
+              <thead>
+                <tr class="border-b border-gray-800/60 bg-gray-800/20">
+                  <th class="text-left py-3 px-5 text-[11px] font-semibold text-gray-500 uppercase tracking-wide">วันที่</th>
+                  <th class="text-left py-3 px-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide">ประเภท</th>
+                  <th class="text-left py-3 px-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide">หมวดหมู่</th>
+                  <th class="text-left py-3 px-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide hidden md:table-cell">รายละเอียด</th>
+                  <th class="text-right py-3 px-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide">จำนวนเงิน</th>
+                  <th class="text-right py-3 px-5 text-[11px] font-semibold text-gray-500 uppercase tracking-wide">จัดการ</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-800/40">
+                <tr
+                  v-for="item in filteredTransactions"
+                  :key="item.id"
+                  class="hover:bg-gray-800/20 transition-all"
+                >
+                  <td class="py-3 px-5 text-gray-300 text-xs whitespace-nowrap">{{ formatDate(item.entry_date) }}</td>
+                  <td class="py-3 px-3">
+                    <span
+                      class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold"
+                      :class="item.type === 'income'
+                        ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/25'
+                        : 'bg-rose-500/15 text-rose-400 border border-rose-500/25'"
+                    >
+                      {{ item.type === 'income' ? '↑ รับ' : '↓ จ่าย' }}
+                    </span>
+                  </td>
+                  <td class="py-3 px-3 text-gray-300 text-xs">{{ item.category || '-' }}</td>
+                  <td class="py-3 px-3 text-gray-500 text-xs hidden md:table-cell max-w-[180px] truncate">{{ item.description || '-' }}</td>
+                  <td class="py-3 px-3 text-right font-semibold text-sm" :class="item.type === 'income' ? 'text-emerald-400' : 'text-rose-400'">
+                    {{ item.type === 'income' ? '+' : '-' }}{{ formatCurrency(item.amount) }}
+                  </td>
+                  <td class="py-3 px-5 text-right">
+                    <div class="flex items-center justify-end gap-1.5">
+                      <button
+                        @click="openEditTransactionModal(item)"
+                        :disabled="isDeletingId === item.id"
+                        class="px-3 py-1.5 rounded-lg text-xs bg-sky-500/15 text-sky-400 hover:bg-sky-500/25 border border-sky-500/20 disabled:opacity-50 transition-all font-medium"
+                      >แก้ไข</button>
+                      <button
+                        @click="deleteTransaction(item.id)"
+                        :disabled="isDeletingId === item.id"
+                        class="px-3 py-1.5 rounded-lg text-xs bg-rose-500/15 text-rose-400 hover:bg-rose-500/25 border border-rose-500/20 disabled:opacity-50 transition-all font-medium"
+                      >{{ isDeletingId === item.id ? 'ลบ...' : 'ลบ' }}</button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- Add/Edit Modal -->
+    <Teleport to="body">
+      <div
+        v-if="isEntryModalOpen"
+        class="fixed inset-0 z-50 flex items-center justify-center p-4"
+      >
+        <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" @click="isEntryModalOpen = false"></div>
+
+        <div class="relative w-full max-w-lg rounded-2xl border border-gray-700/80 bg-gray-900 shadow-2xl overflow-hidden">
+          <!-- Modal Header -->
+          <div class="flex items-center justify-between px-6 py-4 border-b border-gray-800/80">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-xl flex items-center justify-center text-base" :class="form.type === 'income' ? 'bg-emerald-500/20' : 'bg-rose-500/20'">
+                {{ form.type === 'income' ? '📈' : '📉' }}
+              </div>
+              <div>
+                <h3 class="text-base font-semibold text-white">{{ modalTitle }}</h3>
+                <p class="text-xs text-gray-500">{{ modalSubtitle }}</p>
+              </div>
+            </div>
+            <button
+              @click="() => { isEntryModalOpen = false; resetForm() }"
+              class="w-8 h-8 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white flex items-center justify-center text-sm transition-all"
+              aria-label="ปิด"
+            >✕</button>
+          </div>
+
+          <!-- Modal Body -->
+          <form class="p-6 space-y-4" @submit.prevent="submitTransaction">
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-medium text-gray-400 mb-1.5">วันที่</label>
                 <input
                   v-model="form.entryDate"
                   type="date"
-                  class="w-full bg-gray-800 border border-gray-700 rounded-xl px-3 py-2 text-sm outline-none focus:border-violet-500"
+                  class="w-full bg-gray-800/80 border border-gray-700/60 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 transition-all"
                 >
               </div>
-
               <div>
-                <label class="block text-xs text-gray-400 mb-1">ประเภท</label>
+                <label class="block text-xs font-medium text-gray-400 mb-1.5">ประเภท</label>
                 <select
                   v-model="form.type"
-                  class="w-full bg-gray-800 border border-gray-700 rounded-xl px-3 py-2 text-sm outline-none focus:border-violet-500"
+                  class="w-full bg-gray-800/80 border border-gray-700/60 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 transition-all"
                 >
-                  <option value="income">รายรับ</option>
-                  <option value="expense">รายจ่าย</option>
+                  <option value="income">📈 รายรับ</option>
+                  <option value="expense">📉 รายจ่าย</option>
                 </select>
               </div>
+            </div>
 
-              <div>
-                <label class="block text-xs text-gray-400 mb-1">หมวดหมู่</label>
-                <input
-                  v-model="form.category"
-                  type="text"
-                  maxlength="80"
-                  placeholder="เช่น เงินเดือน, ค่าอาหาร"
-                  class="w-full bg-gray-800 border border-gray-700 rounded-xl px-3 py-2 text-sm outline-none focus:border-violet-500"
-                >
-              </div>
+            <div>
+              <label class="block text-xs font-medium text-gray-400 mb-1.5">หมวดหมู่</label>
+              <input
+                v-model="form.category"
+                type="text"
+                maxlength="80"
+                placeholder="เช่น เงินเดือน, ค่าอาหาร, ค่าเดินทาง..."
+                class="w-full bg-gray-800/80 border border-gray-700/60 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-600 outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 transition-all"
+              >
+            </div>
 
-              <div>
-                <label class="block text-xs text-gray-400 mb-1">จำนวนเงิน (บาท)</label>
+            <div>
+              <label class="block text-xs font-medium text-gray-400 mb-1.5">จำนวนเงิน (บาท) <span class="text-rose-400">*</span></label>
+              <div class="relative">
+                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-medium">฿</span>
                 <input
                   v-model="form.amount"
                   type="number"
                   min="0"
                   step="0.01"
                   placeholder="0.00"
-                  class="w-full bg-gray-800 border border-gray-700 rounded-xl px-3 py-2 text-sm outline-none focus:border-violet-500"
+                  class="w-full bg-gray-800/80 border border-gray-700/60 rounded-xl pl-8 pr-4 py-2.5 text-sm text-white placeholder-gray-600 outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 transition-all"
                 >
               </div>
+            </div>
 
-              <div>
-                <label class="block text-xs text-gray-400 mb-1">รายละเอียด (ไม่บังคับ)</label>
-                <textarea
-                  v-model="form.description"
-                  rows="3"
-                  maxlength="300"
-                  class="w-full bg-gray-800 border border-gray-700 rounded-xl px-3 py-2 text-sm outline-none focus:border-violet-500 resize-none"
-                ></textarea>
-              </div>
+            <div>
+              <label class="block text-xs font-medium text-gray-400 mb-1.5">รายละเอียด (ไม่บังคับ)</label>
+              <textarea
+                v-model="form.description"
+                rows="2"
+                maxlength="300"
+                placeholder="บันทึกเพิ่มเติม..."
+                class="w-full bg-gray-800/80 border border-gray-700/60 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-600 outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 transition-all resize-none"
+              ></textarea>
+            </div>
 
-              <div class="pt-1 flex items-center justify-end gap-2">
-                <button
-                  type="button"
-                  @click="() => { isEntryModalOpen = false; resetForm() }"
-                  class="px-4 py-2 rounded-xl bg-gray-800 hover:bg-gray-700 text-sm"
-                >
-                  ยกเลิก
-                </button>
-                <button
-                  type="submit"
-                  :disabled="isSubmitting"
-                  class="px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium flex-1"
-                >
-                  {{ submitButtonText }}
-                </button>
-              </div>
-            </form>
-          </div>
+            <div class="flex gap-3 pt-2">
+              <button
+                type="button"
+                @click="() => { isEntryModalOpen = false; resetForm() }"
+                class="flex-1 py-2.5 rounded-xl bg-gray-800/80 hover:bg-gray-800 border border-gray-700/60 text-sm font-medium text-gray-300 hover:text-white transition-all"
+              >ยกเลิก</button>
+              <button
+                type="submit"
+                :disabled="isSubmitting"
+                class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-semibold text-white shadow-md shadow-violet-500/20 transition-all flex items-center justify-center gap-2"
+              >
+                <span v-if="isSubmitting" class="inline-block w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
+                {{ submitButtonText }}
+              </button>
+            </div>
+          </form>
         </div>
-      </Teleport>
-    </div>
+      </div>
+    </Teleport>
   </AppTabsLayout>
 </template>
 
@@ -349,13 +368,8 @@ type TransactionPayload = {
   amount: number
 }
 
-definePageMeta({
-  middleware: 'auth',
-})
-
-useHead({
-  title: 'รายรับรายจ่าย',
-})
+definePageMeta({ middleware: 'auth' })
+useHead({ title: 'รายรับรายจ่าย' })
 
 const router = useRouter()
 const supabase = useSupabaseClient()
@@ -384,140 +398,80 @@ const form = reactive({
 const tableMissingCodes = new Set(['42P01', 'PGRST205'])
 
 const formatCurrency = (amount: number) => new Intl.NumberFormat('th-TH', {
-  style: 'currency',
-  currency: 'THB',
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
+  style: 'currency', currency: 'THB', minimumFractionDigits: 2, maximumFractionDigits: 2,
 }).format(amount)
 
 const formatDate = (dateString: string) => new Date(dateString).toLocaleDateString('th-TH', {
-  day: '2-digit',
-  month: 'short',
-  year: 'numeric',
+  day: '2-digit', month: 'short', year: 'numeric',
 })
 
-const totalIncome = computed(() => transactions.value
-  .filter((item) => item.type === 'income')
-  .reduce((sum, item) => sum + item.amount, 0))
-
-const totalExpense = computed(() => transactions.value
-  .filter((item) => item.type === 'expense')
-  .reduce((sum, item) => sum + item.amount, 0))
-
+const totalIncome = computed(() => transactions.value.filter(i => i.type === 'income').reduce((s, i) => s + i.amount, 0))
+const totalExpense = computed(() => transactions.value.filter(i => i.type === 'expense').reduce((s, i) => s + i.amount, 0))
 const remainingBalance = computed(() => totalIncome.value - totalExpense.value)
-
 const overspentAmount = computed(() => Math.max(totalExpense.value - totalIncome.value, 0))
 
-const formatPercent = (value: number) => new Intl.NumberFormat('th-TH', {
-  minimumFractionDigits: 0,
-  maximumFractionDigits: 1,
-}).format(value)
+const formatPercent = (value: number) => new Intl.NumberFormat('th-TH', { minimumFractionDigits: 0, maximumFractionDigits: 1 }).format(value)
 
 const expenseProgressPercent = computed(() => {
-  if (totalIncome.value <= 0) {
-    return totalExpense.value > 0 ? 100 : 0
-  }
-
-  const ratio = (totalExpense.value / totalIncome.value) * 100
-  return Math.min(ratio, 100)
+  if (totalIncome.value <= 0) return totalExpense.value > 0 ? 100 : 0
+  return Math.min((totalExpense.value / totalIncome.value) * 100, 100)
 })
 
 const remainingProgressPercent = computed(() => {
-  if (totalIncome.value <= 0) {
-    return 0
-  }
-
-  const ratio = (remainingBalance.value / totalIncome.value) * 100
-  return Math.min(Math.max(ratio, 0), 100)
+  if (totalIncome.value <= 0) return 0
+  return Math.min(Math.max((remainingBalance.value / totalIncome.value) * 100, 0), 100)
 })
 
 const expenseProgressText = computed(() => {
-  if (totalIncome.value <= 0) {
-    return totalExpense.value > 0 ? 'มีรายจ่าย แต่ยังไม่มีรายรับเป็นฐานคำนวณ' : 'รอข้อมูลรายรับ/รายจ่าย'
-  }
-
+  if (totalIncome.value <= 0) return totalExpense.value > 0 ? 'มีรายจ่าย แต่ยังไม่มีรายรับ' : 'รอข้อมูล'
   return `ใช้ไป ${formatPercent((totalExpense.value / totalIncome.value) * 100)}% ของรายรับ`
 })
 
 const remainingProgressText = computed(() => {
-  if (totalIncome.value <= 0) {
-    return 'รอข้อมูลรายรับเพื่อคำนวณเงินคงเหลือ'
-  }
-
-  if (remainingBalance.value < 0) {
-    return 'รายจ่ายเกินรายรับ'
-  }
-
+  if (totalIncome.value <= 0) return 'รอข้อมูลรายรับ'
+  if (remainingBalance.value < 0) return 'รายจ่ายเกินรายรับ'
   return `คงเหลือ ${formatPercent((remainingBalance.value / totalIncome.value) * 100)}% ของรายรับ`
 })
 
 const isEditing = computed(() => Boolean(editingTransactionId.value))
-
 const modalTitle = computed(() => isEditing.value ? 'แก้ไขรายการ' : 'เพิ่มรายการใหม่')
-
-const modalSubtitle = computed(() => isEditing.value
-  ? 'ปรับข้อมูลรายรับ/รายจ่าย'
-  : 'บันทึกรายรับหรือรายจ่ายของแต่ละวัน')
-
+const modalSubtitle = computed(() => isEditing.value ? 'ปรับข้อมูลรายรับ/รายจ่าย' : 'บันทึกรายรับหรือรายจ่ายของแต่ละวัน')
 const submitButtonText = computed(() => {
-  if (isSubmitting.value) {
-    return isEditing.value ? 'กำลังบันทึกการแก้ไข...' : 'กำลังบันทึก...'
-  }
-
+  if (isSubmitting.value) return isEditing.value ? 'กำลังบันทึก...' : 'กำลังบันทึก...'
   return isEditing.value ? 'บันทึกการแก้ไข' : 'บันทึกรายการ'
 })
 
 const topExpenseCategory = computed(() => {
   const categoryTotals = transactions.value
-    .filter((item) => item.type === 'expense')
-    .reduce<Record<string, number>>((acc, item) => {
-      const key = item.category?.trim() || 'ไม่ระบุหมวดหมู่'
-      acc[key] = (acc[key] || 0) + item.amount
+    .filter(i => i.type === 'expense')
+    .reduce<Record<string, number>>((acc, i) => {
+      const key = i.category?.trim() || 'ไม่ระบุหมวดหมู่'
+      acc[key] = (acc[key] || 0) + i.amount
       return acc
     }, {})
-
-  const [name, amount] = Object.entries(categoryTotals)
-    .sort((a, b) => b[1] - a[1])[0] || ['-', 0]
-
+  const [name, amount] = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1])[0] || ['-', 0]
   return { name, amount }
 })
 
 const dailySummaries = computed<DailySummary[]>(() => {
   let source = transactions.value
-  if (summaryFilterMonth.value) {
-    source = source.filter(item => item.entry_date.startsWith(summaryFilterMonth.value))
-  }
-
-  const grouped = source.reduce<Record<string, DailySummary>>((acc, item) => {
-    const daySummary = acc[item.entry_date] ?? {
-        date: item.entry_date,
-        income: 0,
-        expense: 0,
-        balance: 0,
-      }
-
-    acc[item.entry_date] = daySummary
-
-    if (item.type === 'income') {
-      daySummary.income += item.amount
-    } else {
-      daySummary.expense += item.amount
-    }
-
-    daySummary.balance = daySummary.income - daySummary.expense
+  if (summaryFilterMonth.value) source = source.filter(i => i.entry_date.startsWith(summaryFilterMonth.value))
+  const grouped = source.reduce<Record<string, DailySummary>>((acc, i) => {
+    const d = acc[i.entry_date] ?? { date: i.entry_date, income: 0, expense: 0, balance: 0 }
+    acc[i.entry_date] = d
+    if (i.type === 'income') d.income += i.amount
+    else d.expense += i.amount
+    d.balance = d.income - d.expense
     return acc
   }, {})
-
   return Object.values(grouped).sort((a, b) => b.date.localeCompare(a.date))
 })
 
 const filteredTransactions = computed(() => {
-  if (transactionFilterMode.value === 'day' && transactionFilterDate.value) {
-    return transactions.value.filter(item => item.entry_date === transactionFilterDate.value)
-  }
-  if (transactionFilterMode.value === 'month' && transactionFilterMonth.value) {
-    return transactions.value.filter(item => item.entry_date.startsWith(transactionFilterMonth.value))
-  }
+  if (transactionFilterMode.value === 'day' && transactionFilterDate.value)
+    return transactions.value.filter(i => i.entry_date === transactionFilterDate.value)
+  if (transactionFilterMode.value === 'month' && transactionFilterMonth.value)
+    return transactions.value.filter(i => i.entry_date.startsWith(transactionFilterMonth.value))
   return transactions.value
 })
 
@@ -530,15 +484,12 @@ const resetForm = () => {
   editingTransactionId.value = ''
 }
 
-const normalizeRows = (rows: any[]): TransactionRow[] => rows.map((row) => ({
-  id: String(row.id),
-  user_id: String(row.user_id),
-  entry_date: String(row.entry_date),
+const normalizeRows = (rows: any[]): TransactionRow[] => rows.map(row => ({
+  id: String(row.id), user_id: String(row.user_id), entry_date: String(row.entry_date),
   type: row.type === 'income' ? 'income' : 'expense',
   category: typeof row.category === 'string' ? row.category : null,
   description: typeof row.description === 'string' ? row.description : null,
-  amount: Number(row.amount || 0),
-  created_at: String(row.created_at || ''),
+  amount: Number(row.amount || 0), created_at: String(row.created_at || ''),
 }))
 
 const openEditTransactionModal = (item: TransactionRow) => {
@@ -555,113 +506,55 @@ const openEditTransactionModal = (item: TransactionRow) => {
 const loadTransactions = async () => {
   isLoading.value = true
   errorMessage.value = ''
-
   try {
     const { data: userData, error: userError } = await supabase.auth.getUser()
-    if (userError) {
-      throw userError
-    }
-
-    if (!userData.user) {
-      await router.push('/login')
-      return
-    }
-
+    if (userError) throw userError
+    if (!userData.user) { await router.push('/login'); return }
     const { data, error } = await supabase
       .from('transactions')
       .select('id, user_id, entry_date, type, category, description, amount, created_at')
       .eq('user_id', userData.user.id)
       .order('entry_date', { ascending: false })
       .order('created_at', { ascending: false })
-
     if (error) {
-      if (tableMissingCodes.has(error.code || '')) {
-        errorMessage.value = 'ยังไม่พบตาราง transactions ใน Supabase กรุณาสร้างตารางก่อนใช้งาน'
-        transactions.value = []
-        return
-      }
-
+      if (tableMissingCodes.has(error.code || '')) { errorMessage.value = 'ยังไม่พบตาราง transactions ใน Supabase'; transactions.value = []; return }
       throw error
     }
-
     transactions.value = normalizeRows(data || [])
   } catch (error: any) {
     console.error('Load transactions error:', error)
-    errorMessage.value = error?.message || 'โหลดข้อมูลรายรับรายจ่ายไม่สำเร็จ'
+    errorMessage.value = error?.message || 'โหลดข้อมูลไม่สำเร็จ'
   } finally {
     isLoading.value = false
   }
 }
 
 const submitTransaction = async () => {
-  if (isSubmitting.value) {
-    return
-  }
-
+  if (isSubmitting.value) return
   const { toastSuccess, toastError, toastWarning } = useAlert()
   const amount = Math.abs(Number(form.amount))
-
-  if (!form.entryDate) {
-    errorMessage.value = 'กรุณาเลือกวันที่'
-    toastWarning('กรุณาเลือกวันที่')
-    return
-  }
-
-  if (!Number.isFinite(amount) || amount <= 0) {
-    errorMessage.value = 'กรุณาระบุจำนวนเงินให้ถูกต้อง'
-    toastWarning('กรุณาระบุจำนวนเงินให้ถูกต้อง')
-    return
-  }
-
+  if (!form.entryDate) { toastWarning('กรุณาเลือกวันที่'); return }
+  if (!Number.isFinite(amount) || amount <= 0) { toastWarning('กรุณาระบุจำนวนเงินให้ถูกต้อง'); return }
   isSubmitting.value = true
   errorMessage.value = ''
-
   try {
     const { data: userData, error: userError } = await supabase.auth.getUser()
-    if (userError) {
-      throw userError
-    }
-
-    if (!userData.user) {
-      await router.push('/login')
-      return
-    }
-
+    if (userError) throw userError
+    if (!userData.user) { await router.push('/login'); return }
     const payload: TransactionPayload = {
-      entry_date: form.entryDate,
-      type: form.type,
+      entry_date: form.entryDate, type: form.type,
       category: form.category.trim() || null,
-      description: form.description.trim() || null,
-      amount,
+      description: form.description.trim() || null, amount,
     }
-
-    const transactionsQuery = supabase.from('transactions') as any
-
+    const q = supabase.from('transactions') as any
     const { error } = isEditing.value
-      ? await transactionsQuery
-        .update(payload)
-        .eq('id', editingTransactionId.value)
-        .eq('user_id', userData.user.id)
-      : await transactionsQuery
-        .insert({
-          user_id: userData.user.id,
-          ...payload,
-        })
-
+      ? await q.update(payload).eq('id', editingTransactionId.value).eq('user_id', userData.user.id)
+      : await q.insert({ user_id: userData.user.id, ...payload })
     if (error) {
-      if (tableMissingCodes.has(error.code || '')) {
-        const msg = 'ยังไม่พบตาราง transactions ใน Supabase กรุณาสร้างตารางก่อนใช้งาน'
-        errorMessage.value = msg
-        toastError(msg)
-        return
-      }
-
+      if (tableMissingCodes.has(error.code || '')) { const msg = 'ยังไม่พบตาราง transactions ใน Supabase'; errorMessage.value = msg; toastError(msg); return }
       throw error
     }
-    
-    const successMsg = isEditing.value ? 'แก้ไขรายการสำเร็จ' : 'เพิ่มรายการสำเร็จ'
-    toastSuccess(successMsg)
-
+    toastSuccess(isEditing.value ? 'แก้ไขรายการสำเร็จ' : 'เพิ่มรายการสำเร็จ')
     isEntryModalOpen.value = false
     resetForm()
     await loadTransactions()
@@ -676,50 +569,20 @@ const submitTransaction = async () => {
 }
 
 const deleteTransaction = async (transactionId: string) => {
-  if (!transactionId || isDeletingId.value) {
-    return
-  }
-
+  if (!transactionId || isDeletingId.value) return
   const { confirmDelete, toastSuccess, toastError } = useAlert()
-  const shouldDelete = import.meta.client
-    ? await confirmDelete('ยืนยันการลบรายการนี้?', 'สรุปยอดเงินจะถูกคำนวณใหม่')
-    : true
-
-  if (!shouldDelete) {
-    return
-  }
-
+  const shouldDelete = import.meta.client ? await confirmDelete('ยืนยันการลบรายการนี้?', 'สรุปยอดเงินจะถูกคำนวณใหม่') : true
+  if (!shouldDelete) return
   isDeletingId.value = transactionId
   errorMessage.value = ''
-
   try {
     const { data: userData, error: userError } = await supabase.auth.getUser()
-    if (userError) {
-      throw userError
-    }
-
-    if (!userData.user) {
-      await router.push('/login')
-      return
-    }
-
-    const { error } = await supabase
-      .from('transactions')
-      .delete()
-      .eq('id', transactionId)
-      .eq('user_id', userData.user.id)
-
-    if (error) {
-      throw error
-    }
-
-    transactions.value = transactions.value.filter((item) => item.id !== transactionId)
-
-    if (editingTransactionId.value === transactionId) {
-      isEntryModalOpen.value = false
-      resetForm()
-    }
-    
+    if (userError) throw userError
+    if (!userData.user) { await router.push('/login'); return }
+    const { error } = await supabase.from('transactions').delete().eq('id', transactionId).eq('user_id', userData.user.id)
+    if (error) throw error
+    transactions.value = transactions.value.filter(i => i.id !== transactionId)
+    if (editingTransactionId.value === transactionId) { isEntryModalOpen.value = false; resetForm() }
     toastSuccess('ลบรายการสำเร็จ')
   } catch (error: any) {
     console.error('Delete transaction error:', error)
@@ -731,7 +594,5 @@ const deleteTransaction = async (transactionId: string) => {
   }
 }
 
-onMounted(() => {
-  loadTransactions()
-})
+onMounted(() => { loadTransactions() })
 </script>

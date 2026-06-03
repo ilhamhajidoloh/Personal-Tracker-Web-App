@@ -1,170 +1,197 @@
 <template>
   <AppTabsLayout>
-    <header class="px-6 md:px-8 py-5 border-b border-gray-800 flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4">
+    <!-- Page Header -->
+    <header class="px-6 md:px-8 py-5 border-b border-gray-800/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shrink-0 bg-gray-900/50">
       <div>
-        <h1 class="text-2xl font-bold text-white">Dashboard ภาพรวม</h1>
-        <p class="text-sm text-gray-400 mt-1">{{ todayText }}</p>
+        <h1 class="text-2xl font-bold text-white tracking-tight">ภาพรวม Dashboard</h1>
+        <p class="text-sm text-gray-500 mt-0.5">{{ todayText }}</p>
       </div>
       <div class="flex items-center gap-2">
         <NuxtLink
           to="/cashflow"
-          class="px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 border border-violet-500/40 text-sm font-medium transition-colors"
+          class="px-4 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 border border-violet-500/30 text-sm font-medium text-white shadow-md shadow-violet-500/20 transition-all"
         >
           รายรับรายจ่าย
         </NuxtLink>
         <NuxtLink
           to="/study-schedule"
-          class="px-4 py-2 rounded-xl bg-gray-800 hover:bg-gray-700 border border-gray-700 text-sm font-medium transition-colors"
+          class="px-4 py-2 rounded-xl bg-gray-800/80 hover:bg-gray-800 border border-gray-700/60 text-sm font-medium transition-all"
         >
           ตารางเรียน
         </NuxtLink>
       </div>
     </header>
 
-    <div class="flex-1 overflow-y-auto px-6 md:px-8 py-6 space-y-6">
+    <div class="flex-1 overflow-y-auto px-6 md:px-8 py-6 space-y-5">
+      <!-- Error -->
       <div
         v-if="errorMessage"
-        class="rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-amber-200 text-sm"
+        class="rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-amber-200 text-sm flex items-center gap-2"
       >
-        {{ errorMessage }}
+        <span>⚠️</span>
+        <span>{{ errorMessage }}</span>
       </div>
 
-      <section class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        <div class="bg-gray-900 border border-gray-800 rounded-2xl p-5">
-          <p class="text-xs text-gray-400">เงินคงเหลือรวม</p>
-          <p class="text-2xl font-bold mt-2" :class="remainingBalance >= 0 ? 'text-sky-300' : 'text-amber-300'">
+      <!-- Stats Cards Row -->
+      <section class="grid grid-cols-2 xl:grid-cols-4 gap-3 md:gap-4">
+        <!-- Balance -->
+        <div class="bg-gray-900 border border-gray-800/80 rounded-2xl p-4 md:p-5 col-span-2 sm:col-span-1">
+          <div class="flex items-start justify-between gap-2 mb-3">
+            <div class="w-10 h-10 rounded-xl bg-sky-500/15 flex items-center justify-center text-lg shrink-0">💰</div>
+            <span class="text-[10px] px-2 py-1 rounded-full font-medium" :class="remainingBalance >= 0 ? 'bg-sky-500/10 text-sky-400' : 'bg-amber-500/10 text-amber-400'">
+              {{ remainingBalance >= 0 ? 'บวก' : 'ติดลบ' }}
+            </span>
+          </div>
+          <p class="text-xs text-gray-500 font-medium">เงินคงเหลือรวม</p>
+          <p class="text-2xl font-bold mt-1" :class="remainingBalance >= 0 ? 'text-sky-300' : 'text-amber-300'">
             {{ formatCurrency(remainingBalance) }}
           </p>
-
           <div class="mt-3">
-            <div class="h-2 w-full rounded-full bg-gray-800 overflow-hidden">
+            <div class="h-1.5 w-full rounded-full bg-gray-800 overflow-hidden">
               <div
-                class="h-full transition-all"
-                :class="remainingBalance >= 0 ? 'bg-sky-500' : 'bg-amber-500'"
+                class="h-full transition-all duration-500"
+                :class="remainingBalance >= 0 ? 'bg-gradient-to-r from-sky-500 to-cyan-400' : 'bg-gradient-to-r from-amber-500 to-orange-400'"
                 :style="{ width: `${remainingProgressPercent}%` }"
               ></div>
             </div>
-            <p class="text-xs text-gray-400 mt-1">{{ remainingProgressText }}</p>
+            <p class="text-[11px] text-gray-500 mt-1">{{ remainingProgressText }}</p>
           </div>
         </div>
-        <div class="bg-gray-900 border border-gray-800 rounded-2xl p-5">
-          <p class="text-xs text-gray-400">รายรับรวม</p>
-          <p class="text-2xl font-bold text-emerald-400 mt-2">{{ formatCurrency(totalIncome) }}</p>
-        </div>
-        <div class="bg-gray-900 border border-gray-800 rounded-2xl p-5">
-          <p class="text-xs text-gray-400">รายจ่ายรวม</p>
-          <p class="text-2xl font-bold text-rose-400 mt-2">{{ formatCurrency(totalExpense) }}</p>
 
+        <!-- Income -->
+        <div class="bg-gray-900 border border-gray-800/80 rounded-2xl p-4 md:p-5">
+          <div class="w-10 h-10 rounded-xl bg-emerald-500/15 flex items-center justify-center text-lg mb-3">📈</div>
+          <p class="text-xs text-gray-500 font-medium">รายรับรวม</p>
+          <p class="text-2xl font-bold text-emerald-400 mt-1">{{ formatCurrency(totalIncome) }}</p>
+        </div>
+
+        <!-- Expense -->
+        <div class="bg-gray-900 border border-gray-800/80 rounded-2xl p-4 md:p-5">
+          <div class="w-10 h-10 rounded-xl bg-rose-500/15 flex items-center justify-center text-lg mb-3">📉</div>
+          <p class="text-xs text-gray-500 font-medium">รายจ่ายรวม</p>
+          <p class="text-2xl font-bold text-rose-400 mt-1">{{ formatCurrency(totalExpense) }}</p>
           <div class="mt-3">
-            <div class="h-2 w-full rounded-full bg-gray-800 overflow-hidden">
+            <div class="h-1.5 w-full rounded-full bg-gray-800 overflow-hidden">
               <div
-                class="h-full bg-rose-500 transition-all"
+                class="h-full bg-gradient-to-r from-rose-500 to-pink-400 transition-all duration-500"
                 :style="{ width: `${expenseProgressPercent}%` }"
               ></div>
             </div>
-            <p class="text-xs text-gray-400 mt-1">
+            <p class="text-[11px] text-gray-500 mt-1">
               {{ expenseProgressText }}
-              <span v-if="overspentAmount > 0" class="text-amber-300">(เกิน {{ formatCurrency(overspentAmount) }})</span>
+              <span v-if="overspentAmount > 0" class="text-amber-400">  (เกิน {{ formatCurrency(overspentAmount) }})</span>
             </p>
           </div>
         </div>
-        <div class="bg-gray-900 border border-gray-800 rounded-2xl p-5">
-          <p class="text-xs text-gray-400">รายจ่ายที่มากที่สุด</p>
-          <p class="text-lg font-semibold text-white mt-2 truncate">{{ topExpenseCategory.name }}</p>
-          <p class="text-sm text-gray-400 mt-1">{{ formatCurrency(topExpenseCategory.amount) }}</p>
+
+        <!-- Top Category -->
+        <div class="bg-gray-900 border border-gray-800/80 rounded-2xl p-4 md:p-5">
+          <div class="w-10 h-10 rounded-xl bg-amber-500/15 flex items-center justify-center text-lg mb-3">🏷️</div>
+          <p class="text-xs text-gray-500 font-medium">หมวดรายจ่ายสูงสุด</p>
+          <p class="text-lg font-bold text-white mt-1 truncate">{{ topExpenseCategory.name }}</p>
+          <p class="text-sm text-gray-500 mt-0.5">{{ formatCurrency(topExpenseCategory.amount) }}</p>
         </div>
       </section>
 
+      <!-- Finance + Schedule Row -->
       <section class="grid grid-cols-1 xl:grid-cols-5 gap-4">
-        <div class="xl:col-span-3 bg-gray-900 border border-gray-800 rounded-2xl p-5">
+        <!-- Finance Summary -->
+        <div class="xl:col-span-3 bg-gray-900 border border-gray-800/80 rounded-2xl p-5">
           <div class="flex items-start justify-between gap-3 mb-4">
             <div>
-              <h2 class="text-lg font-semibold text-white">สรุปการเงินแบบย่อ</h2>
-              <p class="text-sm text-gray-400 mt-1">แสดงเฉพาะข้อมูลสำคัญบนหน้า Dashboard</p>
+              <h2 class="text-base font-semibold text-white">สรุปการเงิน</h2>
+              <p class="text-xs text-gray-500 mt-0.5">ข้อมูลสำคัญแบบย่อ</p>
             </div>
             <button
               @click="refreshOverview"
               :disabled="isLoading"
-              class="px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed border border-gray-700 text-xs"
+              class="px-3 py-1.5 rounded-lg bg-gray-800/70 hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed border border-gray-700/60 text-xs text-gray-400 hover:text-white transition-all"
             >
-              {{ isLoading ? 'กำลังโหลด...' : 'รีเฟรช' }}
+              {{ isLoading ? 'กำลังโหลด...' : '↻ รีเฟรช' }}
             </button>
           </div>
 
-          <div v-if="isLoading" class="text-sm text-gray-400">กำลังโหลดข้อมูล...</div>
+          <div v-if="isLoading" class="space-y-2">
+            <div class="h-16 rounded-xl bg-gray-800/60 animate-pulse"></div>
+            <div class="h-16 rounded-xl bg-gray-800/60 animate-pulse"></div>
+          </div>
 
           <div v-else class="space-y-3">
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div class="border border-gray-800 rounded-xl px-3 py-3">
-                <p class="text-xs text-gray-500">จำนวนรายการทั้งหมด</p>
-                <p class="text-lg font-semibold text-white mt-1">{{ totalTransactions }} รายการ</p>
+            <div class="grid grid-cols-3 gap-3">
+              <div class="border border-gray-800/70 rounded-xl p-3">
+                <p class="text-[11px] text-gray-500">รายการทั้งหมด</p>
+                <p class="text-xl font-bold text-white mt-1">{{ totalTransactions }}</p>
+                <p class="text-[11px] text-gray-500">รายการ</p>
               </div>
-              <div class="border border-gray-800 rounded-xl px-3 py-3">
-                <p class="text-xs text-gray-500">รายการล่าสุด</p>
-                <p class="text-sm font-medium text-white mt-1">{{ latestTransactionTitle }}</p>
-                <p class="text-xs text-gray-400 mt-1">{{ latestTransactionSubtitle }}</p>
+              <div class="border border-gray-800/70 rounded-xl p-3">
+                <p class="text-[11px] text-gray-500">รายการล่าสุด</p>
+                <p class="text-sm font-semibold text-white mt-1 truncate">{{ latestTransactionTitle }}</p>
+                <p class="text-[11px] text-gray-500 mt-0.5 truncate">{{ latestTransactionSubtitle }}</p>
               </div>
-              <div class="border border-gray-800 rounded-xl px-3 py-3">
-                <p class="text-xs text-gray-500">ค่าใช้จ่ายหมวดสูงสุด</p>
-                <p class="text-sm font-medium text-white mt-1">{{ topExpenseCategory.name }}</p>
-                <p class="text-xs text-gray-400 mt-1">{{ formatCurrency(topExpenseCategory.amount) }}</p>
+              <div class="border border-gray-800/70 rounded-xl p-3">
+                <p class="text-[11px] text-gray-500">หมวดสูงสุด</p>
+                <p class="text-sm font-semibold text-white mt-1 truncate">{{ topExpenseCategory.name }}</p>
+                <p class="text-[11px] text-gray-500 mt-0.5">{{ formatCurrency(topExpenseCategory.amount) }}</p>
               </div>
             </div>
-
             <NuxtLink
               to="/cashflow"
-              class="inline-flex items-center px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 border border-violet-500/40 text-sm font-medium"
+              class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-violet-600/15 hover:bg-violet-600/25 border border-violet-500/20 text-sm font-medium text-violet-300 transition-all"
             >
-              ดูรายละเอียดรายรับรายจ่ายทั้งหมด
+              ดูรายละเอียดทั้งหมด →
             </NuxtLink>
           </div>
         </div>
 
-        <div class="xl:col-span-2 bg-gray-900 border border-gray-800 rounded-2xl p-5">
+        <!-- Study Schedule Summary -->
+        <div class="xl:col-span-2 bg-gray-900 border border-gray-800/80 rounded-2xl p-5">
           <div class="flex items-start justify-between gap-3 mb-4">
             <div>
-              <h2 class="text-lg font-semibold text-white">สรุปตารางเรียน</h2>
-              <p class="text-sm text-gray-400 mt-1">ข้อมูลจำเป็นสำหรับดูเร็วบนหน้า Dashboard</p>
+              <h2 class="text-base font-semibold text-white">ตารางเรียน</h2>
+              <p class="text-xs text-gray-500 mt-0.5">วันนี้และคาบถัดไป</p>
             </div>
             <button
               @click="loadStudySchedules"
               :disabled="isScheduleLoading"
-              class="px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed border border-gray-700 text-xs"
+              class="px-3 py-1.5 rounded-lg bg-gray-800/70 hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed border border-gray-700/60 text-xs text-gray-400 hover:text-white transition-all"
             >
-              {{ isScheduleLoading ? 'กำลังโหลด...' : 'รีเฟรช' }}
+              {{ isScheduleLoading ? 'กำลังโหลด...' : '↻ รีเฟรช' }}
             </button>
           </div>
 
-          <div
-            v-if="scheduleErrorMessage"
-            class="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-amber-200 text-xs mb-3"
-          >
+          <div v-if="scheduleErrorMessage" class="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-amber-200 text-xs mb-3">
             {{ scheduleErrorMessage }}
           </div>
 
-          <div v-if="isScheduleLoading" class="text-sm text-gray-400">กำลังโหลดข้อมูลตารางเรียน...</div>
+          <div v-if="isScheduleLoading" class="space-y-2">
+            <div class="h-12 rounded-xl bg-gray-800/60 animate-pulse"></div>
+            <div class="h-12 rounded-xl bg-gray-800/60 animate-pulse"></div>
+          </div>
 
           <div v-else class="space-y-3">
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div class="border border-gray-800 rounded-xl px-3 py-3">
-                <p class="text-xs text-gray-500">คาบเรียนวันนี้</p>
-                <p class="text-lg font-semibold text-white mt-1">{{ todaysStudyClasses.length }} คาบ</p>
+            <div class="grid grid-cols-2 gap-3">
+              <div class="border border-gray-800/70 rounded-xl p-3">
+                <p class="text-[11px] text-gray-500">วันนี้</p>
+                <p class="text-xl font-bold text-sky-300 mt-1">{{ todaysStudyClasses.length }}</p>
+                <p class="text-[11px] text-gray-500">คาบ</p>
               </div>
-              <div class="border border-gray-800 rounded-xl px-3 py-3">
-                <p class="text-xs text-gray-500">คาบทั้งหมดต่อสัปดาห์</p>
-                <p class="text-lg font-semibold text-white mt-1">{{ totalStudyClasses }} คาบ</p>
+              <div class="border border-gray-800/70 rounded-xl p-3">
+                <p class="text-[11px] text-gray-500">ทั้งสัปดาห์</p>
+                <p class="text-xl font-bold text-white mt-1">{{ totalStudyClasses }}</p>
+                <p class="text-[11px] text-gray-500">คาบ</p>
               </div>
             </div>
 
+            <!-- Next class card -->
             <div class="rounded-xl border px-3 py-3" :class="nextStudyAlertBoxClass">
               <div class="flex items-start justify-between gap-2">
-                <div>
-                  <p class="text-xs text-gray-400">คาบถัดไป</p>
-                  <p class="text-sm font-medium text-white mt-1">{{ nextStudyClassTitle }}</p>
-                  <p class="text-xs text-gray-300 mt-1">{{ nextStudyClassSubtitle }}</p>
+                <div class="min-w-0">
+                  <p class="text-[11px] text-gray-400">คาบถัดไป</p>
+                  <p class="text-sm font-semibold text-white mt-0.5 truncate">{{ nextStudyClassTitle }}</p>
+                  <p class="text-[11px] text-gray-400 mt-0.5">{{ nextStudyClassSubtitle }}</p>
                 </div>
                 <span
-                  class="text-xs font-medium px-2 py-1 rounded-full border whitespace-nowrap"
+                  class="text-[11px] font-semibold px-2 py-1 rounded-full border whitespace-nowrap shrink-0"
                   :class="nextStudyAlertBadgeClass"
                 >
                   {{ nextStudyAlertText }}
@@ -172,142 +199,149 @@
               </div>
             </div>
 
-            <div class="border border-gray-800 rounded-xl px-3 py-3">
-              <div class="flex items-center justify-between gap-2 mb-2">
-                <p class="text-xs text-gray-500">วิชาวันนี้</p>
-                <p v-if="todaysStudyClasses.length" class="text-xs text-gray-500">{{ todaysStudyClasses.length }} คาบ</p>
-              </div>
-
-              <div v-if="todaysStudyPreview.length" class="flex flex-wrap gap-2">
-                <span
-                  v-for="item in todaysStudyPreview"
-                  :key="item.id"
-                  class="px-2 py-1 rounded-full text-xs border"
-                  :class="getCourseChipClass(item.course_name)"
-                >
-                  {{ formatTime(item.start_time) }} {{ item.course_name }}
-                </span>
-
-                <span
-                  v-if="todaysStudyClasses.length > todaysStudyPreview.length"
-                  class="px-2 py-1 rounded-full text-xs border border-gray-700 text-gray-300"
-                >
-                  +{{ todaysStudyClasses.length - todaysStudyPreview.length }} วิชา
-                </span>
-              </div>
-
-              <p v-else class="text-xs text-gray-500">วันนี้ไม่มีคาบเรียน</p>
+            <!-- Today's subjects -->
+            <div v-if="todaysStudyPreview.length" class="flex flex-wrap gap-1.5">
+              <span
+                v-for="item in todaysStudyPreview"
+                :key="item.id"
+                class="px-2.5 py-1 rounded-full text-[11px] font-medium border"
+                :class="getCourseChipClass(item.course_name)"
+              >
+                {{ formatTime(item.start_time) }} · {{ item.course_name }}
+              </span>
+              <span
+                v-if="todaysStudyClasses.length > todaysStudyPreview.length"
+                class="px-2.5 py-1 rounded-full text-[11px] border border-gray-700 text-gray-400"
+              >
+                +{{ todaysStudyClasses.length - todaysStudyPreview.length }} วิชา
+              </span>
             </div>
+            <p v-else class="text-xs text-gray-500">วันนี้ไม่มีคาบเรียน</p>
 
             <NuxtLink
               to="/study-schedule"
-              class="inline-flex items-center px-4 py-2 rounded-xl bg-gray-800 hover:bg-gray-700 border border-gray-700 text-sm font-medium"
+              class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-800/70 hover:bg-gray-800 border border-gray-700/60 text-sm font-medium text-gray-300 hover:text-white transition-all"
             >
-              จัดการตารางเรียน
+              จัดการตารางเรียน →
             </NuxtLink>
           </div>
         </div>
       </section>
 
-      <section class="bg-gray-900 border border-gray-800 rounded-2xl p-5">
+      <!-- Todos Section -->
+      <section class="bg-gray-900 border border-gray-800/80 rounded-2xl p-5">
         <div class="flex items-center justify-between gap-3 mb-4">
           <div>
-            <h2 class="text-lg font-semibold text-white">งานและ To-do (วันนี้ / ค้างส่ง)</h2>
-            <p class="text-sm text-gray-400 mt-1">สรุปงานสำคัญที่ต้องรีบจัดการ</p>
+            <h2 class="text-base font-semibold text-white">งานและ To-do</h2>
+            <p class="text-xs text-gray-500 mt-0.5">งานด่วนและงานค้างส่ง</p>
           </div>
           <NuxtLink
             to="/todos"
-            class="px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 border border-gray-700 text-xs inline-flex items-center gap-1"
+            class="px-3 py-1.5 rounded-lg bg-gray-800/70 hover:bg-gray-800 border border-gray-700/60 text-xs text-gray-400 hover:text-white transition-all"
           >
-            ดูทั้งหมด
+            ดูทั้งหมด →
           </NuxtLink>
         </div>
 
-        <div
-          v-if="todosErrorMessage"
-          class="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-amber-200 text-xs mb-3"
-        >
+        <div v-if="todosErrorMessage" class="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-amber-200 text-xs mb-3">
           {{ todosErrorMessage }}
         </div>
 
-        <div v-if="isTodosLoading" class="text-sm text-gray-400">กำลังโหลดข้อมูลงาน...</div>
-        <div v-else-if="!todos.length" class="text-sm text-gray-400">ยังไม่มีงานใดๆ กดปุ่ม 'ดูทั้งหมด' เพื่อเพิ่มงานใหม่</div>
+        <div v-if="isTodosLoading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div v-for="i in 3" :key="i" class="h-24 rounded-xl bg-gray-800/60 animate-pulse"></div>
+        </div>
+
+        <div v-else-if="!todos.length" class="flex flex-col items-center justify-center py-8 text-center">
+          <div class="w-14 h-14 rounded-2xl bg-gray-800/70 flex items-center justify-center text-2xl mb-3">✅</div>
+          <p class="text-sm font-medium text-gray-400">ยังไม่มีงานใดๆ</p>
+          <NuxtLink to="/todos" class="mt-3 text-xs text-violet-400 hover:text-violet-300 transition-colors">+ เพิ่มงานแรก</NuxtLink>
+        </div>
+
+        <div v-else-if="dashboardTodos.length === 0" class="flex flex-col items-center justify-center py-8 text-center">
+          <div class="w-14 h-14 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-2xl mb-3">🎉</div>
+          <p class="text-sm font-medium text-emerald-400">ไม่มีงานด่วนหรืองานค้างในวันนี้!</p>
+          <p class="text-xs text-gray-500 mt-1">ทำได้ดีมาก ทุกงานอยู่ในสถานะดี</p>
+        </div>
+
         <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           <div
             v-for="todo in dashboardTodos"
             :key="todo.id"
-            class="border border-gray-700 rounded-xl px-4 py-3 bg-gray-800/30 flex flex-col justify-between"
+            class="border border-gray-800/70 rounded-xl p-4 bg-gray-800/20 hover:bg-gray-800/40 transition-all flex flex-col justify-between gap-3"
           >
             <div>
-              <div class="flex items-start justify-between gap-2 mb-1">
-                <p class="text-sm font-medium text-white line-clamp-2">{{ todo.title }}</p>
-                <span v-if="todo.priority === 'high'" class="shrink-0 px-2 py-0.5 rounded text-[10px] bg-rose-500/20 text-rose-300 border border-rose-500/30">ด่วน</span>
+              <div class="flex items-start gap-2 mb-1.5">
+                <p class="text-sm font-medium text-white line-clamp-2 flex-1">{{ todo.title }}</p>
+                <span
+                  v-if="todo.priority === 'high'"
+                  class="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-500/15 text-rose-300 border border-rose-500/25"
+                >ด่วน</span>
               </div>
-              <p class="text-[11px]" :class="getTodoDateColor(todo)">
-                {{ todo.due_date ? `กำหนด: ${formatDate(todo.due_date)}` : 'ไม่มีกำหนด' }}
+              <p class="text-[11px] font-medium flex items-center gap-1" :class="getTodoDateColor(todo)">
+                <span v-if="todo.due_date">📅 {{ formatDate(todo.due_date) }}</span>
+                <span v-else class="text-gray-500">ไม่มีกำหนด</span>
               </p>
             </div>
-            
-            <div class="mt-3 flex items-center justify-between">
-              <span class="text-[10px] uppercase px-2 py-0.5 rounded-full border border-gray-600 bg-gray-700 text-gray-300">
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] px-2 py-1 rounded-full border font-medium"
+                :class="todo.status === 'in_progress' ? 'border-sky-500/30 bg-sky-500/10 text-sky-400' : 'border-gray-700 bg-gray-800 text-gray-400'">
                 {{ todo.status === 'in_progress' ? 'กำลังทำ' : 'รอทำ' }}
               </span>
-              <button 
+              <button
                 @click="markTodoDone(todo.id)"
-                class="text-[11px] text-emerald-400 hover:text-emerald-300 flex items-center gap-1"
+                class="text-[11px] text-emerald-400 hover:text-emerald-300 flex items-center gap-1 transition-colors font-medium"
               >
-                <span>✓</span> เสร็จแล้ว
+                ✓ เสร็จแล้ว
               </button>
             </div>
-          </div>
-          
-          <div
-            v-if="dashboardTodos.length === 0"
-            class="md:col-span-2 lg:col-span-3 border border-dashed border-gray-700 rounded-xl px-4 py-6 text-center"
-          >
-            <p class="text-sm text-gray-400">🎉 ไม่มีงานด่วนหรืองานค้างในวันนี้</p>
           </div>
         </div>
       </section>
 
-      <section class="bg-gray-900 border border-gray-800 rounded-2xl p-5">
+      <!-- Events Section -->
+      <section class="bg-gray-900 border border-gray-800/80 rounded-2xl p-5">
         <div class="flex items-center justify-between gap-3 mb-4">
           <div>
-            <h2 class="text-lg font-semibold text-white">กิจกรรมและนัดหมาย</h2>
-            <p class="text-sm text-gray-400 mt-1">เหตุการณ์สำคัญที่กำลังจะมาถึง</p>
+            <h2 class="text-base font-semibold text-white">กิจกรรมและนัดหมาย</h2>
+            <p class="text-xs text-gray-500 mt-0.5">เหตุการณ์สำคัญที่กำลังจะมาถึง</p>
           </div>
           <NuxtLink
             to="/events"
-            class="px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 border border-gray-700 text-xs inline-flex items-center gap-1"
+            class="px-3 py-1.5 rounded-lg bg-gray-800/70 hover:bg-gray-800 border border-gray-700/60 text-xs text-gray-400 hover:text-white transition-all"
           >
-            ดูทั้งหมด
+            ดูทั้งหมด →
           </NuxtLink>
         </div>
 
-        <div
-          v-if="eventsErrorMessage"
-          class="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-amber-200 text-xs mb-3"
-        >
+        <div v-if="eventsErrorMessage" class="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-amber-200 text-xs mb-3">
           {{ eventsErrorMessage }}
         </div>
 
-        <div v-if="isEventsLoading" class="text-sm text-gray-400">กำลังโหลดข้อมูลกิจกรรม...</div>
-        <div v-else-if="!dashboardEvents.length" class="text-sm text-gray-400">🎉 ยังไม่มีกิจกรรมที่กำลังจะมาถึง</div>
+        <div v-if="isEventsLoading" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div v-for="i in 4" :key="i" class="h-20 rounded-xl bg-gray-800/60 animate-pulse"></div>
+        </div>
+
+        <div v-else-if="!dashboardEvents.length" class="flex flex-col items-center justify-center py-8 text-center">
+          <div class="w-14 h-14 rounded-2xl bg-gray-800/70 flex items-center justify-center text-2xl mb-3">📆</div>
+          <p class="text-sm font-medium text-gray-400">ไม่มีกิจกรรมที่กำลังจะมาถึง</p>
+          <NuxtLink to="/events" class="mt-3 text-xs text-violet-400 hover:text-violet-300 transition-colors">+ เพิ่มกิจกรรม</NuxtLink>
+        </div>
+
         <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div
             v-for="event in dashboardEvents"
             :key="event.id"
-            class="border border-gray-700 rounded-xl px-4 py-3 bg-gray-800/30 flex items-center justify-between gap-4"
+            class="border border-gray-800/70 rounded-xl px-4 py-3 bg-gray-800/20 hover:bg-gray-800/40 transition-all flex items-center gap-4"
           >
-            <div class="flex-1 min-w-0">
-              <p class="text-sm font-medium text-white line-clamp-1 mb-1">{{ event.title }}</p>
-              <p class="text-[11px] text-sky-400 font-medium">
-                {{ displayEventDateTimeShort(event) }}
-              </p>
+            <!-- Date badge -->
+            <div class="shrink-0 text-center bg-gray-800 border border-gray-700/60 rounded-xl px-3 py-2.5 min-w-[52px]">
+              <div class="text-[10px] font-bold uppercase text-rose-400 leading-none">{{ getMonthShort(event.start_date) }}</div>
+              <div class="text-2xl text-white font-bold leading-tight mt-0.5">{{ getDay(event.start_date) }}</div>
             </div>
-            <div class="shrink-0 text-center bg-gray-800 border border-gray-700 rounded-lg px-3 py-2">
-              <div class="text-[10px] text-rose-400 font-bold uppercase">{{ getMonthShort(event.start_date) }}</div>
-              <div class="text-lg text-white font-bold">{{ getDay(event.start_date) }}</div>
+            <!-- Event info -->
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-semibold text-white line-clamp-1">{{ event.title }}</p>
+              <p class="text-[11px] text-sky-400 mt-0.5 font-medium">{{ displayEventDateTimeShort(event) }}</p>
             </div>
           </div>
         </div>
@@ -442,15 +476,11 @@ const toMinutes = (time: string) => {
 
 const getCourseChipClass = (courseName: string) => {
   const normalized = courseName.trim().toLowerCase()
-  if (!normalized) {
-    return 'border-gray-600 bg-gray-700/30 text-gray-100'
-  }
-
+  if (!normalized) return 'border-gray-600 bg-gray-700/30 text-gray-100'
   let hash = 0
   for (const char of normalized) {
     hash = ((hash * 31) + char.charCodeAt(0)) % 2147483647
   }
-
   return courseChipPalette[Math.abs(hash) % courseChipPalette.length]
 }
 
@@ -472,40 +502,23 @@ const formatPercent = (value: number) => new Intl.NumberFormat('th-TH', {
 }).format(value)
 
 const expenseProgressPercent = computed(() => {
-  if (totalIncome.value <= 0) {
-    return totalExpense.value > 0 ? 100 : 0
-  }
-
-  const ratio = (totalExpense.value / totalIncome.value) * 100
-  return Math.min(ratio, 100)
+  if (totalIncome.value <= 0) return totalExpense.value > 0 ? 100 : 0
+  return Math.min((totalExpense.value / totalIncome.value) * 100, 100)
 })
 
 const remainingProgressPercent = computed(() => {
-  if (totalIncome.value <= 0) {
-    return 0
-  }
-
-  const ratio = (remainingBalance.value / totalIncome.value) * 100
-  return Math.min(Math.max(ratio, 0), 100)
+  if (totalIncome.value <= 0) return 0
+  return Math.min(Math.max((remainingBalance.value / totalIncome.value) * 100, 0), 100)
 })
 
 const expenseProgressText = computed(() => {
-  if (totalIncome.value <= 0) {
-    return totalExpense.value > 0 ? 'มีรายจ่าย แต่ยังไม่มีรายรับเป็นฐานคำนวณ' : 'รอข้อมูลรายรับ/รายจ่าย'
-  }
-
+  if (totalIncome.value <= 0) return totalExpense.value > 0 ? 'มีรายจ่าย แต่ยังไม่มีรายรับเป็นฐาน' : 'รอข้อมูล'
   return `ใช้ไป ${formatPercent((totalExpense.value / totalIncome.value) * 100)}% ของรายรับ`
 })
 
 const remainingProgressText = computed(() => {
-  if (totalIncome.value <= 0) {
-    return 'รอข้อมูลรายรับเพื่อคำนวณเงินคงเหลือ'
-  }
-
-  if (remainingBalance.value < 0) {
-    return 'รายจ่ายเกินรายรับ'
-  }
-
+  if (totalIncome.value <= 0) return 'รอข้อมูลรายรับ'
+  if (remainingBalance.value < 0) return 'รายจ่ายเกินรายรับ'
   return `คงเหลือ ${formatPercent((remainingBalance.value / totalIncome.value) * 100)}% ของรายรับ`
 })
 
@@ -517,38 +530,26 @@ const topExpenseCategory = computed(() => {
       acc[key] = (acc[key] || 0) + item.amount
       return acc
     }, {})
-
-  const [name, amount] = Object.entries(categoryTotals)
-    .sort((a, b) => b[1] - a[1])[0] || ['-', 0]
-
+  const [name, amount] = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1])[0] || ['-', 0]
   return { name, amount }
 })
 
 const latestTransaction = computed(() => transactions.value[0] || null)
 
 const latestTransactionTitle = computed(() => {
-  if (!latestTransaction.value) {
-    return 'ยังไม่มีรายการ'
-  }
-
+  if (!latestTransaction.value) return 'ยังไม่มีรายการ'
   const typeText = latestTransaction.value.type === 'income' ? 'รายรับ' : 'รายจ่าย'
   return `${typeText} ${formatCurrency(latestTransaction.value.amount)}`
 })
 
 const latestTransactionSubtitle = computed(() => {
-  if (!latestTransaction.value) {
-    return 'เพิ่มรายการแรกในแท็บรายรับรายจ่าย'
-  }
-
+  if (!latestTransaction.value) return 'เพิ่มรายการแรก'
   const categoryText = latestTransaction.value.category || 'ไม่ระบุหมวดหมู่'
   return `${formatDate(latestTransaction.value.entry_date)} • ${categoryText}`
 })
 
 const sortedStudySchedules = computed(() => [...studySchedules.value].sort((a, b) => {
-  if (a.day_of_week !== b.day_of_week) {
-    return a.day_of_week - b.day_of_week
-  }
-
+  if (a.day_of_week !== b.day_of_week) return a.day_of_week - b.day_of_week
   return a.start_time.localeCompare(b.start_time)
 }))
 
@@ -558,10 +559,7 @@ const todayWeekday = computed(() => {
 })
 
 const totalStudyClasses = computed(() => studySchedules.value.length)
-
-const todaysStudyClasses = computed(() => sortedStudySchedules.value
-  .filter((item) => item.day_of_week === todayWeekday.value))
-
+const todaysStudyClasses = computed(() => sortedStudySchedules.value.filter((item) => item.day_of_week === todayWeekday.value))
 const todaysStudyPreview = computed(() => todaysStudyClasses.value.slice(0, 4))
 
 const dashboardTodos = computed(() => {
@@ -579,8 +577,8 @@ const dashboardTodos = computed(() => {
 const getTodoDateColor = (item: TodoRow) => {
   if (!item.due_date) return 'text-gray-500'
   const today = getTodayTH()
-  if (item.due_date < today) return 'text-rose-400 font-medium'
-  if (item.due_date === today) return 'text-amber-400 font-medium'
+  if (item.due_date < today) return 'text-rose-400'
+  if (item.due_date === today) return 'text-amber-400'
   return 'text-gray-400'
 }
 
@@ -588,8 +586,8 @@ const dashboardEvents = computed(() => {
   const today = getTodayTH()
   return events.value
     .filter(e => {
-        const maxDate = e.end_date || e.start_date
-        return maxDate >= today
+      const maxDate = e.end_date || e.start_date
+      return maxDate >= today
     })
     .sort((a, b) => a.start_date.localeCompare(b.start_date) || (a.start_time || '').localeCompare(b.start_time || ''))
     .slice(0, 4)
@@ -597,136 +595,71 @@ const dashboardEvents = computed(() => {
 
 const displayEventDateTimeShort = (item: DashboardEventRow) => {
   const formatTimeStr = (t: string | null) => t ? t.slice(0, 5) + ' น.' : ''
-  if (item.event_type === 'same_day_all_day') {
-    return `${formatDate(item.start_date)} (ตลอดวัน)`
-  }
-  if (item.event_type === 'same_day_time') {
-    return `${formatDate(item.start_date)}  ${formatTimeStr(item.start_time)} - ${formatTimeStr(item.end_time)}`
-  }
-  if (item.event_type === 'multi_day') {
-    return `${formatDate(item.start_date)} ถึง ${formatDate(item.end_date || '')}`
-  }
+  if (item.event_type === 'same_day_all_day') return `${formatDate(item.start_date)} (ตลอดวัน)`
+  if (item.event_type === 'same_day_time') return `${formatDate(item.start_date)}  ${formatTimeStr(item.start_time)} - ${formatTimeStr(item.end_time)}`
+  if (item.event_type === 'multi_day') return `${formatDate(item.start_date)} ถึง ${formatDate(item.end_date || '')}`
   return formatDate(item.start_date)
 }
 
 const nextStudyClassMeta = computed<NextStudyClassMeta>(() => {
-  if (!sortedStudySchedules.value.length) {
-    return null
-  }
-
+  if (!sortedStudySchedules.value.length) return null
   const now = nowTH()
   const currentDay = now.getDay() === 0 ? 7 : now.getDay()
   const currentMinutes = (now.getHours() * 60) + now.getMinutes()
-
   for (let offset = 0; offset < 7; offset += 1) {
     const checkingDay = ((currentDay - 1 + offset) % 7) + 1
     const classesInDay = sortedStudySchedules.value
       .filter((item) => item.day_of_week === checkingDay)
       .sort((a, b) => a.start_time.localeCompare(b.start_time))
-
     for (const item of classesInDay) {
       const startMinutes = toMinutes(item.start_time)
-
       if (offset > 0 || startMinutes >= currentMinutes) {
-        return {
-          item,
-          dayOffset: offset,
-          minutesUntil: (offset * 24 * 60) + (startMinutes - currentMinutes),
-        }
+        return { item, dayOffset: offset, minutesUntil: (offset * 24 * 60) + (startMinutes - currentMinutes) }
       }
     }
   }
-
   const firstItem = sortedStudySchedules.value[0]
   return firstItem
-    ? {
-      item: firstItem,
-      dayOffset: 7,
-      minutesUntil: (7 * 24 * 60) + (toMinutes(firstItem.start_time) - currentMinutes),
-    }
+    ? { item: firstItem, dayOffset: 7, minutesUntil: (7 * 24 * 60) + (toMinutes(firstItem.start_time) - (nowTH().getHours() * 60 + nowTH().getMinutes())) }
     : null
 })
 
 const nextStudyClass = computed(() => nextStudyClassMeta.value?.item || null)
 
-const nextStudyClassTitle = computed(() => {
-  if (!nextStudyClass.value) {
-    return 'ยังไม่มีคาบเรียน'
-  }
-
-  return nextStudyClass.value.course_name
-})
+const nextStudyClassTitle = computed(() => nextStudyClass.value?.course_name || 'ยังไม่มีคาบเรียน')
 
 const nextStudyClassSubtitle = computed(() => {
-  if (!nextStudyClass.value) {
-    return 'เพิ่มคาบเรียนแรกของคุณในแท็บตารางเรียน'
-  }
-
+  if (!nextStudyClass.value) return 'เพิ่มคาบเรียนแรกในแท็บตารางเรียน'
   const dayText = dayLabelMap.get(nextStudyClass.value.day_of_week) || 'ไม่ระบุวัน'
   return `${dayText} • ${formatTime(nextStudyClass.value.start_time)} - ${formatTime(nextStudyClass.value.end_time)}`
 })
 
 const nextStudyAlertText = computed(() => {
-  if (!nextStudyClassMeta.value) {
-    return 'ยังไม่มีคาบถัดไป'
-  }
-
+  if (!nextStudyClassMeta.value) return 'ยังไม่มีคาบถัดไป'
   const minutes = nextStudyClassMeta.value.minutesUntil
-  if (minutes <= 0) {
-    return 'เริ่มตอนนี้'
-  }
-
-  if (minutes < 60) {
-    return `อีก ${minutes} นาที`
-  }
-
+  if (minutes <= 0) return 'เริ่มตอนนี้'
+  if (minutes < 60) return `อีก ${minutes} นาที`
   const hours = Math.floor(minutes / 60)
   const remainMinutes = minutes % 60
-
-  if (hours < 24) {
-    return remainMinutes > 0
-      ? `อีก ${hours} ชม. ${remainMinutes} นาที`
-      : `อีก ${hours} ชม.`
-  }
-
+  if (hours < 24) return remainMinutes > 0 ? `อีก ${hours} ชม. ${remainMinutes} นาที` : `อีก ${hours} ชม.`
   const days = Math.floor(hours / 24)
   const remainHours = hours % 24
-  return remainHours > 0
-    ? `อีก ${days} วัน ${remainHours} ชม.`
-    : `อีก ${days} วัน`
+  return remainHours > 0 ? `อีก ${days} วัน ${remainHours} ชม.` : `อีก ${days} วัน`
 })
 
 const nextStudyAlertBadgeClass = computed(() => {
-  if (!nextStudyClassMeta.value) {
-    return 'border-gray-600 bg-gray-700/40 text-gray-100'
-  }
-
+  if (!nextStudyClassMeta.value) return 'border-gray-600 bg-gray-700/40 text-gray-300'
   const minutes = nextStudyClassMeta.value.minutesUntil
-  if (minutes <= 30) {
-    return 'border-rose-300/60 bg-rose-500/25 text-rose-100'
-  }
-
-  if (minutes <= 120) {
-    return 'border-amber-300/60 bg-amber-500/25 text-amber-100'
-  }
-
+  if (minutes <= 30) return 'border-rose-300/60 bg-rose-500/25 text-rose-100'
+  if (minutes <= 120) return 'border-amber-300/60 bg-amber-500/25 text-amber-100'
   return 'border-sky-300/60 bg-sky-500/25 text-sky-100'
 })
 
 const nextStudyAlertBoxClass = computed(() => {
-  if (!nextStudyClassMeta.value) {
-    return 'border-gray-700 bg-gray-800/40'
-  }
-
+  if (!nextStudyClassMeta.value) return 'border-gray-700 bg-gray-800/40'
   const minutes = nextStudyClassMeta.value.minutesUntil
-  if (minutes <= 30) {
-    return 'border-rose-400/35 bg-rose-500/10'
-  }
-
-  if (minutes <= 120) {
-    return 'border-amber-400/35 bg-amber-500/10'
-  }
-
+  if (minutes <= 30) return 'border-rose-400/35 bg-rose-500/10'
+  if (minutes <= 120) return 'border-amber-400/35 bg-amber-500/10'
   return 'border-sky-400/35 bg-sky-500/10'
 })
 
@@ -754,18 +687,10 @@ const normalizeStudyRows = (rows: any[]): StudyScheduleRow[] => rows.map((row) =
 const loadTransactions = async () => {
   isLoading.value = true
   errorMessage.value = ''
-
   try {
     const { data: userData, error: userError } = await supabase.auth.getUser()
-    if (userError) {
-      throw userError
-    }
-
-    if (!userData.user) {
-      await router.push('/login')
-      return
-    }
-
+    if (userError) throw userError
+    if (!userData.user) { await router.push('/login'); return }
     const { data, error } = await supabase
       .from('transactions')
       .select('id, user_id, entry_date, type, category, amount, created_at')
@@ -773,17 +698,10 @@ const loadTransactions = async () => {
       .order('entry_date', { ascending: false })
       .order('created_at', { ascending: false })
       .limit(100)
-
     if (error) {
-      if (tableMissingCodes.has(error.code || '')) {
-        errorMessage.value = 'ยังไม่พบตาราง transactions ใน Supabase กรุณาสร้างตารางก่อนใช้งาน'
-        transactions.value = []
-        return
-      }
-
+      if (tableMissingCodes.has(error.code || '')) { errorMessage.value = 'ยังไม่พบตาราง transactions ใน Supabase'; transactions.value = []; return }
       throw error
     }
-
     transactions.value = normalizeTransactionRows(data || [])
   } catch (error: any) {
     console.error('Load dashboard finance error:', error)
@@ -796,35 +714,20 @@ const loadTransactions = async () => {
 const loadStudySchedules = async () => {
   isScheduleLoading.value = true
   scheduleErrorMessage.value = ''
-
   try {
     const { data: userData, error: userError } = await supabase.auth.getUser()
-    if (userError) {
-      throw userError
-    }
-
-    if (!userData.user) {
-      await router.push('/login')
-      return
-    }
-
+    if (userError) throw userError
+    if (!userData.user) { await router.push('/login'); return }
     const { data, error } = await supabase
       .from('study_schedules')
       .select('id, user_id, course_name, day_of_week, start_time, end_time, location, created_at')
       .eq('user_id', userData.user.id)
       .order('day_of_week', { ascending: true })
       .order('start_time', { ascending: true })
-
     if (error) {
-      if (tableMissingCodes.has(error.code || '')) {
-        scheduleErrorMessage.value = 'ยังไม่พบตาราง study_schedules ใน Supabase กรุณาสร้างตารางก่อนใช้งาน'
-        studySchedules.value = []
-        return
-      }
-
+      if (tableMissingCodes.has(error.code || '')) { scheduleErrorMessage.value = 'ยังไม่พบตาราง study_schedules ใน Supabase'; studySchedules.value = []; return }
       throw error
     }
-
     studySchedules.value = normalizeStudyRows(data || [])
   } catch (error: any) {
     console.error('Load study schedules summary error:', error)
@@ -845,26 +748,18 @@ const normalizeTodoRows = (rows: any[]): TodoRow[] => rows.map((row) => ({
 const loadTodos = async () => {
   isTodosLoading.value = true
   todosErrorMessage.value = ''
-
   try {
     const { data: userData, error: userError } = await supabase.auth.getUser()
     if (userError) throw userError
     if (!userData.user) return
-
     const { data, error } = await supabase
       .from('todos')
       .select('id, title, due_date, status, priority')
       .eq('user_id', userData.user.id)
-
     if (error) {
-      if (tableMissingCodes.has(error.code || '')) {
-        todosErrorMessage.value = 'ยังไม่พบตาราง todos ใน Supabase'
-        todos.value = []
-        return
-      }
+      if (tableMissingCodes.has(error.code || '')) { todosErrorMessage.value = 'ยังไม่พบตาราง todos ใน Supabase'; todos.value = []; return }
       throw error
     }
-
     todos.value = normalizeTodoRows(data || [])
   } catch (error: any) {
     console.error('Load todos error:', error)
@@ -878,15 +773,9 @@ const markTodoDone = async (id: string) => {
   try {
     const { data: userData } = await supabase.auth.getUser()
     if (!userData.user) return
-
     const query = supabase.from('todos') as any
-    const { error } = await query
-      .update({ status: 'completed' })
-      .eq('id', id)
-      .eq('user_id', userData.user.id)
-
+    const { error } = await query.update({ status: 'completed' }).eq('id', id).eq('user_id', userData.user.id)
     if (error) throw error
-    
     todos.value = todos.value.map(t => t.id === id ? { ...t, status: 'completed' } : t)
   } catch (err: any) {
     console.error('Mark done error:', err)
@@ -906,26 +795,18 @@ const normalizeEventRows = (rows: any[]): DashboardEventRow[] => rows.map((row) 
 const loadEvents = async () => {
   isEventsLoading.value = true
   eventsErrorMessage.value = ''
-
   try {
     const { data: userData, error: userError } = await supabase.auth.getUser()
     if (userError) throw userError
     if (!userData.user) return
-
     const { data, error } = await supabase
       .from('events')
       .select('id, title, event_type, start_date, start_time, end_date, end_time')
       .eq('user_id', userData.user.id)
-
     if (error) {
-      if (tableMissingCodes.has(error.code || '')) {
-        eventsErrorMessage.value = 'ยังไม่พบตาราง events ใน Supabase'
-        events.value = []
-        return
-      }
+      if (tableMissingCodes.has(error.code || '')) { eventsErrorMessage.value = 'ยังไม่พบตาราง events ใน Supabase'; events.value = []; return }
       throw error
     }
-
     events.value = normalizeEventRows(data || [])
   } catch (error: any) {
     console.error('Load events error:', error)
@@ -936,12 +817,7 @@ const loadEvents = async () => {
 }
 
 const refreshOverview = async () => {
-  await Promise.all([
-    loadTransactions(),
-    loadStudySchedules(),
-    loadTodos(),
-    loadEvents()
-  ])
+  await Promise.all([loadTransactions(), loadStudySchedules(), loadTodos(), loadEvents()])
 }
 
 onMounted(() => {
