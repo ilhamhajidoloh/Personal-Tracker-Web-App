@@ -333,27 +333,46 @@
           <div v-for="i in 4" :key="i" class="h-20 rounded-xl bg-gray-800/60 animate-pulse"></div>
         </div>
 
-        <div v-else-if="!dashboardEvents.length" class="flex flex-col items-center justify-center py-8 text-center">
+        <div v-else-if="!dashboardEvents.length && !nextEventMeta" class="flex flex-col items-center justify-center py-8 text-center">
           <div class="w-14 h-14 rounded-2xl bg-gray-800/70 flex items-center justify-center text-2xl mb-3">📆</div>
           <p class="text-sm font-medium text-gray-400">ไม่มีกิจกรรมที่กำลังจะมาถึง</p>
           <NuxtLink to="/events" class="mt-3 text-xs text-violet-400 hover:text-violet-300 transition-colors">+ เพิ่มกิจกรรม</NuxtLink>
         </div>
 
-        <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div
-            v-for="event in dashboardEvents"
-            :key="event.id"
-            class="border border-gray-800/70 rounded-xl px-4 py-3 bg-gray-800/20 hover:bg-gray-800/40 transition-all flex items-center gap-4"
-          >
-            <!-- Date badge -->
-            <div class="shrink-0 text-center bg-gray-800 border border-gray-700/60 rounded-xl px-3 py-2.5 min-w-[52px]">
-              <div class="text-[10px] font-bold uppercase text-rose-400 leading-none">{{ getMonthShort(event.start_date) }}</div>
-              <div class="text-2xl text-white font-bold leading-tight mt-0.5">{{ getDay(event.start_date) }}</div>
+        <div v-else class="space-y-4">
+          <!-- Next event card -->
+          <div v-if="nextEventMeta" class="rounded-xl border px-4 py-3" :class="nextEventAlertBoxClass">
+            <div class="flex items-start justify-between gap-2">
+              <div class="min-w-0">
+                <p class="text-[11px] text-gray-400">กิจกรรมถัดไป</p>
+                <p class="text-sm font-semibold text-white mt-0.5 truncate">{{ nextEventTitle }}</p>
+                <p class="text-[11px] text-gray-400 mt-0.5">{{ nextEventSubtitle }}</p>
+              </div>
+              <span
+                class="text-[11px] font-semibold px-2 py-1 rounded-full border whitespace-nowrap shrink-0"
+                :class="nextEventAlertBadgeClass"
+              >
+                {{ nextEventAlertText }}
+              </span>
             </div>
-            <!-- Event info -->
-            <div class="flex-1 min-w-0">
-              <p class="text-sm font-semibold text-white line-clamp-1">{{ event.title }}</p>
-              <p class="text-[11px] text-sky-400 mt-0.5 font-medium">{{ displayEventDateTimeShort(event) }}</p>
+          </div>
+
+          <div v-if="filteredDashboardEvents.length" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div
+              v-for="event in filteredDashboardEvents"
+              :key="event.id"
+              class="border border-gray-800/70 rounded-xl px-4 py-3 bg-gray-800/20 hover:bg-gray-800/40 transition-all flex items-center gap-4"
+            >
+              <!-- Date badge -->
+              <div class="shrink-0 text-center bg-gray-800 border border-gray-700/60 rounded-xl px-3 py-2.5 min-w-[52px]">
+                <div class="text-[10px] font-bold uppercase text-rose-400 leading-none">{{ getMonthShort(event.start_date) }}</div>
+                <div class="text-2xl text-white font-bold leading-tight mt-0.5">{{ getDay(event.start_date) }}</div>
+              </div>
+              <!-- Event info -->
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-semibold text-white line-clamp-1">{{ event.title }}</p>
+                <p class="text-[11px] text-sky-400 mt-0.5 font-medium">{{ displayEventDateTimeShort(event) }}</p>
+              </div>
             </div>
           </div>
         </div>
@@ -618,6 +637,99 @@ const displayEventDateTimeShort = (item: DashboardEventRow) => {
   if (item.event_type === 'multi_day') return `${formatDate(item.start_date)} ถึง ${formatDate(item.end_date || '')}`
   return formatDate(item.start_date)
 }
+
+const nextEventMeta = computed(() => {
+  if (!events.value.length) return null
+  const now = currentTime.value.getTime()
+  
+  let closestMeta = null
+  let minScore = Infinity
+  
+  for (const event of events.value) {
+    let startStr = `${event.start_date}T${event.start_time || '00:00:00'}`
+    let endStr = `${event.end_date || event.start_date}T${event.end_time || '23:59:59'}`
+    
+    if (event.event_type === 'same_day_all_day') {
+       startStr = `${event.start_date}T00:00:00`
+       endStr = `${event.start_date}T23:59:59`
+    } else if (event.event_type === 'multi_day') {
+       startStr = `${event.start_date}T00:00:00`
+       endStr = `${event.end_date}T23:59:59`
+    }
+    
+    const startMs = new Date(startStr).getTime()
+    const endMs = new Date(endStr).getTime()
+    
+    const minutesUntilStart = Math.ceil((startMs - now) / 60000)
+    const minutesUntilEnd = Math.ceil((endMs - now) / 60000)
+    
+    if (minutesUntilEnd <= 0) continue // Passed
+    
+    const isCurrent = minutesUntilStart <= 0 && minutesUntilEnd > 0
+    const score = isCurrent ? minutesUntilEnd - 10000000 : minutesUntilStart
+    
+    if (score < minScore) {
+       minScore = score
+       closestMeta = {
+         item: event,
+         minutesUntilStart,
+         minutesUntilEnd,
+         isCurrent
+       }
+    }
+  }
+  return closestMeta
+})
+
+const nextEventTitle = computed(() => nextEventMeta.value?.item.title || 'ยังไม่มีกิจกรรม')
+const nextEventSubtitle = computed(() => {
+  if (!nextEventMeta.value) return 'เพิ่มกิจกรรมแรกในแท็บกิจกรรม'
+  return displayEventDateTimeShort(nextEventMeta.value.item)
+})
+
+const nextEventAlertText = computed(() => {
+  if (!nextEventMeta.value) return 'ยังไม่มีกิจกรรมถัดไป'
+  const meta = nextEventMeta.value
+  if (meta.isCurrent) {
+    const min = meta.minutesUntilEnd
+    if (min < 60) return `กำลังดำเนินอยู่ (จบในอีก ${min} นาที)`
+    const hrs = Math.floor(min / 60)
+    const remainMin = min % 60
+    return remainMin > 0 ? `กำลังดำเนินอยู่ (จบในอีก ${hrs} ชม. ${remainMin} นาที)` : `กำลังดำเนินอยู่ (จบในอีก ${hrs} ชม.)`
+  }
+  
+  const min = meta.minutesUntilStart
+  if (min < 60) return `เริ่มในอีก ${min} นาที`
+  const hrs = Math.floor(min / 60)
+  const remainMin = min % 60
+  if (hrs < 24) return remainMin > 0 ? `เริ่มในอีก ${hrs} ชม. ${remainMin} นาที` : `เริ่มในอีก ${hrs} ชม.`
+  const days = Math.floor(hrs / 24)
+  const remainHrs = hrs % 24
+  return remainHrs > 0 ? `เริ่มในอีก ${days} วัน ${remainHrs} ชม.` : `เริ่มในอีก ${days} วัน`
+})
+
+const nextEventAlertBadgeClass = computed(() => {
+  if (!nextEventMeta.value) return 'border-gray-600 bg-gray-700/40 text-gray-300'
+  const meta = nextEventMeta.value
+  if (meta.isCurrent) return 'border-emerald-300/60 bg-emerald-500/25 text-emerald-100'
+  if (meta.minutesUntilStart <= 60) return 'border-rose-300/60 bg-rose-500/25 text-rose-100'
+  if (meta.minutesUntilStart <= 24 * 60) return 'border-amber-300/60 bg-amber-500/25 text-amber-100'
+  return 'border-sky-300/60 bg-sky-500/25 text-sky-100'
+})
+
+const nextEventAlertBoxClass = computed(() => {
+  if (!nextEventMeta.value) return 'border-gray-700 bg-gray-800/40'
+  const meta = nextEventMeta.value
+  if (meta.isCurrent) return 'border-emerald-400/35 bg-emerald-500/10'
+  if (meta.minutesUntilStart <= 60) return 'border-rose-400/35 bg-rose-500/10'
+  if (meta.minutesUntilStart <= 24 * 60) return 'border-amber-400/35 bg-amber-500/10'
+  return 'border-sky-400/35 bg-sky-500/10'
+})
+
+const filteredDashboardEvents = computed(() => {
+  if (!nextEventMeta.value) return dashboardEvents.value
+  return dashboardEvents.value.filter(e => e.id !== nextEventMeta.value!.item.id)
+})
 
 const nextStudyClassMeta = computed<NextStudyClassMeta>(() => {
   if (!sortedStudySchedules.value.length) return null
