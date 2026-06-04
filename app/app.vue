@@ -14,5 +14,8 @@ onMounted(() => {
 </script>
 
 <template>
-  <NuxtPage :page-key="route => route.fullPath" />
+  <div>
+    <NuxtPage :page-key="route => route.fullPath" />
+    <InstallPrompt />
+  </div>
 </template>
