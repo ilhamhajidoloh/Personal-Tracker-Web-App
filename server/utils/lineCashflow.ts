@@ -3,6 +3,7 @@ export type LineSessionState = 'awaiting_type' | 'awaiting_amount' | 'awaiting_c
 export type LineSession = {
   state: LineSessionState
   type?: 'income' | 'expense'
+  category?: string
   amount?: number
   expires_at: number
 }
@@ -157,30 +158,56 @@ export const makeTypeSelectMsg = () => ({
   },
 })
 
-export const makeAmountMsg = (type: 'income' | 'expense') => ({
+export const getExistingCategories = async (
+  supabase: any,
+  userId: string,
+  type: 'income' | 'expense',
+): Promise<string[]> => {
+  const { data, error } = await supabase
+    .from('transactions')
+    .select('category')
+    .eq('user_id', userId)
+    .eq('type', type)
+    .not('category', 'is', null)
+  if (error || !data) return []
+  const cats = data.map((r: any) => String(r.category).trim()).filter(Boolean) as string[]
+  return [...new Set(cats)].sort((a: string, b: string) => a.localeCompare(b, 'th'))
+}
+
+export const makeAmountMsg = (type: 'income' | 'expense', category: string) => ({
   type: 'text',
   text: [
-    type === 'income' ? '💰 รายรับ' : '💸 รายจ่าย',
+    `${type === 'income' ? '💰 รายรับ' : '💸 รายจ่าย'} (${category})`,
     '──────────',
     'กรุณาพิมพ์จำนวนเงิน (บาท):',
     'เช่น: 500 หรือ 1,500.50',
     '',
     'พิมพ์ "ยกเลิก" เพื่อยกเลิก',
   ].join('\n'),
-})
-
-export const makeCategoryMsg = (type: 'income' | 'expense', amount: number) => ({
-  type: 'text',
-  text: [
-    `บันทึก${type === 'income' ? 'รายรับ' : 'รายจ่าย'} ${fmt(amount)} บ.`,
-    '──────────',
-    'ระบุหมวดหมู่ (ไม่บังคับ):',
-    type === 'income' ? 'เช่น: เงินเดือน, รายได้เสริม' : 'เช่น: ค่าอาหาร, ค่าเดินทาง',
-  ].join('\n'),
   quickReply: {
     items: [
-      { type: 'action', action: { type: 'message', label: '⏭ ข้ามหมวดหมู่', text: 'ข้าม' } },
       { type: 'action', action: { type: 'message', label: '❌ ยกเลิก', text: 'ยกเลิก' } },
     ],
   },
 })
+
+export const makeCategorySelectMsg = (type: 'income' | 'expense', categories: string[]) => {
+  const typeLabel = type === 'income' ? 'รายรับ' : 'รายจ่าย'
+  const items = categories.slice(0, 11).map(cat => ({
+    type: 'action',
+    action: { type: 'message', label: cat, text: cat }
+  }))
+  items.push({ type: 'action', action: { type: 'message', label: '❌ ยกเลิก', text: 'ยกเลิก' } })
+
+  return {
+    type: 'text',
+    text: [
+      `บันทึก${typeLabel}`,
+      '──────────',
+      categories.length > 0
+        ? 'เลือกหมวดหมู่ด้านล่าง หรือพิมพ์หมวดหมู่ใหม่:'
+        : 'กรุณาพิมพ์ชื่อหมวดหมู่ที่ต้องการบันทึก:',
+    ].join('\n'),
+    quickReply: { items }
+  }
+}

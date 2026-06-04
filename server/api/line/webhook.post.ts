@@ -13,13 +13,13 @@ import {
   buildSummaryMessage,
   findUserByLineId,
   getBalance,
+  getExistingCategories,
   getLineSession,
   isCancelText,
   isCashflowTrigger,
   isExpenseText,
   isIncomeText,
-  isSkipText,
-  makeCategoryMsg,
+  makeCategorySelectMsg,
   makeAmountMsg,
   makeTypeSelectMsg,
   newSession,
@@ -157,13 +157,15 @@ export default defineEventHandler(async (event) => {
 
     if (!session) {
       if (isIncomeText(text)) {
-        await setLineSession(supabaseAdmin, userId, metadata, newSession('awaiting_amount', { type: 'income' }))
-        await replyMsgs(replyToken, [makeAmountMsg('income')])
+        const categories = await getExistingCategories(supabaseAdmin, userId, 'income')
+        await setLineSession(supabaseAdmin, userId, metadata, newSession('awaiting_category', { type: 'income' }))
+        await replyMsgs(replyToken, [makeCategorySelectMsg('income', categories)])
         continue
       }
       if (isExpenseText(text)) {
-        await setLineSession(supabaseAdmin, userId, metadata, newSession('awaiting_amount', { type: 'expense' }))
-        await replyMsgs(replyToken, [makeAmountMsg('expense')])
+        const categories = await getExistingCategories(supabaseAdmin, userId, 'expense')
+        await setLineSession(supabaseAdmin, userId, metadata, newSession('awaiting_category', { type: 'expense' }))
+        await replyMsgs(replyToken, [makeCategorySelectMsg('expense', categories)])
         continue
       }
       // Trigger word or any unknown text → show menu
@@ -178,20 +180,32 @@ export default defineEventHandler(async (event) => {
 
     if (session.state === 'awaiting_type') {
       if (isIncomeText(text)) {
-        await setLineSession(supabaseAdmin, userId, metadata, newSession('awaiting_amount', { type: 'income' }))
-        await replyMsgs(replyToken, [makeAmountMsg('income')])
+        const categories = await getExistingCategories(supabaseAdmin, userId, 'income')
+        await setLineSession(supabaseAdmin, userId, metadata, newSession('awaiting_category', { type: 'income' }))
+        await replyMsgs(replyToken, [makeCategorySelectMsg('income', categories)])
         continue
       }
       if (isExpenseText(text)) {
-        await setLineSession(supabaseAdmin, userId, metadata, newSession('awaiting_amount', { type: 'expense' }))
-        await replyMsgs(replyToken, [makeAmountMsg('expense')])
+        const categories = await getExistingCategories(supabaseAdmin, userId, 'expense')
+        await setLineSession(supabaseAdmin, userId, metadata, newSession('awaiting_category', { type: 'expense' }))
+        await replyMsgs(replyToken, [makeCategorySelectMsg('expense', categories)])
         continue
       }
       await replyMsgs(replyToken, [makeTypeSelectMsg()])
       continue
     }
 
-    // ── 6. awaiting_amount ──────────────────────────────────────────────────
+    // ── 6. awaiting_category ────────────────────────────────────────────────
+
+    if (session.state === 'awaiting_category') {
+      const type = session.type!
+      const category = text
+      await setLineSession(supabaseAdmin, userId, metadata, newSession('awaiting_amount', { type, category }))
+      await replyMsgs(replyToken, [makeAmountMsg(type, category)])
+      continue
+    }
+
+    // ── 7. awaiting_amount ──────────────────────────────────────────────────
 
     if (session.state === 'awaiting_amount') {
       const amount = parseAmount(text)
@@ -200,17 +214,7 @@ export default defineEventHandler(async (event) => {
         continue
       }
       const type = session.type!
-      await setLineSession(supabaseAdmin, userId, metadata, newSession('awaiting_category', { type, amount }))
-      await replyMsgs(replyToken, [makeCategoryMsg(type, amount)])
-      continue
-    }
-
-    // ── 7. awaiting_category ────────────────────────────────────────────────
-
-    if (session.state === 'awaiting_category') {
-      const type = session.type!
-      const amount = session.amount!
-      const category = isSkipText(text) ? undefined : text
+      const category = session.category
 
       try {
         await saveTransaction(supabaseAdmin, userId, type, amount, category)
