@@ -84,12 +84,18 @@
         <div v-if="expenseCategoryRankings.length > 0" class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <!-- Top 3 Highest -->
           <div class="bg-gray-900 border border-gray-800/80 rounded-2xl p-5">
-            <div class="flex items-center gap-2 mb-4">
-              <div class="w-8 h-8 rounded-lg bg-rose-500/15 flex items-center justify-center text-base shrink-0">🔺</div>
-              <div>
-                <h2 class="text-sm font-semibold text-white">3 อันดับรายจ่ายสูงสุด</h2>
-                <p class="text-[11px] text-gray-500">หมวดที่ใช้จ่ายมากที่สุด</p>
+            <div class="flex items-center justify-between gap-2 mb-4">
+              <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-lg bg-rose-500/15 flex items-center justify-center text-base shrink-0">🔺</div>
+                <div>
+                  <h2 class="text-sm font-semibold text-white">3 อันดับรายจ่ายสูงสุด</h2>
+                  <p class="text-[11px] text-gray-500">หมวดที่ใช้จ่ายมากที่สุด</p>
+                </div>
               </div>
+              <button
+                @click="isRankingModalOpen = true"
+                class="px-3 py-1.5 rounded-lg bg-gray-800/70 hover:bg-gray-800 border border-gray-700/60 text-xs text-gray-400 hover:text-white transition-all whitespace-nowrap"
+              >ดูทั้งหมด →</button>
             </div>
             <div class="space-y-2">
               <div
@@ -320,6 +326,78 @@
       </div>
     </div>
 
+    <!-- Expense Ranking Modal -->
+    <Teleport to="body">
+      <div
+        v-if="isRankingModalOpen"
+        class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-6"
+      >
+        <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" @click="isRankingModalOpen = false"></div>
+
+        <div class="relative w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl border border-gray-700/80 bg-gray-900 shadow-2xl flex flex-col max-h-[88vh] sm:max-h-[80vh]">
+          <!-- Header -->
+          <div class="flex items-center justify-between px-5 py-4 border-b border-gray-800/80 shrink-0">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-xl bg-rose-500/20 flex items-center justify-center text-base shrink-0">📊</div>
+              <div>
+                <h3 class="text-base font-semibold text-white">ลำดับรายจ่ายทุกประเภท</h3>
+                <p class="text-xs text-gray-500">
+                  {{ expenseCategoryRankings.length }} หมวดหมู่ · รวม {{ formatCurrency(totalExpense) }}
+                </p>
+              </div>
+            </div>
+            <button
+              @click="isRankingModalOpen = false"
+              class="w-8 h-8 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white flex items-center justify-center text-sm transition-all shrink-0"
+              aria-label="ปิด"
+            >✕</button>
+          </div>
+
+          <!-- List -->
+          <div class="overflow-y-auto flex-1">
+            <div
+              v-for="(cat, i) in expenseCategoryRankings"
+              :key="cat.name"
+              class="px-5 py-3.5 border-b border-gray-800/40 last:border-0 hover:bg-gray-800/20 transition-all"
+            >
+              <div class="flex items-center gap-3 mb-2">
+                <span
+                  class="w-7 h-7 rounded-full text-xs font-bold flex items-center justify-center shrink-0"
+                  :class="i === 0
+                    ? 'bg-rose-500/30 text-rose-300'
+                    : i === 1
+                      ? 'bg-orange-500/30 text-orange-300'
+                      : i === 2
+                        ? 'bg-amber-500/30 text-amber-300'
+                        : 'bg-gray-700/80 text-gray-400'"
+                >{{ i + 1 }}</span>
+                <span class="flex-1 text-sm font-medium text-white truncate">{{ cat.name }}</span>
+                <span class="text-sm font-bold text-rose-400 shrink-0">{{ formatCurrency(cat.amount) }}</span>
+              </div>
+              <div class="ml-10 space-y-1">
+                <div class="h-1.5 w-full rounded-full bg-gray-800 overflow-hidden">
+                  <div
+                    class="h-full rounded-full transition-all duration-500"
+                    :class="i === 0 ? 'bg-gradient-to-r from-rose-500 to-pink-400' : i === 1 ? 'bg-gradient-to-r from-orange-500 to-amber-400' : i === 2 ? 'bg-gradient-to-r from-amber-500 to-yellow-400' : 'bg-gray-600'"
+                    :style="{ width: `${(cat.amount / (expenseCategoryRankings[0]?.amount || 1)) * 100}%` }"
+                  ></div>
+                </div>
+                <p class="text-[11px] text-gray-500">
+                  {{ formatPercent((cat.amount / totalExpense) * 100) }}% ของรายจ่ายทั้งหมด
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Footer -->
+          <div class="px-5 py-3.5 border-t border-gray-800/80 shrink-0 flex items-center justify-between">
+            <p class="text-xs text-gray-500">รายจ่ายรวมทั้งหมด</p>
+            <p class="text-sm font-bold text-rose-400">{{ formatCurrency(totalExpense) }}</p>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
     <!-- Add/Edit Modal -->
     <Teleport to="body">
       <div
@@ -510,6 +588,7 @@ const supabase = useSupabaseClient()
 const isLoading = ref(true)
 const isSubmitting = ref(false)
 const isEntryModalOpen = ref(false)
+const isRankingModalOpen = ref(false)
 const isDeletingId = ref('')
 const editingTransactionId = ref('')
 const errorMessage = ref('')
