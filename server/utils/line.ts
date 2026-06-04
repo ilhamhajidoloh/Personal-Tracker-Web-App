@@ -243,6 +243,31 @@ export const pushLineTextMessage = async (
   throw new Error(`LINE push failed (${response.status}): ${JSON.stringify(errorBody)}`)
 }
 
+export const replyLineMessages = async (
+  channelAccessToken: string,
+  replyToken: string,
+  messages: Record<string, unknown>[],
+) => {
+  if (!channelAccessToken.trim()) throw new Error('Missing LINE channel access token')
+  if (!replyToken.trim()) throw new Error('Missing LINE reply token')
+  if (!messages.length) throw new Error('No messages to send')
+
+  const response = await fetch('https://api.line.me/v2/bot/message/reply', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${channelAccessToken}`,
+    },
+    body: JSON.stringify({ replyToken, messages }),
+  })
+
+  if (response.ok) return
+
+  const responseText = await response.text()
+  const errorBody = responseText ? parseJsonSafely(responseText) : null
+  throw new Error(`LINE reply failed (${response.status}): ${JSON.stringify(errorBody)}`)
+}
+
 export const replyLineTextMessage = async (
   channelAccessToken: string,
   replyToken: string,
