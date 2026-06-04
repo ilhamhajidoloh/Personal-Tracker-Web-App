@@ -223,14 +223,57 @@
             <p class="text-sm font-medium text-gray-400">ยังไม่มีรายการ</p>
           </div>
 
-          <div v-else class="overflow-x-auto">
+          <!-- Mobile: Card List (< md) -->
+          <div v-else class="md:hidden divide-y divide-gray-800/50">
+            <div
+              v-for="item in filteredTransactions"
+              :key="item.id"
+              class="px-4 py-4 hover:bg-gray-800/20 transition-all"
+            >
+              <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-center gap-2 mb-1.5 flex-wrap">
+                    <span
+                      class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold shrink-0"
+                      :class="item.type === 'income'
+                        ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/25'
+                        : 'bg-rose-500/15 text-rose-400 border border-rose-500/25'"
+                    >{{ item.type === 'income' ? '↑ รับ' : '↓ จ่าย' }}</span>
+                    <span class="text-sm font-medium text-white truncate">{{ item.category || 'ไม่ระบุหมวดหมู่' }}</span>
+                  </div>
+                  <p class="text-xs text-gray-500">{{ formatDate(item.entry_date) }}</p>
+                  <p v-if="item.description" class="text-xs text-gray-600 mt-0.5 line-clamp-1">{{ item.description }}</p>
+                </div>
+                <div class="shrink-0 text-right">
+                  <p class="text-base font-bold" :class="item.type === 'income' ? 'text-emerald-400' : 'text-rose-400'">
+                    {{ item.type === 'income' ? '+' : '-' }}{{ formatCurrency(item.amount) }}
+                  </p>
+                  <div class="flex items-center justify-end gap-1.5 mt-2">
+                    <button
+                      @click="openEditTransactionModal(item)"
+                      :disabled="isDeletingId === item.id"
+                      class="px-2.5 py-1 rounded-lg text-[11px] bg-sky-500/15 text-sky-400 hover:bg-sky-500/25 border border-sky-500/20 disabled:opacity-50 transition-all font-medium"
+                    >แก้ไข</button>
+                    <button
+                      @click="deleteTransaction(item.id)"
+                      :disabled="isDeletingId === item.id"
+                      class="px-2.5 py-1 rounded-lg text-[11px] bg-rose-500/15 text-rose-400 hover:bg-rose-500/25 border border-rose-500/20 disabled:opacity-50 transition-all font-medium"
+                    >{{ isDeletingId === item.id ? 'ลบ...' : 'ลบ' }}</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Desktop: Table (md+) -->
+          <div v-if="filteredTransactions.length" class="hidden md:block overflow-x-auto">
             <table class="min-w-full text-sm">
               <thead>
                 <tr class="border-b border-gray-800/60 bg-gray-800/20">
                   <th class="text-left py-3 px-5 text-[11px] font-semibold text-gray-500 uppercase tracking-wide">วันที่</th>
                   <th class="text-left py-3 px-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide">ประเภท</th>
                   <th class="text-left py-3 px-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide">หมวดหมู่</th>
-                  <th class="text-left py-3 px-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide hidden md:table-cell">รายละเอียด</th>
+                  <th class="text-left py-3 px-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide">รายละเอียด</th>
                   <th class="text-right py-3 px-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide">จำนวนเงิน</th>
                   <th class="text-right py-3 px-5 text-[11px] font-semibold text-gray-500 uppercase tracking-wide">จัดการ</th>
                 </tr>
@@ -248,12 +291,10 @@
                       :class="item.type === 'income'
                         ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/25'
                         : 'bg-rose-500/15 text-rose-400 border border-rose-500/25'"
-                    >
-                      {{ item.type === 'income' ? '↑ รับ' : '↓ จ่าย' }}
-                    </span>
+                    >{{ item.type === 'income' ? '↑ รับ' : '↓ จ่าย' }}</span>
                   </td>
                   <td class="py-3 px-3 text-gray-300 text-xs">{{ item.category || '-' }}</td>
-                  <td class="py-3 px-3 text-gray-500 text-xs hidden md:table-cell max-w-[180px] truncate">{{ item.description || '-' }}</td>
+                  <td class="py-3 px-3 text-gray-500 text-xs max-w-[200px] truncate">{{ item.description || '-' }}</td>
                   <td class="py-3 px-3 text-right font-semibold text-sm" :class="item.type === 'income' ? 'text-emerald-400' : 'text-rose-400'">
                     {{ item.type === 'income' ? '+' : '-' }}{{ formatCurrency(item.amount) }}
                   </td>
