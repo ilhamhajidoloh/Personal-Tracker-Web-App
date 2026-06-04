@@ -363,7 +363,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { getTodayTH, nowTH } from '~/utils/date'
 
 type TransactionType = 'income' | 'expense'
@@ -393,6 +393,7 @@ type NextStudyClassMeta = {
   item: StudyScheduleRow
   dayOffset: number
   minutesUntil: number
+  isCurrent: boolean
 } | null
 
 type TodoStatus = 'pending' | 'in_progress' | 'completed'
@@ -425,6 +426,7 @@ const transactions = ref<TransactionRow[]>([])
 const studySchedules = ref<StudyScheduleRow[]>([])
 const todos = ref<TodoRow[]>([])
 const events = ref<DashboardEventRow[]>([])
+const currentTime = ref(nowTH())
 
 const isLoading = ref(true)
 const isScheduleLoading = ref(true)
@@ -570,7 +572,7 @@ const sortedStudySchedules = computed(() => [...studySchedules.value].sort((a, b
 }))
 
 const todayWeekday = computed(() => {
-  const day = nowTH().getDay()
+  const day = currentTime.value.getDay()
   return day === 0 ? 7 : day
 })
 
@@ -619,7 +621,7 @@ const displayEventDateTimeShort = (item: DashboardEventRow) => {
 
 const nextStudyClassMeta = computed<NextStudyClassMeta>(() => {
   if (!sortedStudySchedules.value.length) return null
-  const now = nowTH()
+  const now = currentTime.value
   const currentDay = now.getDay() === 0 ? 7 : now.getDay()
   const currentMinutes = (now.getHours() * 60) + now.getMinutes()
   for (let offset = 0; offset < 7; offset += 1) {
@@ -629,14 +631,21 @@ const nextStudyClassMeta = computed<NextStudyClassMeta>(() => {
       .sort((a, b) => a.start_time.localeCompare(b.start_time))
     for (const item of classesInDay) {
       const startMinutes = toMinutes(item.start_time)
-      if (offset > 0 || startMinutes >= currentMinutes) {
-        return { item, dayOffset: offset, minutesUntil: (offset * 24 * 60) + (startMinutes - currentMinutes) }
+      const endMinutes = toMinutes(item.end_time)
+      const isCurrent = offset === 0 && currentMinutes >= startMinutes && currentMinutes < endMinutes
+      if (offset > 0 || isCurrent || currentMinutes <= startMinutes) {
+        return {
+          item,
+          dayOffset: offset,
+          minutesUntil: isCurrent ? 0 : (offset * 24 * 60) + (startMinutes - currentMinutes),
+          isCurrent,
+        }
       }
     }
   }
   const firstItem = sortedStudySchedules.value[0]
   return firstItem
-    ? { item: firstItem, dayOffset: 7, minutesUntil: (7 * 24 * 60) + (toMinutes(firstItem.start_time) - (nowTH().getHours() * 60 + nowTH().getMinutes())) }
+    ? { item: firstItem, dayOffset: 7, minutesUntil: (7 * 24 * 60) + (toMinutes(firstItem.start_time) - currentMinutes), isCurrent: false }
     : null
 })
 
@@ -652,6 +661,7 @@ const nextStudyClassSubtitle = computed(() => {
 
 const nextStudyAlertText = computed(() => {
   if (!nextStudyClassMeta.value) return 'ยังไม่มีคาบถัดไป'
+  if (nextStudyClassMeta.value.isCurrent) return 'กำลังเรียน'
   const minutes = nextStudyClassMeta.value.minutesUntil
   if (minutes <= 0) return 'เริ่มตอนนี้'
   if (minutes < 60) return `อีก ${minutes} นาที`
@@ -836,7 +846,16 @@ const refreshOverview = async () => {
   await Promise.all([loadTransactions(), loadStudySchedules(), loadTodos(), loadEvents()])
 }
 
+let clockTimer: ReturnType<typeof setInterval> | null = null
+
 onMounted(() => {
   refreshOverview()
+  clockTimer = setInterval(() => {
+    currentTime.value = nowTH()
+  }, 60_000)
+})
+
+onUnmounted(() => {
+  if (clockTimer) clearInterval(clockTimer)
 })
 </script>

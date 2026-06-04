@@ -319,7 +319,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { nowTH } from '~/utils/date'
 
 type ScheduleRow = {
@@ -363,6 +363,7 @@ const dayOptions: DayOption[] = [
 const dayLabelMap = new Map(dayOptions.map(item => [item.value, item.label]))
 
 const schedules = ref<ScheduleRow[]>([])
+const currentTime = ref(nowTH())
 const isLoading = ref(true)
 const isSubmitting = ref(false)
 const isDeletingId = ref('')
@@ -393,7 +394,7 @@ const submitButtonText = computed(() => {
 })
 
 const todayWeekday = computed(() => {
-  const day = nowTH().getDay()
+  const day = currentTime.value.getDay()
   return day === 0 ? 7 : day
 })
 
@@ -435,14 +436,16 @@ const scheduleGrid = computed(() => {
 
 const nextClass = computed(() => {
   if (!sortedSchedules.value.length) return null
-  const now = nowTH()
+  const now = currentTime.value
   const currentDay = now.getDay() === 0 ? 7 : now.getDay()
   const currentMinutes = (now.getHours() * 60) + now.getMinutes()
   for (let offset = 0; offset < 7; offset += 1) {
     const checkingDay = ((currentDay - 1 + offset) % 7) + 1
     const classesInDay = sortedSchedules.value.filter(item => item.day_of_week === checkingDay).sort((a, b) => a.start_time.localeCompare(b.start_time))
     for (const item of classesInDay) {
-      if (offset > 0 || toMinutes(item.start_time) >= currentMinutes) return item
+      const startMinutes = toMinutes(item.start_time)
+      const endMinutes = toMinutes(item.end_time)
+      if (offset > 0 || currentMinutes < endMinutes || currentMinutes <= startMinutes) return item
     }
   }
   return sortedSchedules.value[0] || null
@@ -558,5 +561,16 @@ const deleteSchedule = async (scheduleId: string) => {
   }
 }
 
-onMounted(() => { loadSchedules() })
+let clockTimer: ReturnType<typeof setInterval> | null = null
+
+onMounted(() => {
+  loadSchedules()
+  clockTimer = setInterval(() => {
+    currentTime.value = nowTH()
+  }, 60_000)
+})
+
+onUnmounted(() => {
+  if (clockTimer) clearInterval(clockTimer)
+})
 </script>
