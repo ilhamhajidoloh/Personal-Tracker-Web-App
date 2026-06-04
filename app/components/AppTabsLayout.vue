@@ -1,7 +1,7 @@
 <template>
   <div class="flex h-screen bg-gray-950 text-white overflow-hidden flex-col md:flex-row">
     <!-- Mobile Top Bar -->
-    <div class="md:hidden flex items-center justify-between px-5 py-3.5 border-b border-gray-800/80 bg-gray-900/95 backdrop-blur-sm shrink-0 z-30 relative">
+    <div class="md:hidden h-16 flex items-center justify-between px-5 border-b border-gray-800/80 bg-gray-900/95 backdrop-blur-sm shrink-0 z-30 relative">
       <div class="flex items-center gap-3">
         <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-base shadow-lg shadow-violet-500/30">✦</div>
         <p class="font-bold text-white tracking-tight">MyLife</p>
@@ -23,13 +23,13 @@
     <!-- Mobile overlay -->
     <div
       v-if="mobileMenuOpen"
-      class="md:hidden fixed inset-0 z-10 bg-black/60 backdrop-blur-sm"
+      class="md:hidden fixed inset-x-0 top-16 bottom-0 z-10 bg-black/60 backdrop-blur-sm"
       @click="closeMobileMenu"
     ></div>
 
     <!-- Sidebar -->
     <aside :class="[
-      'w-72 md:w-64 bg-gray-900 flex flex-col border-r border-gray-800/80 shrink-0 absolute md:relative z-20 h-[calc(100vh-57px)] md:h-auto transition-transform duration-300 ease-in-out',
+      'fixed left-0 top-16 w-[min(18rem,calc(100vw-3rem))] bg-gray-900 flex flex-col border-r border-gray-800/80 shrink-0 z-20 h-[calc(100dvh-4rem)] transition-transform duration-300 ease-in-out md:static md:top-auto md:w-64 md:h-auto',
       mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
     ]">
       <!-- Logo (desktop) -->

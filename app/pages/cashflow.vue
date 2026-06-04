@@ -2,24 +2,24 @@
   <AppTabsLayout>
     <div class="flex-1 overflow-y-auto">
       <!-- Page Header -->
-      <header class="sticky top-0 z-10 px-6 md:px-8 py-5 border-b border-gray-800/80 bg-gray-900/95 backdrop-blur-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h1 class="text-xl font-bold text-white tracking-tight">รายรับรายจ่าย</h1>
-          <p class="text-xs text-gray-500 mt-0.5">บันทึกรายการรายวัน พร้อมสรุปยอดเงินคงเหลือ</p>
+      <header class="md:sticky md:top-0 md:z-10 px-4 md:px-8 py-3.5 md:py-5 border-b border-gray-800/80 bg-gray-900/95 backdrop-blur-sm flex flex-row items-center justify-between gap-3">
+        <div class="min-w-0">
+          <h1 class="text-base md:text-xl font-bold text-white tracking-tight truncate">รายรับรายจ่าย</h1>
+          <p class="text-[11px] text-gray-500 mt-0.5 hidden sm:block">บันทึกรายการรายวัน พร้อมสรุปยอดเงินคงเหลือ</p>
         </div>
         <div class="flex items-center gap-2 shrink-0">
           <button
             @click="isEntryModalOpen = true"
-            class="px-4 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-sm font-semibold text-white shadow-md shadow-violet-500/20 transition-all flex items-center gap-1.5"
+            class="px-3 md:px-4 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-sm font-semibold text-white shadow-md shadow-violet-500/20 transition-all flex items-center gap-1.5"
           >
-            <span>+</span> เพิ่มรายการ
+            <span>+</span><span class="hidden sm:inline"> เพิ่มรายการ</span><span class="sm:hidden">เพิ่ม</span>
           </button>
           <button
             @click="loadTransactions"
             :disabled="isLoading"
-            class="px-4 py-2 rounded-xl bg-gray-800/80 hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed border border-gray-700/60 text-sm text-gray-400 hover:text-white transition-all"
+            class="px-3 md:px-4 py-2 rounded-xl bg-gray-800/80 hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed border border-gray-700/60 text-sm text-gray-400 hover:text-white transition-all"
           >
-            {{ isLoading ? 'กำลังโหลด...' : '↻ รีเฟรช' }}
+            {{ isLoading ? '...' : '↻' }}<span class="hidden sm:inline"> {{ isLoading ? 'กำลังโหลด...' : 'รีเฟรช' }}</span>
           </button>
         </div>
       </header>
