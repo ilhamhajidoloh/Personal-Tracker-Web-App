@@ -117,7 +117,7 @@
           </div>
 
           <div v-else class="space-y-3">
-            <div class="grid grid-cols-3 gap-3">
+            <div class="grid grid-cols-2 gap-3">
               <div class="border border-gray-800/70 rounded-xl p-3">
                 <p class="text-[11px] text-gray-500">รายการทั้งหมด</p>
                 <p class="text-xl font-bold text-white mt-1">{{ totalTransactions }}</p>
@@ -128,10 +128,22 @@
                 <p class="text-sm font-semibold text-white mt-1 truncate">{{ latestTransactionTitle }}</p>
                 <p class="text-[11px] text-gray-500 mt-0.5 truncate">{{ latestTransactionSubtitle }}</p>
               </div>
-              <div class="border border-gray-800/70 rounded-xl p-3">
-                <p class="text-[11px] text-gray-500">หมวดสูงสุด</p>
-                <p class="text-sm font-semibold text-white mt-1 truncate">{{ topExpenseCategory.name }}</p>
-                <p class="text-[11px] text-gray-500 mt-0.5">{{ formatCurrency(topExpenseCategory.amount) }}</p>
+            </div>
+            <div class="border border-gray-800/70 rounded-xl p-3">
+              <div class="flex items-center gap-1.5 mb-2.5">
+                <span class="text-base">🔺</span>
+                <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">3 อันดับรายจ่ายสูงสุด</p>
+              </div>
+              <div v-if="!topExpenseCategories.length" class="text-xs text-gray-500">ยังไม่มีข้อมูลรายจ่าย</div>
+              <div v-else class="space-y-1.5">
+                <div v-for="(cat, i) in topExpenseCategories" :key="cat.name" class="flex items-center gap-2">
+                  <span
+                    class="w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center shrink-0"
+                    :class="i === 0 ? 'bg-rose-500/25 text-rose-300' : i === 1 ? 'bg-orange-500/25 text-orange-300' : 'bg-amber-500/25 text-amber-300'"
+                  >{{ i + 1 }}</span>
+                  <span class="flex-1 text-xs text-white truncate">{{ cat.name }}</span>
+                  <span class="text-xs font-semibold text-rose-400 shrink-0">{{ formatCurrency(cat.amount) }}</span>
+                </div>
               </div>
             </div>
             <NuxtLink
@@ -522,7 +534,7 @@ const remainingProgressText = computed(() => {
   return `คงเหลือ ${formatPercent((remainingBalance.value / totalIncome.value) * 100)}% ของรายรับ`
 })
 
-const topExpenseCategory = computed(() => {
+const topExpenseCategories = computed(() => {
   const categoryTotals = transactions.value
     .filter((item) => item.type === 'expense')
     .reduce<Record<string, number>>((acc, item) => {
@@ -530,9 +542,13 @@ const topExpenseCategory = computed(() => {
       acc[key] = (acc[key] || 0) + item.amount
       return acc
     }, {})
-  const [name, amount] = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1])[0] || ['-', 0]
-  return { name, amount }
+  return Object.entries(categoryTotals)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([name, amount]) => ({ name, amount }))
 })
+
+const topExpenseCategory = computed(() => topExpenseCategories.value[0] || { name: '-', amount: 0 })
 
 const latestTransaction = computed(() => transactions.value[0] || null)
 

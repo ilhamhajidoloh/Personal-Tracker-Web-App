@@ -517,9 +517,10 @@ const submitSchedule = async () => {
       start_time: `${form.startTime}:00`, end_time: `${form.endTime}:00`,
       location: form.location.trim() || null, note: form.note.trim() || null,
     }
+    const q = supabase.from('study_schedules') as any
     const { error } = isEditing.value
-      ? await supabase.from('study_schedules').update(payload as any).eq('id', editingScheduleId.value).eq('user_id', userData.user.id)
-      : await supabase.from('study_schedules').insert({ user_id: userData.user.id, ...payload } as any)
+      ? await q.update(payload).eq('id', editingScheduleId.value).eq('user_id', userData.user.id)
+      : await q.insert({ user_id: userData.user.id, ...payload })
     if (error) {
       if (tableMissingCodes.has(error.code || '')) { const msg = 'ยังไม่พบตาราง study_schedules'; errorMessage.value = msg; toastError(msg); return }
       throw error

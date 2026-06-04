@@ -80,6 +80,58 @@
           </div>
         </div>
 
+        <!-- Top / Bottom Expense Category Rankings -->
+        <div v-if="expenseCategoryRankings.length > 0" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Top 3 Highest -->
+          <div class="bg-gray-900 border border-gray-800/80 rounded-2xl p-5">
+            <div class="flex items-center gap-2 mb-4">
+              <div class="w-8 h-8 rounded-lg bg-rose-500/15 flex items-center justify-center text-base shrink-0">🔺</div>
+              <div>
+                <h2 class="text-sm font-semibold text-white">3 อันดับรายจ่ายสูงสุด</h2>
+                <p class="text-[11px] text-gray-500">หมวดที่ใช้จ่ายมากที่สุด</p>
+              </div>
+            </div>
+            <div class="space-y-2">
+              <div
+                v-for="(cat, i) in topExpenseCategories"
+                :key="cat.name"
+                class="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-gray-800/30"
+              >
+                <span
+                  class="w-6 h-6 rounded-full text-[11px] font-bold flex items-center justify-center shrink-0"
+                  :class="i === 0 ? 'bg-rose-500/30 text-rose-300' : i === 1 ? 'bg-orange-500/30 text-orange-300' : 'bg-amber-500/30 text-amber-300'"
+                >{{ i + 1 }}</span>
+                <span class="flex-1 text-sm text-white truncate">{{ cat.name }}</span>
+                <span class="text-sm font-semibold text-rose-400 shrink-0">{{ formatCurrency(cat.amount) }}</span>
+              </div>
+            </div>
+          </div>
+          <!-- Top 3 Lowest -->
+          <div class="bg-gray-900 border border-gray-800/80 rounded-2xl p-5">
+            <div class="flex items-center gap-2 mb-4">
+              <div class="w-8 h-8 rounded-lg bg-emerald-500/15 flex items-center justify-center text-base shrink-0">🔻</div>
+              <div>
+                <h2 class="text-sm font-semibold text-white">3 อันดับรายจ่ายน้อยสุด</h2>
+                <p class="text-[11px] text-gray-500">หมวดที่ใช้จ่ายน้อยที่สุด</p>
+              </div>
+            </div>
+            <div class="space-y-2">
+              <div
+                v-for="(cat, i) in bottomExpenseCategories"
+                :key="cat.name"
+                class="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-gray-800/30"
+              >
+                <span
+                  class="w-6 h-6 rounded-full text-[11px] font-bold flex items-center justify-center shrink-0"
+                  :class="i === 0 ? 'bg-emerald-500/30 text-emerald-300' : i === 1 ? 'bg-teal-500/30 text-teal-300' : 'bg-cyan-500/30 text-cyan-300'"
+                >{{ i + 1 }}</span>
+                <span class="flex-1 text-sm text-white truncate">{{ cat.name }}</span>
+                <span class="text-sm font-semibold text-emerald-400 shrink-0">{{ formatCurrency(cat.amount) }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Daily Summary -->
         <section class="bg-gray-900 border border-gray-800/80 rounded-2xl overflow-hidden">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 py-4 border-b border-gray-800/60">
@@ -277,15 +329,55 @@
               </div>
             </div>
 
-            <div>
+            <div class="relative" ref="categoryComboboxRef">
               <label class="block text-xs font-medium text-gray-400 mb-1.5">หมวดหมู่</label>
               <input
-                v-model="form.category"
+                v-model="categorySearch"
                 type="text"
                 maxlength="80"
-                placeholder="เช่น เงินเดือน, ค่าอาหาร, ค่าเดินทาง..."
+                placeholder="พิมพ์ค้นหาหรือสร้างหมวดหมู่ใหม่..."
+                autocomplete="off"
+                @focus="isCategoryDropdownOpen = true"
+                @keydown.down.prevent="navigateCategoryOption(1)"
+                @keydown.up.prevent="navigateCategoryOption(-1)"
+                @keydown.enter.prevent="selectHighlightedCategory"
+                @keydown.escape="isCategoryDropdownOpen = false"
                 class="w-full bg-gray-800/80 border border-gray-700/60 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-600 outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 transition-all"
               >
+              <!-- Dropdown -->
+              <div
+                v-if="isCategoryDropdownOpen && (filteredCategories.length > 0 || categorySearch.trim())"
+                class="absolute left-0 right-0 top-full mt-1 z-30 max-h-48 overflow-y-auto rounded-xl border border-gray-700/60 bg-gray-850 shadow-xl"
+                style="background: #1a1d23;"
+              >
+                <button
+                  v-for="(cat, idx) in filteredCategories"
+                  :key="cat"
+                  type="button"
+                  @mousedown.prevent="selectCategory(cat)"
+                  class="w-full text-left px-4 py-2.5 text-sm transition-all"
+                  :class="idx === highlightedCategoryIndex ? 'bg-violet-600/30 text-white' : 'text-gray-300 hover:bg-gray-800/80 hover:text-white'"
+                >
+                  {{ cat }}
+                </button>
+                <!-- "Create new" option when search text doesn't match any existing -->
+                <button
+                  v-if="categorySearch.trim() && !categoryExactMatch"
+                  type="button"
+                  @mousedown.prevent="selectCategory(categorySearch.trim())"
+                  class="w-full text-left px-4 py-2.5 text-sm transition-all flex items-center gap-2"
+                  :class="highlightedCategoryIndex === filteredCategories.length ? 'bg-violet-600/30 text-white' : 'text-violet-400 hover:bg-gray-800/80 hover:text-violet-300'"
+                >
+                  <span>➕</span> สร้าง "{{ categorySearch.trim() }}"
+                </button>
+                <!-- No results and no search text -->
+                <div
+                  v-if="filteredCategories.length === 0 && !categorySearch.trim()"
+                  class="px-4 py-3 text-xs text-gray-500 text-center"
+                >
+                  พิมพ์เพื่อค้นหาหรือสร้างหมวดหมู่ใหม่
+                </div>
+              </div>
             </div>
 
             <div>
@@ -337,7 +429,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { getTodayTH, getThisMonthTH } from '~/utils/date'
 
 type TransactionType = 'income' | 'expense'
@@ -453,6 +545,92 @@ const topExpenseCategory = computed(() => {
   return { name, amount }
 })
 
+const expenseCategoryRankings = computed(() => {
+  const categoryTotals = transactions.value
+    .filter(i => i.type === 'expense')
+    .reduce<Record<string, number>>((acc, i) => {
+      const key = i.category?.trim() || 'ไม่ระบุหมวดหมู่'
+      acc[key] = (acc[key] || 0) + i.amount
+      return acc
+    }, {})
+  return Object.entries(categoryTotals)
+    .sort((a, b) => b[1] - a[1])
+    .map(([name, amount]) => ({ name, amount }))
+})
+
+const topExpenseCategories = computed(() => expenseCategoryRankings.value.slice(0, 3))
+const bottomExpenseCategories = computed(() => [...expenseCategoryRankings.value].reverse().slice(0, 3))
+
+const categoryComboboxRef = ref<HTMLElement | null>(null)
+const categorySearch = ref('')
+const isCategoryDropdownOpen = ref(false)
+const highlightedCategoryIndex = ref(0)
+
+const categoriesByType = computed(() => {
+  const cats = transactions.value
+    .filter(i => i.type === form.type && i.category?.trim())
+    .map(i => i.category as string)
+  return [...new Set(cats)].sort((a, b) => a.localeCompare(b, 'th'))
+})
+
+const filteredCategories = computed(() => {
+  const q = categorySearch.value.trim().toLowerCase()
+  if (!q) return categoriesByType.value
+  return categoriesByType.value.filter(c => c.toLowerCase().includes(q))
+})
+
+const categoryExactMatch = computed(() => {
+  const q = categorySearch.value.trim().toLowerCase()
+  return categoriesByType.value.some(c => c.toLowerCase() === q)
+})
+
+const selectCategory = (cat: string) => {
+  form.category = cat
+  categorySearch.value = cat
+  isCategoryDropdownOpen.value = false
+  highlightedCategoryIndex.value = 0
+}
+
+const navigateCategoryOption = (direction: number) => {
+  const totalOptions = filteredCategories.value.length + (categorySearch.value.trim() && !categoryExactMatch.value ? 1 : 0)
+  if (totalOptions === 0) return
+  highlightedCategoryIndex.value = (highlightedCategoryIndex.value + direction + totalOptions) % totalOptions
+}
+
+const selectHighlightedCategory = () => {
+  if (!isCategoryDropdownOpen.value) { isCategoryDropdownOpen.value = true; return }
+  const idx = highlightedCategoryIndex.value
+  if (idx < filteredCategories.value.length) {
+    const cat = filteredCategories.value[idx]
+    if (cat !== undefined) {
+      selectCategory(cat)
+    }
+  } else if (categorySearch.value.trim() && !categoryExactMatch.value) {
+    selectCategory(categorySearch.value.trim())
+  }
+}
+
+const handleClickOutsideCombobox = (e: MouseEvent) => {
+  if (categoryComboboxRef.value && !categoryComboboxRef.value.contains(e.target as Node)) {
+    isCategoryDropdownOpen.value = false
+    // If user typed something but didn't select, commit what they typed
+    if (categorySearch.value.trim()) {
+      form.category = categorySearch.value.trim()
+    }
+  }
+}
+
+watch(categorySearch, () => {
+  highlightedCategoryIndex.value = 0
+  if (!isCategoryDropdownOpen.value) isCategoryDropdownOpen.value = true
+})
+
+watch(() => form.type, () => {
+  form.category = ''
+  categorySearch.value = ''
+  isCategoryDropdownOpen.value = false
+})
+
 const dailySummaries = computed<DailySummary[]>(() => {
   let source = transactions.value
   if (summaryFilterMonth.value) source = source.filter(i => i.entry_date.startsWith(summaryFilterMonth.value))
@@ -482,6 +660,8 @@ const resetForm = () => {
   form.description = ''
   form.amount = ''
   editingTransactionId.value = ''
+  categorySearch.value = ''
+  isCategoryDropdownOpen.value = false
 }
 
 const normalizeRows = (rows: any[]): TransactionRow[] => rows.map(row => ({
@@ -497,9 +677,11 @@ const openEditTransactionModal = (item: TransactionRow) => {
   form.entryDate = item.entry_date
   form.type = item.type
   form.category = item.category || ''
+  categorySearch.value = item.category || ''
   form.description = item.description || ''
   form.amount = String(item.amount)
   errorMessage.value = ''
+  isCategoryDropdownOpen.value = false
   isEntryModalOpen.value = true
 }
 
@@ -594,5 +776,12 @@ const deleteTransaction = async (transactionId: string) => {
   }
 }
 
-onMounted(() => { loadTransactions() })
+onMounted(() => {
+  loadTransactions()
+  document.addEventListener('mousedown', handleClickOutsideCombobox)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('mousedown', handleClickOutsideCombobox)
+})
 </script>
