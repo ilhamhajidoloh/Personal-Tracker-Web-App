@@ -132,7 +132,7 @@
                         <p v-if="item.location" class="text-[10px] text-gray-500 mt-0.5">{{ item.location }}</p>
                       </div>
                     </div>
-                    <span v-else class="text-[11px] text-gray-700">—</span>
+                    <span v-else class="text-[11px] text-gray-600">—</span>
                   </td>
                 </tr>
               </tbody>

@@ -43,23 +43,23 @@ onUnmounted(() => {
 
 <template>
   <div v-if="isPromptVisible" class="fixed bottom-0 left-0 right-0 p-4 z-50 animate-bounce">
-    <div class="max-w-md mx-auto bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-4 border border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row items-center justify-between gap-4">
+    <div class="max-w-md mx-auto bg-gray-800 rounded-xl shadow-2xl p-4 border border-gray-700 flex flex-col sm:flex-row items-center justify-between gap-4">
       <div class="flex items-center gap-3">
-        <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center flex-shrink-0">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-600 dark:text-blue-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div class="w-12 h-12 bg-violet-500/15 rounded-lg flex items-center justify-center flex-shrink-0">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-violet-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
           </svg>
         </div>
         <div>
-          <h3 class="font-bold text-gray-900 dark:text-white">Install App</h3>
-          <p class="text-sm text-gray-500 dark:text-gray-400">Add to home screen for a better experience</p>
+          <h3 class="font-bold text-white">Install App</h3>
+          <p class="text-sm text-gray-400">Add to home screen for a better experience</p>
         </div>
       </div>
       <div class="flex gap-2 w-full sm:w-auto">
-        <button @click="dismissPrompt" class="flex-1 sm:flex-none px-4 py-2 text-sm font-medium text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+        <button @click="dismissPrompt" class="flex-1 sm:flex-none px-4 py-2 text-sm font-medium text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-colors">
           Not now
         </button>
-        <button @click="installPWA" class="flex-1 sm:flex-none px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors shadow-md">
+        <button @click="installPWA" class="flex-1 sm:flex-none px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 rounded-lg transition-all shadow-md shadow-violet-500/20">
           Install
         </button>
       </div>

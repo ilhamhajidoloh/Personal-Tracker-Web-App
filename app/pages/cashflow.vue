@@ -547,8 +547,7 @@
               <!-- Dropdown -->
               <div
                 v-if="isCategoryDropdownOpen && (filteredCategories.length > 0 || categorySearch.trim())"
-                class="absolute left-0 right-0 top-full mt-1 z-30 max-h-48 overflow-y-auto rounded-xl border border-gray-700/60 bg-gray-850 shadow-xl"
-                style="background: #1a1d23;"
+                class="absolute left-0 right-0 top-full mt-1 z-30 max-h-48 overflow-y-auto rounded-xl border border-gray-700/60 bg-gray-800 shadow-xl"
               >
                 <button
                   v-for="(cat, idx) in filteredCategories"
