@@ -835,7 +835,6 @@ const loadTransactions = async () => {
       .eq('user_id', userData.user.id)
       .order('entry_date', { ascending: false })
       .order('created_at', { ascending: false })
-      .limit(100)
     if (error) {
       if (tableMissingCodes.has(error.code || '')) { errorMessage.value = 'ยังไม่พบตาราง transactions ใน Supabase'; transactions.value = []; return }
       throw error
