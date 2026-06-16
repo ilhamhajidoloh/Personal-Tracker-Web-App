@@ -21,6 +21,9 @@ export default defineNuxtConfig({
     manifest: {
       name: 'MyLife App',
       short_name: 'MyLife',
+      id: '/',
+      start_url: '/',
+      scope: '/',
       theme_color: '#ffffff',
       background_color: '#ffffff',
       display: 'standalone',
@@ -28,18 +31,33 @@ export default defineNuxtConfig({
         {
           src: 'pwa-192x192.png',
           sizes: '192x192',
-          type: 'image/png'
-        },
-        {
-          src: 'pwa-512x512.png',
-          sizes: '512x512',
-          type: 'image/png'
+          type: 'image/png',
+          purpose: 'any'
         },
         {
           src: 'pwa-512x512.png',
           sizes: '512x512',
           type: 'image/png',
-          purpose: 'any maskable'
+          purpose: 'any'
+        },
+        {
+          src: 'pwa-512x512.png',
+          sizes: '512x512',
+          type: 'image/png',
+          purpose: 'maskable'
+        }
+      ],
+      screenshots: [
+        {
+          src: 'screenshot-desktop.png',
+          sizes: '1920x1080',
+          type: 'image/png',
+          form_factor: 'wide'
+        },
+        {
+          src: 'screenshot-mobile.png',
+          sizes: '1080x1920',
+          type: 'image/png'
         }
       ]
     },

@@ -15,6 +15,7 @@ onMounted(() => {
 
 <template>
   <div>
+    <NuxtPwaManifest />
     <NuxtPage :page-key="route => route.fullPath" />
     <InstallPrompt />
   </div>
