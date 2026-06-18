@@ -634,7 +634,11 @@ const displayEventDateTimeShort = (item: DashboardEventRow) => {
   const formatTimeStr = (t: string | null) => t ? t.slice(0, 5) + ' น.' : ''
   if (item.event_type === 'same_day_all_day') return `${formatDate(item.start_date)} (ตลอดวัน)`
   if (item.event_type === 'same_day_time') return `${formatDate(item.start_date)}  ${formatTimeStr(item.start_time)} - ${formatTimeStr(item.end_time)}`
-  if (item.event_type === 'multi_day') return `${formatDate(item.start_date)} ถึง ${formatDate(item.end_date || '')}`
+  if (item.event_type === 'multi_day') {
+    const startTimeStr = item.start_time ? ` ${formatTimeStr(item.start_time)}` : ''
+    const endTimeStr = item.end_time ? ` ${formatTimeStr(item.end_time)}` : ''
+    return `${formatDate(item.start_date)}${startTimeStr} ถึง ${formatDate(item.end_date || '')}${endTimeStr}`
+  }
   return formatDate(item.start_date)
 }
 
@@ -652,9 +656,6 @@ const nextEventMeta = computed(() => {
     if (event.event_type === 'same_day_all_day') {
        startStr = `${event.start_date}T00:00:00`
        endStr = `${event.start_date}T23:59:59`
-    } else if (event.event_type === 'multi_day') {
-       startStr = `${event.start_date}T00:00:00`
-       endStr = `${event.end_date}T23:59:59`
     }
     
     const startMs = new Date(startStr).getTime()
