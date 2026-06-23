@@ -1,74 +1,97 @@
 <template>
-  <div class="min-h-screen bg-gray-950 flex items-center justify-center p-4 relative overflow-hidden">
-    <!-- Background blobs -->
+  <div class="min-h-screen flex items-center justify-center p-4 relative overflow-hidden" style="background: var(--bg-base, #06060f);">
+    <!-- Animated Background -->
     <div class="absolute inset-0 overflow-hidden pointer-events-none">
-      <div class="absolute -top-48 -right-48 w-[500px] h-[500px] bg-violet-600/8 rounded-full blur-3xl"></div>
-      <div class="absolute -bottom-48 -left-48 w-[500px] h-[500px] bg-indigo-600/8 rounded-full blur-3xl"></div>
-      <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-violet-500/4 rounded-full blur-3xl"></div>
+      <div class="absolute -top-32 -right-32 w-[600px] h-[600px] rounded-full blur-[150px] opacity-40" style="background: radial-gradient(circle, rgba(139,92,246,0.12), transparent 70%); animation: float 15s ease-in-out infinite;"></div>
+      <div class="absolute -bottom-48 -left-48 w-[500px] h-[500px] rounded-full blur-[130px] opacity-30" style="background: radial-gradient(circle, rgba(99,102,241,0.1), transparent 70%); animation: float 20s ease-in-out infinite reverse;"></div>
+      <div class="absolute top-1/4 left-1/2 -translate-x-1/2 w-[800px] h-[800px] rounded-full blur-[180px] opacity-20" style="background: radial-gradient(circle, rgba(168,85,247,0.08), transparent 60%);"></div>
+      <!-- Floating particles -->
+      <div class="absolute top-[15%] left-[20%] w-1.5 h-1.5 rounded-full bg-violet-400/20" style="animation: float 8s ease-in-out infinite;"></div>
+      <div class="absolute top-[60%] right-[15%] w-2 h-2 rounded-full bg-indigo-400/15" style="animation: float 12s ease-in-out infinite 2s;"></div>
+      <div class="absolute bottom-[25%] left-[35%] w-1 h-1 rounded-full bg-purple-400/25" style="animation: float 10s ease-in-out infinite 4s;"></div>
+      <div class="absolute top-[40%] right-[30%] w-1.5 h-1.5 rounded-full bg-violet-300/15" style="animation: float 14s ease-in-out infinite 1s;"></div>
     </div>
 
     <!-- Loading / Redirecting -->
     <div
       v-if="isCheckingSession || isRedirecting"
-      class="relative bg-gray-900/90 backdrop-blur-md border border-gray-800/80 p-10 rounded-3xl shadow-2xl flex flex-col items-center gap-5 max-w-sm w-full"
+      class="relative rounded-2xl p-10 flex flex-col items-center gap-5 max-w-sm w-full animate-fade-in"
+      style="background: var(--bg-card); backdrop-filter: blur(20px) saturate(1.5); border: 1px solid var(--border-default);"
     >
-      <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-3xl shadow-xl shadow-violet-500/25">✦</div>
-      <span class="inline-block w-10 h-10 border-4 border-violet-400/20 border-t-violet-400 rounded-full animate-spin"></span>
-      <div class="text-center space-y-1">
+      <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500 via-purple-500 to-indigo-600 flex items-center justify-center shadow-xl glow-violet relative overflow-hidden">
+        <span class="text-white font-bold text-2xl relative z-10">M</span>
+        <div class="absolute inset-0 bg-gradient-to-t from-white/10 to-transparent"></div>
+      </div>
+      <span class="inline-block w-10 h-10 border-[3px] border-violet-400/15 border-t-violet-400 rounded-full animate-spin"></span>
+      <div class="text-center space-y-1.5">
         <p class="text-lg font-semibold text-white">
           {{ isRedirecting ? 'กำลังพาไปที่ Dashboard...' : 'กำลังตรวจสอบเซสชัน...' }}
         </p>
-        <p class="text-sm text-gray-500">กรุณารอสักครู่</p>
+        <p class="text-sm" style="color: var(--text-muted);">กรุณารอสักครู่</p>
       </div>
     </div>
 
     <!-- Login Card -->
-    <div v-else class="relative bg-gray-900/90 backdrop-blur-md border border-gray-800/70 rounded-3xl shadow-2xl max-w-sm w-full overflow-hidden">
+    <div v-else class="relative rounded-2xl max-w-[400px] w-full overflow-hidden animate-slide-up" style="background: var(--bg-card); backdrop-filter: blur(24px) saturate(1.6); border: 1px solid var(--border-default); box-shadow: 0 24px 80px rgba(0,0,0,0.3), 0 0 1px var(--border-subtle);">
+      <!-- Decorative top gradient line -->
+      <div class="h-[2px] w-full" style="background: linear-gradient(90deg, transparent, #8b5cf6, #6366f1, #8b5cf6, transparent);"></div>
+
       <!-- Card header -->
-      <div class="px-8 pt-8 pb-6 text-center">
-        <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-3xl shadow-xl shadow-violet-500/30 mx-auto mb-5">✦</div>
+      <div class="px-8 pt-8 pb-5 text-center">
+        <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500 via-purple-500 to-indigo-600 flex items-center justify-center shadow-xl glow-violet mx-auto mb-5 relative overflow-hidden">
+          <span class="text-white font-bold text-2xl relative z-10">M</span>
+          <div class="absolute inset-0 bg-gradient-to-t from-white/10 to-transparent"></div>
+        </div>
         <h1 class="text-2xl font-bold text-white tracking-tight">Welcome to MyLife</h1>
-        <p class="text-sm text-gray-500 mt-1.5">จัดการชีวิตของคุณให้ดีขึ้น</p>
+        <p class="text-sm mt-1.5" style="color: var(--text-muted);">จัดการชีวิตของคุณให้ดีขึ้น</p>
       </div>
 
       <div class="px-8 pb-8 space-y-5">
         <!-- Messages -->
-        <div
-          v-if="errorMessage"
-          class="flex items-start gap-2.5 bg-rose-500/10 border border-rose-500/25 rounded-xl p-3.5 text-sm text-rose-400"
-        >
-          <span class="shrink-0 mt-0.5">⚠️</span>
-          <span>{{ errorMessage }}</span>
-        </div>
-        <div
-          v-if="successMessage"
-          class="flex items-start gap-2.5 bg-emerald-500/10 border border-emerald-500/25 rounded-xl p-3.5 text-sm text-emerald-400"
-        >
-          <span class="shrink-0 mt-0.5">✓</span>
-          <span>{{ successMessage }}</span>
-        </div>
+        <Transition name="slide-down">
+          <div
+            v-if="errorMessage"
+            class="flex items-start gap-2.5 rounded-xl p-3.5 text-sm text-rose-400"
+            style="background: rgba(244,63,94,0.08); border: 1px solid rgba(244,63,94,0.15);"
+          >
+            <span class="shrink-0 mt-0.5">⚠️</span>
+            <span>{{ errorMessage }}</span>
+          </div>
+        </Transition>
+        <Transition name="slide-down">
+          <div
+            v-if="successMessage"
+            class="flex items-start gap-2.5 rounded-xl p-3.5 text-sm text-emerald-400"
+            style="background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.15);"
+          >
+            <span class="shrink-0 mt-0.5">✓</span>
+            <span>{{ successMessage }}</span>
+          </div>
+        </Transition>
 
         <!-- Tab switcher -->
-        <div class="flex bg-gray-800/70 rounded-xl p-1 gap-1">
+        <div class="flex rounded-xl p-1 gap-1" style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);">
           <button
             @click="isSignUp = false"
             :class="[
-              'flex-1 py-2 px-4 rounded-lg text-sm font-semibold transition-all',
+              'flex-1 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all duration-300',
               !isSignUp
-                ? 'bg-violet-600 text-white shadow-lg shadow-violet-500/20'
-                : 'text-gray-400 hover:text-gray-200'
+                ? 'text-white shadow-lg'
+                : 'hover:text-white'
             ]"
+            :style="!isSignUp ? 'background: linear-gradient(135deg, #8b5cf6, #6366f1); box-shadow: 0 4px 16px rgba(139,92,246,0.25);' : 'color: var(--text-muted);'"
           >
             ลงชื่อเข้าใช้
           </button>
           <button
             @click="isSignUp = true"
             :class="[
-              'flex-1 py-2 px-4 rounded-lg text-sm font-semibold transition-all',
+              'flex-1 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all duration-300',
               isSignUp
-                ? 'bg-violet-600 text-white shadow-lg shadow-violet-500/20'
-                : 'text-gray-400 hover:text-gray-200'
+                ? 'text-white shadow-lg'
+                : 'hover:text-white'
             ]"
+            :style="isSignUp ? 'background: linear-gradient(135deg, #8b5cf6, #6366f1); box-shadow: 0 4px 16px rgba(139,92,246,0.25);' : 'color: var(--text-muted);'"
           >
             สมัครสมาชิก
           </button>
@@ -77,31 +100,31 @@
         <!-- Sign In Form -->
         <form v-if="!isSignUp" @submit.prevent="handleSignIn" class="space-y-4">
           <div>
-            <label class="block text-xs font-medium text-gray-400 mb-1.5">อีเมล</label>
+            <label class="block text-xs font-medium mb-1.5" style="color: var(--text-secondary);">อีเมล</label>
             <input
               v-model="email"
               type="email"
               placeholder="your@email.com"
               required
-              class="w-full bg-gray-800/80 border border-gray-700/80 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 transition-all"
+              class="w-full input-glass text-sm"
             />
           </div>
           <div>
-            <label class="block text-xs font-medium text-gray-400 mb-1.5">รหัสผ่าน</label>
+            <label class="block text-xs font-medium mb-1.5" style="color: var(--text-secondary);">รหัสผ่าน</label>
             <input
               v-model="password"
               type="password"
               placeholder="••••••••"
               required
-              class="w-full bg-gray-800/80 border border-gray-700/80 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 transition-all"
+              class="w-full input-glass text-sm"
             />
           </div>
           <button
             type="submit"
             :disabled="isLoading"
-            class="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 disabled:from-violet-600/50 disabled:to-indigo-600/50 disabled:cursor-not-allowed text-white font-semibold py-2.5 px-4 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-violet-500/20"
+            class="w-full btn-primary text-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
           >
-            <span v-if="isLoading" class="inline-block w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
+            <span v-if="isLoading" class="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
             {{ isLoading ? 'กำลังเข้าสู่ระบบ...' : 'ลงชื่อเข้าใช้' }}
           </button>
         </form>
@@ -109,60 +132,60 @@
         <!-- Sign Up Form -->
         <form v-else @submit.prevent="handleSignUp" class="space-y-4">
           <div>
-            <label class="block text-xs font-medium text-gray-400 mb-1.5">อีเมล</label>
+            <label class="block text-xs font-medium mb-1.5" style="color: var(--text-secondary);">อีเมล</label>
             <input
               v-model="email"
               type="email"
               placeholder="your@email.com"
               required
-              class="w-full bg-gray-800/80 border border-gray-700/80 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 transition-all"
+              class="w-full input-glass text-sm"
             />
           </div>
           <div>
-            <label class="block text-xs font-medium text-gray-400 mb-1.5">รหัสผ่าน</label>
+            <label class="block text-xs font-medium mb-1.5" style="color: var(--text-secondary);">รหัสผ่าน</label>
             <input
               v-model="password"
               type="password"
               placeholder="••••••••"
               required
               minlength="6"
-              class="w-full bg-gray-800/80 border border-gray-700/80 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 transition-all"
+              class="w-full input-glass text-sm"
             />
-            <p class="text-[11px] text-gray-600 mt-1.5">อย่างน้อย 6 ตัวอักษร</p>
+            <p class="text-[11px] mt-1.5" style="color: var(--text-muted);">อย่างน้อย 6 ตัวอักษร</p>
           </div>
           <div>
-            <label class="block text-xs font-medium text-gray-400 mb-1.5">ยืนยันรหัสผ่าน</label>
+            <label class="block text-xs font-medium mb-1.5" style="color: var(--text-secondary);">ยืนยันรหัสผ่าน</label>
             <input
               v-model="confirmPassword"
               type="password"
               placeholder="••••••••"
               required
               minlength="6"
-              class="w-full bg-gray-800/80 border border-gray-700/80 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 transition-all"
+              class="w-full input-glass text-sm"
             />
           </div>
           <button
             type="submit"
             :disabled="isLoading || password !== confirmPassword"
-            class="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 disabled:from-violet-600/50 disabled:to-indigo-600/50 disabled:cursor-not-allowed text-white font-semibold py-2.5 px-4 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-violet-500/20"
+            class="w-full btn-primary text-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
           >
-            <span v-if="isLoading" class="inline-block w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
+            <span v-if="isLoading" class="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
             {{ isLoading ? 'กำลังสร้างบัญชี...' : 'สมัครสมาชิก' }}
           </button>
         </form>
 
         <!-- Divider -->
         <div class="flex items-center gap-3">
-          <div class="flex-1 h-px bg-gray-800"></div>
-          <span class="text-xs text-gray-600">หรือ</span>
-          <div class="flex-1 h-px bg-gray-800"></div>
+          <div class="flex-1 h-px" style="background: var(--border-default);"></div>
+          <span class="text-xs" style="color: var(--text-muted);">หรือ</span>
+          <div class="flex-1 h-px" style="background: var(--border-default);"></div>
         </div>
 
         <!-- Google Sign In -->
         <button
           @click="handleGoogleSignIn"
           :disabled="isLoading"
-          class="w-full bg-gray-800/80 hover:bg-gray-800 disabled:bg-gray-800/50 disabled:cursor-not-allowed border border-gray-700/80 hover:border-gray-600 text-white font-medium py-2.5 px-4 rounded-xl transition-all flex items-center justify-center gap-3"
+          class="w-full btn-secondary text-sm font-medium flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24">
             <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -173,7 +196,7 @@
           ลงชื่อเข้าใช้ผ่าน Google
         </button>
 
-        <p class="text-xs text-center text-gray-600 leading-relaxed">
+        <p class="text-xs text-center leading-relaxed" style="color: var(--text-muted);">
           เมื่อลงชื่อเข้าใช้สำเร็จ ระบบจะพาไปที่ Dashboard อัตโนมัติ
         </p>
       </div>
@@ -366,3 +389,13 @@ const handleGoogleSignIn = async () => {
   }
 }
 </script>
+
+<style scoped>
+.slide-down-enter-active, .slide-down-leave-active {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.slide-down-enter-from, .slide-down-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+</style>

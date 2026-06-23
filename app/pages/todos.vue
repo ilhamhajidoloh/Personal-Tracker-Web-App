@@ -2,22 +2,22 @@
   <AppTabsLayout>
     <div class="flex-1 overflow-y-auto">
       <!-- Page Header -->
-      <header class="sticky top-0 z-10 px-6 md:px-8 py-5 border-b border-gray-800/80 bg-gray-900/95 backdrop-blur-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <header class="sticky top-0 z-10 px-6 md:px-8 py-5 glass-header flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 class="text-xl font-bold text-white tracking-tight">งานและ To-do</h1>
-          <p class="text-xs text-gray-500 mt-0.5">จัดการสิ่งที่ต้องทำ งานค้าง และกำหนดส่ง</p>
+          <h1 class="text-xl font-bold text-white tracking-tight">✅ งานและ To-do</h1>
+          <p class="text-xs mt-0.5" style="color: var(--text-muted);">จัดการสิ่งที่ต้องทำ งานค้าง และกำหนดส่ง</p>
         </div>
         <div class="flex items-center gap-2 shrink-0">
           <button
             @click="isEntryModalOpen = true"
-            class="px-4 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-sm font-semibold text-white shadow-md shadow-violet-500/20 transition-all flex items-center gap-1.5"
+            class="btn-primary text-sm flex items-center gap-1.5"
           >
             <span>+</span> เพิ่มงานใหม่
           </button>
           <button
             @click="loadTodos"
             :disabled="isLoading"
-            class="px-4 py-2 rounded-xl bg-gray-800/80 hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed border border-gray-700/60 text-sm text-gray-400 hover:text-white transition-all"
+            class="btn-secondary text-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {{ isLoading ? 'กำลังโหลด...' : '↻ รีเฟรช' }}
           </button>
@@ -35,28 +35,28 @@
 
         <!-- Stats Cards -->
         <div class="grid grid-cols-3 gap-3 md:gap-4">
-          <div class="bg-gray-900 border border-gray-800/80 rounded-2xl p-4 md:p-5">
-            <div class="w-9 h-9 rounded-xl bg-gray-700/60 flex items-center justify-center text-base mb-3">📋</div>
-            <p class="text-[11px] text-gray-500 font-medium uppercase tracking-wide">ที่ยังไม่เสร็จ</p>
-            <p class="text-2xl font-bold text-white mt-1">{{ pendingTodos.length }}</p>
-            <p class="text-xs text-gray-500">งาน</p>
+          <div class="stat-card">
+            <div class="icon-bubble mb-3" style="background: var(--bg-elevated);">📋</div>
+            <p class="text-[11px] font-medium uppercase tracking-wide relative z-10" style="color: var(--text-muted);">ที่ยังไม่เสร็จ</p>
+            <p class="text-2xl font-bold text-white mt-1 relative z-10">{{ pendingTodos.length }}</p>
+            <p class="text-xs relative z-10" style="color: var(--text-muted);">งาน</p>
           </div>
-          <div class="bg-gray-900 border border-gray-800/80 rounded-2xl p-4 md:p-5">
-            <div class="w-9 h-9 rounded-xl bg-rose-500/15 flex items-center justify-center text-base mb-3">⚠️</div>
-            <p class="text-[11px] text-gray-500 font-medium uppercase tracking-wide">ด่วน/เกินกำหนด</p>
-            <p class="text-2xl font-bold text-rose-400 mt-1">{{ urgentTodos.length }}</p>
-            <p class="text-xs text-gray-500">งาน</p>
+          <div class="stat-card">
+            <div class="icon-bubble mb-3" style="background: rgba(244,63,94,0.12);">⚠️</div>
+            <p class="text-[11px] font-medium uppercase tracking-wide relative z-10" style="color: var(--text-muted);">ด่วน/เกินกำหนด</p>
+            <p class="text-2xl font-bold text-rose-400 mt-1 relative z-10">{{ urgentTodos.length }}</p>
+            <p class="text-xs relative z-10" style="color: var(--text-muted);">งาน</p>
           </div>
-          <div class="bg-gray-900 border border-gray-800/80 rounded-2xl p-4 md:p-5">
-            <div class="w-9 h-9 rounded-xl bg-emerald-500/15 flex items-center justify-center text-base mb-3">✅</div>
-            <p class="text-[11px] text-gray-500 font-medium uppercase tracking-wide">เสร็จแล้ว</p>
-            <p class="text-2xl font-bold text-emerald-400 mt-1">{{ completedTodos.length }}</p>
-            <p class="text-xs text-gray-500">งาน</p>
+          <div class="stat-card">
+            <div class="icon-bubble mb-3" style="background: rgba(16,185,129,0.12);">✅</div>
+            <p class="text-[11px] font-medium uppercase tracking-wide relative z-10" style="color: var(--text-muted);">เสร็จแล้ว</p>
+            <p class="text-2xl font-bold text-emerald-400 mt-1 relative z-10">{{ completedTodos.length }}</p>
+            <p class="text-xs relative z-10" style="color: var(--text-muted);">งาน</p>
           </div>
         </div>
 
         <!-- Todo List -->
-        <section class="bg-gray-900 border border-gray-800/80 rounded-2xl overflow-hidden">
+        <section class="section-card">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 py-4 border-b border-gray-800/60">
             <h2 class="text-base font-semibold text-white">รายการงาน</h2>
             <select

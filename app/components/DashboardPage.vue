@@ -1,83 +1,86 @@
 <template>
   <AppTabsLayout>
     <!-- Page Header -->
-    <header class="px-6 md:px-8 py-5 border-b border-gray-800/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shrink-0 bg-gray-900/50">
-      <div>
+    <header class="px-6 md:px-8 py-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shrink-0 glass-header">
+      <div class="animate-slide-up">
         <h1 class="text-2xl font-bold text-white tracking-tight">ภาพรวม Dashboard</h1>
-        <p class="text-sm text-gray-500 mt-0.5">{{ todayText }}</p>
+        <p class="text-sm mt-0.5" style="color: var(--text-muted);">{{ todayText }}</p>
       </div>
-      <div class="flex items-center gap-2">
+      <div class="flex items-center gap-2 animate-slide-up delay-100">
         <NuxtLink
           to="/cashflow"
-          class="px-4 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 border border-violet-500/30 text-sm font-medium text-white shadow-md shadow-violet-500/20 transition-all"
+          class="btn-primary text-sm flex items-center gap-1.5"
         >
-          รายรับรายจ่าย
+          💸 รายรับรายจ่าย
         </NuxtLink>
         <NuxtLink
           to="/study-schedule"
-          class="px-4 py-2 rounded-xl bg-gray-800/80 hover:bg-gray-800 border border-gray-700/60 text-sm font-medium transition-all"
+          class="btn-secondary text-sm font-medium"
         >
-          ตารางเรียน
+          📅 ตารางเรียน
         </NuxtLink>
       </div>
     </header>
 
     <div class="flex-1 overflow-y-auto px-6 md:px-8 py-6 space-y-5">
       <!-- Error -->
-      <div
-        v-if="errorMessage"
-        class="rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-amber-200 text-sm flex items-center gap-2"
-      >
-        <span>⚠️</span>
-        <span>{{ errorMessage }}</span>
-      </div>
+      <Transition name="slide-down">
+        <div
+          v-if="errorMessage"
+          class="rounded-xl p-3.5 text-amber-200 text-sm flex items-center gap-2"
+          style="background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.15);"
+        >
+          <span>⚠️</span>
+          <span>{{ errorMessage }}</span>
+        </div>
+      </Transition>
 
       <!-- Stats Cards Row -->
       <section class="grid grid-cols-2 xl:grid-cols-4 gap-3 md:gap-4">
         <!-- Balance -->
-        <div class="bg-gray-900 border border-gray-800/80 rounded-2xl p-4 md:p-5 col-span-2 sm:col-span-1">
-          <div class="flex items-start justify-between gap-2 mb-3">
-            <div class="w-10 h-10 rounded-xl bg-sky-500/15 flex items-center justify-center text-lg shrink-0">💰</div>
-            <span class="text-[10px] px-2 py-1 rounded-full font-medium" :class="remainingBalance >= 0 ? 'bg-sky-500/10 text-sky-400' : 'bg-amber-500/10 text-amber-400'">
+        <div class="stat-card col-span-2 sm:col-span-1 animate-slide-up">
+          <div class="flex items-start justify-between gap-2 mb-3 relative z-10">
+            <div class="icon-bubble" :style="'background: rgba(14,165,233,0.12);'">💰</div>
+            <span class="text-[10px] px-2.5 py-1 rounded-full font-semibold" :class="remainingBalance >= 0 ? 'text-sky-400' : 'text-amber-400'" :style="remainingBalance >= 0 ? 'background: rgba(14,165,233,0.1); border: 1px solid rgba(14,165,233,0.2);' : 'background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.2);'">
               {{ remainingBalance >= 0 ? 'บวก' : 'ติดลบ' }}
             </span>
           </div>
-          <p class="text-xs text-gray-500 font-medium">เงินคงเหลือรวม</p>
-          <p class="text-2xl font-bold mt-1" :class="remainingBalance >= 0 ? 'text-sky-300' : 'text-amber-300'">
+          <p class="text-xs font-medium relative z-10" style="color: var(--text-muted);">เงินคงเหลือรวม</p>
+          <p class="text-2xl font-bold mt-1 relative z-10" :class="remainingBalance >= 0 ? 'text-sky-300' : 'text-amber-300'">
             {{ formatCurrency(remainingBalance) }}
           </p>
-          <div class="mt-3">
-            <div class="h-1.5 w-full rounded-full bg-gray-800 overflow-hidden">
+          <div class="mt-3 relative z-10">
+            <div class="progress-bar">
               <div
-                class="h-full transition-all duration-500"
+                class="h-full rounded-full transition-all duration-700"
                 :class="remainingBalance >= 0 ? 'bg-gradient-to-r from-sky-500 to-cyan-400' : 'bg-gradient-to-r from-amber-500 to-orange-400'"
                 :style="{ width: `${remainingProgressPercent}%` }"
               ></div>
             </div>
-            <p class="text-[11px] text-gray-500 mt-1">{{ remainingProgressText }}</p>
+            <p class="text-[11px] mt-1.5" style="color: var(--text-muted);">{{ remainingProgressText }}</p>
           </div>
         </div>
 
         <!-- Income -->
-        <div class="bg-gray-900 border border-gray-800/80 rounded-2xl p-4 md:p-5">
-          <div class="w-10 h-10 rounded-xl bg-emerald-500/15 flex items-center justify-center text-lg mb-3">📈</div>
-          <p class="text-xs text-gray-500 font-medium">รายรับรวม</p>
-          <p class="text-2xl font-bold text-emerald-400 mt-1">{{ formatCurrency(totalIncome) }}</p>
+        <div class="stat-card animate-slide-up delay-100">
+          <div class="icon-bubble mb-3" style="background: rgba(16,185,129,0.12);">📈</div>
+          <p class="text-xs font-medium relative z-10" style="color: var(--text-muted);">รายรับรวม</p>
+          <p class="text-2xl font-bold text-emerald-400 mt-1 relative z-10">{{ formatCurrency(totalIncome) }}</p>
         </div>
 
         <!-- Expense -->
-        <div class="bg-gray-900 border border-gray-800/80 rounded-2xl p-4 md:p-5">
-          <div class="w-10 h-10 rounded-xl bg-rose-500/15 flex items-center justify-center text-lg mb-3">📉</div>
-          <p class="text-xs text-gray-500 font-medium">รายจ่ายรวม</p>
-          <p class="text-2xl font-bold text-rose-400 mt-1">{{ formatCurrency(totalExpense) }}</p>
-          <div class="mt-3">
-            <div class="h-1.5 w-full rounded-full bg-gray-800 overflow-hidden">
+        <div class="stat-card animate-slide-up delay-200">
+          <div class="icon-bubble mb-3" style="background: rgba(244,63,94,0.12);">📉</div>
+          <p class="text-xs font-medium relative z-10" style="color: var(--text-muted);">รายจ่ายรวม</p>
+          <p class="text-2xl font-bold text-rose-400 mt-1 relative z-10">{{ formatCurrency(totalExpense) }}</p>
+          <div class="mt-3 relative z-10">
+            <div class="progress-bar">
               <div
-                class="h-full bg-gradient-to-r from-rose-500 to-pink-400 transition-all duration-500"
+                class="h-full rounded-full bg-gradient-to-r from-rose-500 to-pink-400 transition-all duration-700"
                 :style="{ width: `${expenseProgressPercent}%` }"
               ></div>
             </div>
-            <p class="text-[11px] text-gray-500 mt-1">
+            <p class="text-[11px] mt-1.5" style="color: var(--text-muted);">
               {{ expenseProgressText }}
               <span v-if="overspentAmount > 0" class="text-amber-400">  (เกิน {{ formatCurrency(overspentAmount) }})</span>
             </p>
@@ -85,293 +88,316 @@
         </div>
 
         <!-- Top Category -->
-        <div class="bg-gray-900 border border-gray-800/80 rounded-2xl p-4 md:p-5">
-          <div class="w-10 h-10 rounded-xl bg-amber-500/15 flex items-center justify-center text-lg mb-3">🏷️</div>
-          <p class="text-xs text-gray-500 font-medium">หมวดรายจ่ายสูงสุด</p>
-          <p class="text-lg font-bold text-white mt-1 truncate">{{ topExpenseCategory.name }}</p>
-          <p class="text-sm text-gray-500 mt-0.5">{{ formatCurrency(topExpenseCategory.amount) }}</p>
+        <div class="stat-card animate-slide-up delay-300">
+          <div class="icon-bubble mb-3" style="background: rgba(245,158,11,0.12);">🏷️</div>
+          <p class="text-xs font-medium relative z-10" style="color: var(--text-muted);">หมวดรายจ่ายสูงสุด</p>
+          <p class="text-lg font-bold text-white mt-1 truncate relative z-10">{{ topExpenseCategory.name }}</p>
+          <p class="text-sm mt-0.5 relative z-10" style="color: var(--text-muted);">{{ formatCurrency(topExpenseCategory.amount) }}</p>
         </div>
       </section>
 
       <!-- Finance + Schedule Row -->
       <section class="grid grid-cols-1 xl:grid-cols-5 gap-4">
         <!-- Finance Summary -->
-        <div class="xl:col-span-3 bg-gray-900 border border-gray-800/80 rounded-2xl p-5">
-          <div class="flex items-start justify-between gap-3 mb-4">
+        <div class="xl:col-span-3 section-card animate-slide-up delay-200">
+          <div class="flex items-start justify-between gap-3 p-5" style="border-bottom: 1px solid var(--border-subtle);">
             <div>
               <h2 class="text-base font-semibold text-white">สรุปการเงิน</h2>
-              <p class="text-xs text-gray-500 mt-0.5">ข้อมูลสำคัญแบบย่อ</p>
+              <p class="text-xs mt-0.5" style="color: var(--text-muted);">ข้อมูลสำคัญแบบย่อ</p>
             </div>
             <button
               @click="refreshOverview"
               :disabled="isLoading"
-              class="px-3 py-1.5 rounded-lg bg-gray-800/70 hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed border border-gray-700/60 text-xs text-gray-400 hover:text-white transition-all"
+              class="btn-secondary text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+              style="padding: 0.375rem 0.75rem;"
             >
               {{ isLoading ? 'กำลังโหลด...' : '↻ รีเฟรช' }}
             </button>
           </div>
 
-          <div v-if="isLoading" class="space-y-2">
-            <div class="h-16 rounded-xl bg-gray-800/60 animate-pulse"></div>
-            <div class="h-16 rounded-xl bg-gray-800/60 animate-pulse"></div>
-          </div>
-
-          <div v-else class="space-y-3">
-            <div class="grid grid-cols-2 gap-3">
-              <div class="border border-gray-800/70 rounded-xl p-3">
-                <p class="text-[11px] text-gray-500">รายการทั้งหมด</p>
-                <p class="text-xl font-bold text-white mt-1">{{ totalTransactions }}</p>
-                <p class="text-[11px] text-gray-500">รายการ</p>
-              </div>
-              <div class="border border-gray-800/70 rounded-xl p-3">
-                <p class="text-[11px] text-gray-500">รายการล่าสุด</p>
-                <p class="text-sm font-semibold text-white mt-1 truncate">{{ latestTransactionTitle }}</p>
-                <p class="text-[11px] text-gray-500 mt-0.5 truncate">{{ latestTransactionSubtitle }}</p>
-              </div>
+          <div class="p-5">
+            <div v-if="isLoading" class="space-y-2">
+              <div class="h-16 rounded-xl animate-pulse" style="background: var(--bg-elevated);"></div>
+              <div class="h-16 rounded-xl animate-pulse" style="background: var(--bg-elevated);"></div>
             </div>
-            <div class="border border-gray-800/70 rounded-xl p-3">
-              <div class="flex items-center gap-1.5 mb-2.5">
-                <span class="text-base">🔺</span>
-                <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">3 อันดับรายจ่ายสูงสุด</p>
-              </div>
-              <div v-if="!topExpenseCategories.length" class="text-xs text-gray-500">ยังไม่มีข้อมูลรายจ่าย</div>
-              <div v-else class="space-y-1.5">
-                <div v-for="(cat, i) in topExpenseCategories" :key="cat.name" class="flex items-center gap-2">
-                  <span
-                    class="w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center shrink-0"
-                    :class="i === 0 ? 'bg-rose-500/25 text-rose-300' : i === 1 ? 'bg-orange-500/25 text-orange-300' : 'bg-amber-500/25 text-amber-300'"
-                  >{{ i + 1 }}</span>
-                  <span class="flex-1 text-xs text-white truncate">{{ cat.name }}</span>
-                  <span class="text-xs font-semibold text-rose-400 shrink-0">{{ formatCurrency(cat.amount) }}</span>
+
+            <div v-else class="space-y-3">
+              <div class="grid grid-cols-2 gap-3">
+                <div class="rounded-xl p-3.5" style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);">
+                  <p class="text-[11px]" style="color: var(--text-muted);">รายการทั้งหมด</p>
+                  <p class="text-xl font-bold text-white mt-1">{{ totalTransactions }}</p>
+                  <p class="text-[11px]" style="color: var(--text-muted);">รายการ</p>
+                </div>
+                <div class="rounded-xl p-3.5" style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);">
+                  <p class="text-[11px]" style="color: var(--text-muted);">รายการล่าสุด</p>
+                  <p class="text-sm font-semibold text-white mt-1 truncate">{{ latestTransactionTitle }}</p>
+                  <p class="text-[11px] mt-0.5 truncate" style="color: var(--text-muted);">{{ latestTransactionSubtitle }}</p>
                 </div>
               </div>
+              <div class="rounded-xl p-3.5" style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);">
+                <div class="flex items-center gap-1.5 mb-2.5">
+                  <span class="text-base">🔺</span>
+                  <p class="text-[11px] font-semibold uppercase tracking-wide" style="color: var(--text-secondary);">3 อันดับรายจ่ายสูงสุด</p>
+                </div>
+                <div v-if="!topExpenseCategories.length" class="text-xs" style="color: var(--text-muted);">ยังไม่มีข้อมูลรายจ่าย</div>
+                <div v-else class="space-y-2">
+                  <div v-for="(cat, i) in topExpenseCategories" :key="cat.name" class="flex items-center gap-2.5">
+                    <span
+                      class="w-6 h-6 rounded-full text-[10px] font-bold flex items-center justify-center shrink-0"
+                      :class="i === 0 ? 'text-rose-300' : i === 1 ? 'text-orange-300' : 'text-amber-300'"
+                      :style="i === 0 ? 'background: rgba(244,63,94,0.15);' : i === 1 ? 'background: rgba(249,115,22,0.15);' : 'background: rgba(245,158,11,0.15);'"
+                    >{{ i + 1 }}</span>
+                    <span class="flex-1 text-xs text-white truncate">{{ cat.name }}</span>
+                    <span class="text-xs font-semibold text-rose-400 shrink-0">{{ formatCurrency(cat.amount) }}</span>
+                  </div>
+                </div>
+              </div>
+              <NuxtLink
+                to="/cashflow"
+                class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-violet-300 transition-all"
+                style="background: rgba(139,92,246,0.1); border: 1px solid rgba(139,92,246,0.15);"
+                @mouseenter="$el.style.background = 'rgba(139,92,246,0.18)'"
+                @mouseleave="$el.style.background = 'rgba(139,92,246,0.1)'"
+              >
+                ดูรายละเอียดทั้งหมด →
+              </NuxtLink>
             </div>
-            <NuxtLink
-              to="/cashflow"
-              class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-violet-600/15 hover:bg-violet-600/25 border border-violet-500/20 text-sm font-medium text-violet-300 transition-all"
-            >
-              ดูรายละเอียดทั้งหมด →
-            </NuxtLink>
           </div>
         </div>
 
         <!-- Study Schedule Summary -->
-        <div class="xl:col-span-2 bg-gray-900 border border-gray-800/80 rounded-2xl p-5">
-          <div class="flex items-start justify-between gap-3 mb-4">
+        <div class="xl:col-span-2 section-card animate-slide-up delay-300">
+          <div class="flex items-start justify-between gap-3 p-5" style="border-bottom: 1px solid var(--border-subtle);">
             <div>
               <h2 class="text-base font-semibold text-white">ตารางเรียน</h2>
-              <p class="text-xs text-gray-500 mt-0.5">วันนี้และคาบถัดไป</p>
+              <p class="text-xs mt-0.5" style="color: var(--text-muted);">วันนี้และคาบถัดไป</p>
             </div>
             <button
               @click="loadStudySchedules"
               :disabled="isScheduleLoading"
-              class="px-3 py-1.5 rounded-lg bg-gray-800/70 hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed border border-gray-700/60 text-xs text-gray-400 hover:text-white transition-all"
+              class="btn-secondary text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+              style="padding: 0.375rem 0.75rem;"
             >
               {{ isScheduleLoading ? 'กำลังโหลด...' : '↻ รีเฟรช' }}
             </button>
           </div>
 
-          <div v-if="scheduleErrorMessage" class="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-amber-200 text-xs mb-3">
-            {{ scheduleErrorMessage }}
-          </div>
-
-          <div v-if="isScheduleLoading" class="space-y-2">
-            <div class="h-12 rounded-xl bg-gray-800/60 animate-pulse"></div>
-            <div class="h-12 rounded-xl bg-gray-800/60 animate-pulse"></div>
-          </div>
-
-          <div v-else class="space-y-3">
-            <div class="grid grid-cols-2 gap-3">
-              <div class="border border-gray-800/70 rounded-xl p-3">
-                <p class="text-[11px] text-gray-500">วันนี้</p>
-                <p class="text-xl font-bold text-sky-300 mt-1">{{ todaysStudyClasses.length }}</p>
-                <p class="text-[11px] text-gray-500">คาบ</p>
-              </div>
-              <div class="border border-gray-800/70 rounded-xl p-3">
-                <p class="text-[11px] text-gray-500">ทั้งสัปดาห์</p>
-                <p class="text-xl font-bold text-white mt-1">{{ totalStudyClasses }}</p>
-                <p class="text-[11px] text-gray-500">คาบ</p>
-              </div>
+          <div class="p-5">
+            <div v-if="scheduleErrorMessage" class="rounded-xl px-3 py-2 text-amber-200 text-xs mb-3" style="background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.15);">
+              {{ scheduleErrorMessage }}
             </div>
 
-            <!-- Next class card -->
-            <div class="rounded-xl border px-3 py-3" :class="nextStudyAlertBoxClass">
-              <div class="flex items-start justify-between gap-2">
-                <div class="min-w-0">
-                  <p class="text-[11px] text-gray-400">คาบถัดไป</p>
-                  <p class="text-sm font-semibold text-white mt-0.5 truncate">{{ nextStudyClassTitle }}</p>
-                  <p class="text-[11px] text-gray-400 mt-0.5">{{ nextStudyClassSubtitle }}</p>
+            <div v-if="isScheduleLoading" class="space-y-2">
+              <div class="h-12 rounded-xl animate-pulse" style="background: var(--bg-elevated);"></div>
+              <div class="h-12 rounded-xl animate-pulse" style="background: var(--bg-elevated);"></div>
+            </div>
+
+            <div v-else class="space-y-3">
+              <div class="grid grid-cols-2 gap-3">
+                <div class="rounded-xl p-3.5" style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);">
+                  <p class="text-[11px]" style="color: var(--text-muted);">วันนี้</p>
+                  <p class="text-xl font-bold text-sky-300 mt-1">{{ todaysStudyClasses.length }}</p>
+                  <p class="text-[11px]" style="color: var(--text-muted);">คาบ</p>
                 </div>
+                <div class="rounded-xl p-3.5" style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);">
+                  <p class="text-[11px]" style="color: var(--text-muted);">ทั้งสัปดาห์</p>
+                  <p class="text-xl font-bold text-white mt-1">{{ totalStudyClasses }}</p>
+                  <p class="text-[11px]" style="color: var(--text-muted);">คาบ</p>
+                </div>
+              </div>
+
+              <!-- Next class card -->
+              <div class="rounded-xl px-3.5 py-3.5" :class="nextStudyAlertBoxClass" style="border-width: 1px;">
+                <div class="flex items-start justify-between gap-2">
+                  <div class="min-w-0">
+                    <p class="text-[11px]" style="color: var(--text-secondary);">คาบถัดไป</p>
+                    <p class="text-sm font-semibold text-white mt-0.5 truncate">{{ nextStudyClassTitle }}</p>
+                    <p class="text-[11px] mt-0.5" style="color: var(--text-secondary);">{{ nextStudyClassSubtitle }}</p>
+                  </div>
+                  <span
+                    class="text-[11px] font-semibold px-2.5 py-1 rounded-full border whitespace-nowrap shrink-0"
+                    :class="nextStudyAlertBadgeClass"
+                  >
+                    {{ nextStudyAlertText }}
+                  </span>
+                </div>
+              </div>
+
+              <!-- Today's subjects -->
+              <div v-if="todaysStudyPreview.length" class="flex flex-wrap gap-1.5">
                 <span
-                  class="text-[11px] font-semibold px-2 py-1 rounded-full border whitespace-nowrap shrink-0"
-                  :class="nextStudyAlertBadgeClass"
+                  v-for="item in todaysStudyPreview"
+                  :key="item.id"
+                  class="px-2.5 py-1 rounded-full text-[11px] font-medium border"
+                  :class="getCourseChipClass(item.course_name)"
                 >
-                  {{ nextStudyAlertText }}
+                  {{ formatTime(item.start_time) }} · {{ item.course_name }}
+                </span>
+                <span
+                  v-if="todaysStudyClasses.length > todaysStudyPreview.length"
+                  class="px-2.5 py-1 rounded-full text-[11px] font-medium"
+                  style="border: 1px solid var(--border-default); color: var(--text-secondary);"
+                >
+                  +{{ todaysStudyClasses.length - todaysStudyPreview.length }} วิชา
                 </span>
               </div>
-            </div>
+              <p v-else class="text-xs" style="color: var(--text-muted);">วันนี้ไม่มีคาบเรียน</p>
 
-            <!-- Today's subjects -->
-            <div v-if="todaysStudyPreview.length" class="flex flex-wrap gap-1.5">
-              <span
-                v-for="item in todaysStudyPreview"
-                :key="item.id"
-                class="px-2.5 py-1 rounded-full text-[11px] font-medium border"
-                :class="getCourseChipClass(item.course_name)"
+              <NuxtLink
+                to="/study-schedule"
+                class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all"
+                style="background: var(--bg-elevated); border: 1px solid var(--border-default); color: var(--text-secondary);"
+                @mouseenter="$el.style.borderColor = 'var(--border-strong)'; $el.style.color = 'var(--text-primary)'"
+                @mouseleave="$el.style.borderColor = 'var(--border-default)'; $el.style.color = 'var(--text-secondary)'"
               >
-                {{ formatTime(item.start_time) }} · {{ item.course_name }}
-              </span>
-              <span
-                v-if="todaysStudyClasses.length > todaysStudyPreview.length"
-                class="px-2.5 py-1 rounded-full text-[11px] border border-gray-700 text-gray-400"
-              >
-                +{{ todaysStudyClasses.length - todaysStudyPreview.length }} วิชา
-              </span>
+                จัดการตารางเรียน →
+              </NuxtLink>
             </div>
-            <p v-else class="text-xs text-gray-500">วันนี้ไม่มีคาบเรียน</p>
-
-            <NuxtLink
-              to="/study-schedule"
-              class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-800/70 hover:bg-gray-800 border border-gray-700/60 text-sm font-medium text-gray-300 hover:text-white transition-all"
-            >
-              จัดการตารางเรียน →
-            </NuxtLink>
           </div>
         </div>
       </section>
 
       <!-- Todos Section -->
-      <section class="bg-gray-900 border border-gray-800/80 rounded-2xl p-5">
-        <div class="flex items-center justify-between gap-3 mb-4">
+      <section class="section-card animate-slide-up delay-300">
+        <div class="flex items-center justify-between gap-3 p-5" style="border-bottom: 1px solid var(--border-subtle);">
           <div>
             <h2 class="text-base font-semibold text-white">งานและ To-do</h2>
-            <p class="text-xs text-gray-500 mt-0.5">งานด่วนและงานค้างส่ง</p>
+            <p class="text-xs mt-0.5" style="color: var(--text-muted);">งานด่วนและงานค้างส่ง</p>
           </div>
           <NuxtLink
             to="/todos"
-            class="px-3 py-1.5 rounded-lg bg-gray-800/70 hover:bg-gray-800 border border-gray-700/60 text-xs text-gray-400 hover:text-white transition-all"
+            class="btn-secondary text-xs"
+            style="padding: 0.375rem 0.75rem;"
           >
             ดูทั้งหมด →
           </NuxtLink>
         </div>
 
-        <div v-if="todosErrorMessage" class="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-amber-200 text-xs mb-3">
-          {{ todosErrorMessage }}
-        </div>
+        <div class="p-5">
+          <div v-if="todosErrorMessage" class="rounded-xl px-3 py-2 text-amber-200 text-xs mb-3" style="background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.15);">
+            {{ todosErrorMessage }}
+          </div>
 
-        <div v-if="isTodosLoading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          <div v-for="i in 3" :key="i" class="h-24 rounded-xl bg-gray-800/60 animate-pulse"></div>
-        </div>
+          <div v-if="isTodosLoading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div v-for="i in 3" :key="i" class="h-24 rounded-xl animate-pulse" style="background: var(--bg-elevated);"></div>
+          </div>
 
-        <div v-else-if="!todos.length" class="flex flex-col items-center justify-center py-8 text-center">
-          <div class="w-14 h-14 rounded-2xl bg-gray-800/70 flex items-center justify-center text-2xl mb-3">✅</div>
-          <p class="text-sm font-medium text-gray-400">ยังไม่มีงานใดๆ</p>
-          <NuxtLink to="/todos" class="mt-3 text-xs text-violet-400 hover:text-violet-300 transition-colors">+ เพิ่มงานแรก</NuxtLink>
-        </div>
+          <div v-else-if="!todos.length" class="flex flex-col items-center justify-center py-8 text-center">
+            <div class="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl mb-3" style="background: var(--bg-elevated);">✅</div>
+            <p class="text-sm font-medium" style="color: var(--text-secondary);">ยังไม่มีงานใดๆ</p>
+            <NuxtLink to="/todos" class="mt-3 text-xs text-violet-400 hover:text-violet-300 transition-colors">+ เพิ่มงานแรก</NuxtLink>
+          </div>
 
-        <div v-else-if="dashboardTodos.length === 0" class="flex flex-col items-center justify-center py-8 text-center">
-          <div class="w-14 h-14 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-2xl mb-3">🎉</div>
-          <p class="text-sm font-medium text-emerald-400">ไม่มีงานด่วนหรืองานค้างในวันนี้!</p>
-          <p class="text-xs text-gray-500 mt-1">ทำได้ดีมาก ทุกงานอยู่ในสถานะดี</p>
-        </div>
+          <div v-else-if="dashboardTodos.length === 0" class="flex flex-col items-center justify-center py-8 text-center">
+            <div class="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl mb-3" style="background: rgba(16,185,129,0.1);">🎉</div>
+            <p class="text-sm font-medium text-emerald-400">ไม่มีงานด่วนหรืองานค้างในวันนี้!</p>
+            <p class="text-xs mt-1" style="color: var(--text-muted);">ทำได้ดีมาก ทุกงานอยู่ในสถานะดี</p>
+          </div>
 
-        <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          <div
-            v-for="todo in dashboardTodos"
-            :key="todo.id"
-            class="border border-gray-800/70 rounded-xl p-4 bg-gray-800/20 hover:bg-gray-800/40 transition-all flex flex-col justify-between gap-3"
-          >
-            <div>
-              <div class="flex items-start gap-2 mb-1.5">
-                <p class="text-sm font-medium text-white line-clamp-2 flex-1">{{ todo.title }}</p>
-                <span
-                  v-if="todo.priority === 'high'"
-                  class="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-500/15 text-rose-300 border border-rose-500/25"
-                >ด่วน</span>
+          <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div
+              v-for="todo in dashboardTodos"
+              :key="todo.id"
+              class="glass-card rounded-xl p-4 flex flex-col justify-between gap-3"
+            >
+              <div>
+                <div class="flex items-start gap-2 mb-1.5">
+                  <p class="text-sm font-medium text-white line-clamp-2 flex-1">{{ todo.title }}</p>
+                  <span
+                    v-if="todo.priority === 'high'"
+                    class="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-semibold text-rose-300"
+                    style="background: rgba(244,63,94,0.12); border: 1px solid rgba(244,63,94,0.2);"
+                  >ด่วน</span>
+                </div>
+                <p class="text-[11px] font-medium flex items-center gap-1" :class="getTodoDateColor(todo)">
+                  <span v-if="todo.due_date">📅 {{ formatDate(todo.due_date) }}</span>
+                  <span v-else style="color: var(--text-muted);">ไม่มีกำหนด</span>
+                </p>
               </div>
-              <p class="text-[11px] font-medium flex items-center gap-1" :class="getTodoDateColor(todo)">
-                <span v-if="todo.due_date">📅 {{ formatDate(todo.due_date) }}</span>
-                <span v-else class="text-gray-500">ไม่มีกำหนด</span>
-              </p>
-            </div>
-            <div class="flex items-center justify-between">
-              <span class="text-[10px] px-2 py-1 rounded-full border font-medium"
-                :class="todo.status === 'in_progress' ? 'border-sky-500/30 bg-sky-500/10 text-sky-400' : 'border-gray-700 bg-gray-800 text-gray-400'">
-                {{ todo.status === 'in_progress' ? 'กำลังทำ' : 'รอทำ' }}
-              </span>
-              <button
-                @click="markTodoDone(todo.id)"
-                class="text-[11px] text-emerald-400 hover:text-emerald-300 flex items-center gap-1 transition-colors font-medium"
-              >
-                ✓ เสร็จแล้ว
-              </button>
+              <div class="flex items-center justify-between">
+                <span class="text-[10px] px-2 py-1 rounded-full border font-medium"
+                  :class="todo.status === 'in_progress' ? 'border-sky-500/30 bg-sky-500/10 text-sky-400' : ''"
+                  :style="todo.status !== 'in_progress' ? 'border-color: var(--border-default); background: var(--bg-elevated); color: var(--text-secondary);' : ''"
+                >
+                  {{ todo.status === 'in_progress' ? 'กำลังทำ' : 'รอทำ' }}
+                </span>
+                <button
+                  @click="markTodoDone(todo.id)"
+                  class="text-[11px] text-emerald-400 hover:text-emerald-300 flex items-center gap-1 transition-colors font-medium"
+                >
+                  ✓ เสร็จแล้ว
+                </button>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
       <!-- Events Section -->
-      <section class="bg-gray-900 border border-gray-800/80 rounded-2xl p-5">
-        <div class="flex items-center justify-between gap-3 mb-4">
+      <section class="section-card animate-slide-up delay-400">
+        <div class="flex items-center justify-between gap-3 p-5" style="border-bottom: 1px solid var(--border-subtle);">
           <div>
             <h2 class="text-base font-semibold text-white">กิจกรรมและนัดหมาย</h2>
-            <p class="text-xs text-gray-500 mt-0.5">เหตุการณ์สำคัญที่กำลังจะมาถึง</p>
+            <p class="text-xs mt-0.5" style="color: var(--text-muted);">เหตุการณ์สำคัญที่กำลังจะมาถึง</p>
           </div>
           <NuxtLink
             to="/events"
-            class="px-3 py-1.5 rounded-lg bg-gray-800/70 hover:bg-gray-800 border border-gray-700/60 text-xs text-gray-400 hover:text-white transition-all"
+            class="btn-secondary text-xs"
+            style="padding: 0.375rem 0.75rem;"
           >
             ดูทั้งหมด →
           </NuxtLink>
         </div>
 
-        <div v-if="eventsErrorMessage" class="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-amber-200 text-xs mb-3">
-          {{ eventsErrorMessage }}
-        </div>
-
-        <div v-if="isEventsLoading" class="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div v-for="i in 4" :key="i" class="h-20 rounded-xl bg-gray-800/60 animate-pulse"></div>
-        </div>
-
-        <div v-else-if="!dashboardEvents.length && !nextEventMeta" class="flex flex-col items-center justify-center py-8 text-center">
-          <div class="w-14 h-14 rounded-2xl bg-gray-800/70 flex items-center justify-center text-2xl mb-3">📆</div>
-          <p class="text-sm font-medium text-gray-400">ไม่มีกิจกรรมที่กำลังจะมาถึง</p>
-          <NuxtLink to="/events" class="mt-3 text-xs text-violet-400 hover:text-violet-300 transition-colors">+ เพิ่มกิจกรรม</NuxtLink>
-        </div>
-
-        <div v-else class="space-y-4">
-          <!-- Next event card -->
-          <div v-if="nextEventMeta" class="rounded-xl border px-4 py-3" :class="nextEventAlertBoxClass">
-            <div class="flex items-start justify-between gap-2">
-              <div class="min-w-0">
-                <p class="text-[11px] text-gray-400">กิจกรรมถัดไป</p>
-                <p class="text-sm font-semibold text-white mt-0.5 truncate">{{ nextEventTitle }}</p>
-                <p class="text-[11px] text-gray-400 mt-0.5">{{ nextEventSubtitle }}</p>
-              </div>
-              <span
-                class="text-[11px] font-semibold px-2 py-1 rounded-full border whitespace-nowrap shrink-0"
-                :class="nextEventAlertBadgeClass"
-              >
-                {{ nextEventAlertText }}
-              </span>
-            </div>
+        <div class="p-5">
+          <div v-if="eventsErrorMessage" class="rounded-xl px-3 py-2 text-amber-200 text-xs mb-3" style="background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.15);">
+            {{ eventsErrorMessage }}
           </div>
 
-          <div v-if="filteredDashboardEvents.length" class="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div
-              v-for="event in filteredDashboardEvents"
-              :key="event.id"
-              class="border border-gray-800/70 rounded-xl px-4 py-3 bg-gray-800/20 hover:bg-gray-800/40 transition-all flex items-center gap-4"
-            >
-              <!-- Date badge -->
-              <div class="shrink-0 text-center bg-gray-800 border border-gray-700/60 rounded-xl px-3 py-2.5 min-w-[52px]">
-                <div class="text-[10px] font-bold uppercase text-rose-400 leading-none">{{ getMonthShort(event.start_date) }}</div>
-                <div class="text-2xl text-white font-bold leading-tight mt-0.5">{{ getDay(event.start_date) }}</div>
+          <div v-if="isEventsLoading" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div v-for="i in 4" :key="i" class="h-20 rounded-xl animate-pulse" style="background: var(--bg-elevated);"></div>
+          </div>
+
+          <div v-else-if="!dashboardEvents.length && !nextEventMeta" class="flex flex-col items-center justify-center py-8 text-center">
+            <div class="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl mb-3" style="background: var(--bg-elevated);">📆</div>
+            <p class="text-sm font-medium" style="color: var(--text-secondary);">ไม่มีกิจกรรมที่กำลังจะมาถึง</p>
+            <NuxtLink to="/events" class="mt-3 text-xs text-violet-400 hover:text-violet-300 transition-colors">+ เพิ่มกิจกรรม</NuxtLink>
+          </div>
+
+          <div v-else class="space-y-4">
+            <!-- Next event card -->
+            <div v-if="nextEventMeta" class="rounded-xl px-4 py-3.5" :class="nextEventAlertBoxClass" style="border-width: 1px;">
+              <div class="flex items-start justify-between gap-2">
+                <div class="min-w-0">
+                  <p class="text-[11px]" style="color: var(--text-secondary);">กิจกรรมถัดไป</p>
+                  <p class="text-sm font-semibold text-white mt-0.5 truncate">{{ nextEventTitle }}</p>
+                  <p class="text-[11px] mt-0.5" style="color: var(--text-secondary);">{{ nextEventSubtitle }}</p>
+                </div>
+                <span
+                  class="text-[11px] font-semibold px-2.5 py-1 rounded-full border whitespace-nowrap shrink-0"
+                  :class="nextEventAlertBadgeClass"
+                >
+                  {{ nextEventAlertText }}
+                </span>
               </div>
-              <!-- Event info -->
-              <div class="flex-1 min-w-0">
-                <p class="text-sm font-semibold text-white line-clamp-1">{{ event.title }}</p>
-                <p class="text-[11px] text-sky-400 mt-0.5 font-medium">{{ displayEventDateTimeShort(event) }}</p>
+            </div>
+
+            <div v-if="filteredDashboardEvents.length" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div
+                v-for="event in filteredDashboardEvents"
+                :key="event.id"
+                class="glass-card rounded-xl px-4 py-3.5 flex items-center gap-4"
+              >
+                <!-- Date badge -->
+                <div class="shrink-0 text-center rounded-xl px-3 py-2.5 min-w-[52px]" style="background: var(--bg-elevated); border: 1px solid var(--border-default);">
+                  <div class="text-[10px] font-bold uppercase text-rose-400 leading-none">{{ getMonthShort(event.start_date) }}</div>
+                  <div class="text-2xl text-white font-bold leading-tight mt-0.5">{{ getDay(event.start_date) }}</div>
+                </div>
+                <!-- Event info -->
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm font-semibold text-white line-clamp-1">{{ event.title }}</p>
+                  <p class="text-[11px] text-sky-400 mt-0.5 font-medium">{{ displayEventDateTimeShort(event) }}</p>
+                </div>
               </div>
             </div>
           </div>
@@ -645,30 +671,30 @@ const displayEventDateTimeShort = (item: DashboardEventRow) => {
 const nextEventMeta = computed(() => {
   if (!events.value.length) return null
   const now = currentTime.value.getTime()
-  
+
   let closestMeta = null
   let minScore = Infinity
-  
+
   for (const event of events.value) {
     let startStr = `${event.start_date}T${event.start_time || '00:00:00'}`
     let endStr = `${event.end_date || event.start_date}T${event.end_time || '23:59:59'}`
-    
+
     if (event.event_type === 'same_day_all_day') {
        startStr = `${event.start_date}T00:00:00`
        endStr = `${event.start_date}T23:59:59`
     }
-    
+
     const startMs = new Date(startStr).getTime()
     const endMs = new Date(endStr).getTime()
-    
+
     const minutesUntilStart = Math.ceil((startMs - now) / 60000)
     const minutesUntilEnd = Math.ceil((endMs - now) / 60000)
-    
-    if (minutesUntilEnd <= 0) continue // Passed
-    
+
+    if (minutesUntilEnd <= 0) continue
+
     const isCurrent = minutesUntilStart <= 0 && minutesUntilEnd > 0
     const score = isCurrent ? minutesUntilEnd - 10000000 : minutesUntilStart
-    
+
     if (score < minScore) {
        minScore = score
        closestMeta = {
@@ -698,7 +724,7 @@ const nextEventAlertText = computed(() => {
     const remainMin = min % 60
     return remainMin > 0 ? `กำลังดำเนินอยู่ (จบในอีก ${hrs} ชม. ${remainMin} นาที)` : `กำลังดำเนินอยู่ (จบในอีก ${hrs} ชม.)`
   }
-  
+
   const min = meta.minutesUntilStart
   if (min < 60) return `เริ่มในอีก ${min} นาที`
   const hrs = Math.floor(min / 60)
@@ -971,3 +997,13 @@ onUnmounted(() => {
   if (clockTimer) clearInterval(clockTimer)
 })
 </script>
+
+<style scoped>
+.slide-down-enter-active, .slide-down-leave-active {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.slide-down-enter-from, .slide-down-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+</style>

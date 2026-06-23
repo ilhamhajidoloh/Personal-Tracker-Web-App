@@ -2,22 +2,22 @@
   <AppTabsLayout>
     <div class="flex-1 overflow-y-auto">
       <!-- Page Header -->
-      <header class="md:sticky md:top-0 md:z-10 px-4 md:px-8 py-3.5 md:py-5 border-b border-gray-800/80 bg-gray-900/95 backdrop-blur-sm flex flex-row items-center justify-between gap-3">
+      <header class="md:sticky md:top-0 md:z-10 px-4 md:px-8 py-3.5 md:py-5 glass-header flex flex-row items-center justify-between gap-3">
         <div class="min-w-0">
-          <h1 class="text-base md:text-xl font-bold text-white tracking-tight truncate">รายรับรายจ่าย</h1>
-          <p class="text-[11px] text-gray-500 mt-0.5 hidden sm:block">บันทึกรายการรายวัน พร้อมสรุปยอดเงินคงเหลือ</p>
+          <h1 class="text-base md:text-xl font-bold text-white tracking-tight truncate">💸 รายรับรายจ่าย</h1>
+          <p class="text-[11px] mt-0.5 hidden sm:block" style="color: var(--text-muted);">บันทึกรายการรายวัน พร้อมสรุปยอดเงินคงเหลือ</p>
         </div>
         <div class="flex items-center gap-2 shrink-0">
           <button
             @click="isEntryModalOpen = true"
-            class="px-3 md:px-4 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-sm font-semibold text-white shadow-md shadow-violet-500/20 transition-all flex items-center gap-1.5"
+            class="btn-primary text-sm flex items-center gap-1.5"
           >
             <span>+</span><span class="hidden sm:inline"> เพิ่มรายการ</span><span class="sm:hidden">เพิ่ม</span>
           </button>
           <button
             @click="loadTransactions"
             :disabled="isLoading"
-            class="px-3 md:px-4 py-2 rounded-xl bg-gray-800/80 hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed border border-gray-700/60 text-sm text-gray-400 hover:text-white transition-all"
+            class="btn-secondary text-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {{ isLoading ? '...' : '↻' }}<span class="hidden sm:inline"> {{ isLoading ? 'กำลังโหลด...' : 'รีเฟรช' }}</span>
           </button>
@@ -36,31 +36,32 @@
         <!-- Stats Cards -->
         <div class="grid grid-cols-2 xl:grid-cols-4 gap-3 md:gap-4">
           <!-- Income -->
-          <div class="bg-gray-900 border border-gray-800/80 rounded-2xl p-4 md:p-5">
-            <div class="flex items-center justify-between gap-2 mb-3">
-              <div class="w-10 h-10 rounded-xl bg-emerald-500/15 flex items-center justify-center text-xl">📈</div>
+          <div class="stat-card">
+            <div class="flex items-center justify-between gap-2 mb-3 relative z-10">
+              <div class="icon-bubble" style="background: rgba(16,185,129,0.12);">📈</div>
               <button
                 v-if="incomeCategoryRankings.length > 0"
                 @click="isIncomeRankingModalOpen = true"
-                class="px-2.5 py-1 rounded-lg bg-gray-800/60 hover:bg-gray-800 border border-gray-700/50 text-[11px] text-emerald-400 hover:text-emerald-300 font-medium transition-all"
+                class="px-2.5 py-1 rounded-lg text-[11px] text-emerald-400 hover:text-emerald-300 font-medium transition-all"
+                style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);"
               >
                 ดูอันดับรายรับ
               </button>
             </div>
-            <p class="text-[11px] text-gray-500 font-medium uppercase tracking-wide">รายรับรวม</p>
-            <p class="text-2xl font-bold text-emerald-400 mt-1">{{ formatCurrency(totalIncome) }}</p>
+            <p class="text-[11px] font-medium uppercase tracking-wide relative z-10" style="color: var(--text-muted);">รายรับรวม</p>
+            <p class="text-2xl font-bold text-emerald-400 mt-1 relative z-10">{{ formatCurrency(totalIncome) }}</p>
           </div>
 
           <!-- Expense -->
-          <div class="bg-gray-900 border border-gray-800/80 rounded-2xl p-4 md:p-5">
-            <div class="w-10 h-10 rounded-xl bg-rose-500/15 flex items-center justify-center text-xl mb-3">📉</div>
-            <p class="text-[11px] text-gray-500 font-medium uppercase tracking-wide">รายจ่ายรวม</p>
-            <p class="text-2xl font-bold text-rose-400 mt-1">{{ formatCurrency(totalExpense) }}</p>
-            <div class="mt-3">
-              <div class="h-1.5 w-full rounded-full bg-gray-800 overflow-hidden">
-                <div class="h-full bg-gradient-to-r from-rose-500 to-pink-400 transition-all duration-500" :style="{ width: `${expenseProgressPercent}%` }"></div>
+          <div class="stat-card">
+            <div class="icon-bubble mb-3" style="background: rgba(244,63,94,0.12);">📉</div>
+            <p class="text-[11px] font-medium uppercase tracking-wide relative z-10" style="color: var(--text-muted);">รายจ่ายรวม</p>
+            <p class="text-2xl font-bold text-rose-400 mt-1 relative z-10">{{ formatCurrency(totalExpense) }}</p>
+            <div class="mt-3 relative z-10">
+              <div class="progress-bar">
+                <div class="h-full rounded-full bg-gradient-to-r from-rose-500 to-pink-400 transition-all duration-700" :style="{ width: `${expenseProgressPercent}%` }"></div>
               </div>
-              <p class="text-[11px] text-gray-500 mt-1">
+              <p class="text-[11px] mt-1.5" style="color: var(--text-muted);">
                 {{ expenseProgressText }}
                 <span v-if="overspentAmount > 0" class="text-amber-400"> (เกิน {{ formatCurrency(overspentAmount) }})</span>
               </p>
@@ -68,31 +69,31 @@
           </div>
 
           <!-- Balance -->
-          <div class="bg-gray-900 border border-gray-800/80 rounded-2xl p-4 md:p-5">
-            <div class="w-10 h-10 rounded-xl flex items-center justify-center text-xl mb-3" :class="remainingBalance >= 0 ? 'bg-sky-500/15' : 'bg-amber-500/15'">💰</div>
-            <p class="text-[11px] text-gray-500 font-medium uppercase tracking-wide">เงินคงเหลือ</p>
-            <p class="text-2xl font-bold mt-1" :class="remainingBalance >= 0 ? 'text-sky-300' : 'text-amber-300'">{{ formatCurrency(remainingBalance) }}</p>
-            <div class="mt-3">
-              <div class="h-1.5 w-full rounded-full bg-gray-800 overflow-hidden">
-                <div class="h-full transition-all duration-500" :class="remainingBalance >= 0 ? 'bg-gradient-to-r from-sky-500 to-cyan-400' : 'bg-gradient-to-r from-amber-500 to-orange-400'" :style="{ width: `${remainingProgressPercent}%` }"></div>
+          <div class="stat-card">
+            <div class="icon-bubble mb-3" :style="remainingBalance >= 0 ? 'background: rgba(14,165,233,0.12);' : 'background: rgba(245,158,11,0.12);'">💰</div>
+            <p class="text-[11px] font-medium uppercase tracking-wide relative z-10" style="color: var(--text-muted);">เงินคงเหลือ</p>
+            <p class="text-2xl font-bold mt-1 relative z-10" :class="remainingBalance >= 0 ? 'text-sky-300' : 'text-amber-300'">{{ formatCurrency(remainingBalance) }}</p>
+            <div class="mt-3 relative z-10">
+              <div class="progress-bar">
+                <div class="h-full rounded-full transition-all duration-700" :class="remainingBalance >= 0 ? 'bg-gradient-to-r from-sky-500 to-cyan-400' : 'bg-gradient-to-r from-amber-500 to-orange-400'" :style="{ width: `${remainingProgressPercent}%` }"></div>
               </div>
-              <p class="text-[11px] text-gray-500 mt-1">{{ remainingProgressText }}</p>
+              <p class="text-[11px] mt-1.5" style="color: var(--text-muted);">{{ remainingProgressText }}</p>
             </div>
           </div>
 
           <!-- Top Category -->
-          <div class="bg-gray-900 border border-gray-800/80 rounded-2xl p-4 md:p-5">
-            <div class="w-10 h-10 rounded-xl bg-amber-500/15 flex items-center justify-center text-xl mb-3">🏷️</div>
-            <p class="text-[11px] text-gray-500 font-medium uppercase tracking-wide">หมวดสูงสุด</p>
-            <p class="text-lg font-bold text-white mt-1 truncate">{{ topExpenseCategory.name }}</p>
-            <p class="text-xs text-gray-500 mt-0.5">{{ formatCurrency(topExpenseCategory.amount) }}</p>
+          <div class="stat-card">
+            <div class="icon-bubble mb-3" style="background: rgba(245,158,11,0.12);">🏷️</div>
+            <p class="text-[11px] font-medium uppercase tracking-wide relative z-10" style="color: var(--text-muted);">หมวดสูงสุด</p>
+            <p class="text-lg font-bold text-white mt-1 truncate relative z-10">{{ topExpenseCategory.name }}</p>
+            <p class="text-xs mt-0.5 relative z-10" style="color: var(--text-muted);">{{ formatCurrency(topExpenseCategory.amount) }}</p>
           </div>
         </div>
 
         <!-- Top / Bottom Expense Category Rankings -->
         <div v-if="expenseCategoryRankings.length > 0" class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <!-- Top 3 Highest -->
-          <div class="bg-gray-900 border border-gray-800/80 rounded-2xl p-5">
+          <div class="section-card p-5">
             <div class="flex items-center justify-between gap-2 mb-4">
               <div class="flex items-center gap-2">
                 <div class="w-8 h-8 rounded-lg bg-rose-500/15 flex items-center justify-center text-base shrink-0">🔺</div>
@@ -122,7 +123,7 @@
             </div>
           </div>
           <!-- Top 3 Lowest -->
-          <div class="bg-gray-900 border border-gray-800/80 rounded-2xl p-5">
+          <div class="section-card p-5">
             <div class="flex items-center gap-2 mb-4">
               <div class="w-8 h-8 rounded-lg bg-emerald-500/15 flex items-center justify-center text-base shrink-0">🔻</div>
               <div>
@@ -148,7 +149,7 @@
         </div>
 
         <!-- Daily Summary -->
-        <section class="bg-gray-900 border border-gray-800/80 rounded-2xl overflow-hidden">
+        <section class="section-card">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 py-4 border-b border-gray-800/60">
             <div>
               <h2 class="text-base font-semibold text-white">สรุปรายวัน</h2>
@@ -205,7 +206,7 @@
         </section>
 
         <!-- Transaction List -->
-        <section class="bg-gray-900 border border-gray-800/80 rounded-2xl overflow-hidden">
+        <section class="section-card">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 py-4 border-b border-gray-800/60">
             <h2 class="text-base font-semibold text-white">รายการทั้งหมด</h2>
             <div class="flex items-center gap-2 flex-wrap">

@@ -2,15 +2,15 @@
   <AppTabsLayout>
     <div class="flex-1 overflow-y-auto">
       <!-- Page Header -->
-      <header class="sticky top-0 z-10 px-6 md:px-8 py-5 border-b border-gray-800/80 bg-gray-900/95 backdrop-blur-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <header class="sticky top-0 z-10 px-6 md:px-8 py-5 glass-header flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 class="text-xl font-bold text-white tracking-tight">โปรไฟล์</h1>
-          <p class="text-xs text-gray-500 mt-0.5">ข้อมูลบัญชีผู้ใช้และการตั้งค่า</p>
+          <h1 class="text-xl font-bold text-white tracking-tight">👤 โปรไฟล์</h1>
+          <p class="text-xs mt-0.5" style="color: var(--text-muted);">ข้อมูลบัญชีผู้ใช้และการตั้งค่า</p>
         </div>
         <button
           @click="loadProfile"
           :disabled="isLoading"
-          class="px-4 py-2 rounded-xl bg-gray-800/80 hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed border border-gray-700/60 text-sm text-gray-400 hover:text-white transition-all self-start"
+          class="btn-secondary text-sm disabled:opacity-50 disabled:cursor-not-allowed self-start"
         >
           {{ isLoading ? 'กำลังโหลด...' : '↻ รีเฟรช' }}
         </button>
@@ -28,7 +28,7 @@
         <!-- Loading -->
         <div
           v-if="isLoading"
-          class="rounded-2xl border border-gray-800/80 bg-gray-900 px-6 py-12 flex items-center justify-center gap-3"
+          class="glass-card px-6 py-12 flex items-center justify-center gap-3"
         >
           <span class="inline-block w-6 h-6 border-2 border-violet-400/30 border-t-violet-400 rounded-full animate-spin"></span>
           <span class="text-gray-400">กำลังโหลดข้อมูลโปรไฟล์...</span>
@@ -38,7 +38,7 @@
           <!-- Profile Section -->
           <section class="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <!-- Avatar Card -->
-            <div class="lg:col-span-1 rounded-2xl border border-gray-800/80 bg-gray-900 p-6 flex flex-col items-start">
+            <div class="lg:col-span-1 glass-card p-6 flex flex-col items-start">
               <!-- Avatar -->
               <div class="relative mb-4">
                 <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-3xl font-bold shadow-xl shadow-violet-500/25">
@@ -73,7 +73,7 @@
             </div>
 
             <!-- Account Info Card -->
-            <div class="lg:col-span-2 rounded-2xl border border-gray-800/80 bg-gray-900 overflow-hidden">
+            <div class="lg:col-span-2 section-card">
               <div class="px-5 py-4 border-b border-gray-800/60">
                 <h3 class="text-base font-semibold text-white">ข้อมูลบัญชี</h3>
                 <p class="text-xs text-gray-500 mt-0.5">ข้อมูลหลักของบัญชีผู้ใช้</p>
@@ -92,7 +92,7 @@
           </section>
 
           <!-- LINE Integration -->
-          <section class="rounded-2xl border border-gray-800/80 bg-gray-900 overflow-hidden">
+          <section class="section-card">
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-5 py-4 border-b border-gray-800/60">
               <div class="flex items-center gap-3">
                 <div class="w-10 h-10 rounded-xl bg-green-500/15 flex items-center justify-center text-xl shrink-0">💬</div>

@@ -2,23 +2,23 @@
   <AppTabsLayout>
     <div class="flex-1 overflow-y-auto">
       <!-- Page Header -->
-      <header class="sticky top-0 z-10 px-6 md:px-8 py-5 border-b border-gray-800/80 bg-gray-900/95 backdrop-blur-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <header class="sticky top-0 z-10 px-6 md:px-8 py-5 glass-header flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 class="text-xl font-bold text-white tracking-tight">ตารางเรียน</h1>
-          <p class="text-xs text-gray-500 mt-0.5">เพิ่มข้อมูลวิชา เวลาเรียน และดูภาพรวมรายสัปดาห์</p>
+          <h1 class="text-xl font-bold text-white tracking-tight">📅 ตารางเรียน</h1>
+          <p class="text-xs mt-0.5" style="color: var(--text-muted);">เพิ่มข้อมูลวิชา เวลาเรียน และดูภาพรวมรายสัปดาห์</p>
         </div>
         <div class="flex items-center gap-2 shrink-0">
           <button
             type="button"
             @click="openCreateScheduleModal"
-            class="px-4 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-sm font-semibold text-white shadow-md shadow-violet-500/20 transition-all flex items-center gap-1.5"
+            class="btn-primary text-sm flex items-center gap-1.5"
           >
             <span>+</span> เพิ่มคาบเรียน
           </button>
           <button
             @click="loadSchedules"
             :disabled="isLoading"
-            class="px-4 py-2 rounded-xl bg-gray-800/80 hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed border border-gray-700/60 text-sm text-gray-400 hover:text-white transition-all"
+            class="btn-secondary text-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {{ isLoading ? 'กำลังโหลด...' : '↻ รีเฟรช' }}
           </button>
@@ -36,28 +36,28 @@
 
         <!-- Stats Cards -->
         <section class="grid grid-cols-3 gap-3 md:gap-4">
-          <div class="bg-gray-900 border border-gray-800/80 rounded-2xl p-4 md:p-5">
-            <div class="w-9 h-9 rounded-xl bg-violet-500/15 flex items-center justify-center text-base mb-3">📚</div>
-            <p class="text-[11px] text-gray-500 font-medium uppercase tracking-wide">คาบทั้งหมด</p>
-            <p class="text-2xl font-bold text-white mt-1">{{ totalClasses }}</p>
-            <p class="text-xs text-gray-500">คาบ/สัปดาห์</p>
+          <div class="stat-card">
+            <div class="icon-bubble mb-3" style="background: rgba(139,92,246,0.12);">📚</div>
+            <p class="text-[11px] font-medium uppercase tracking-wide relative z-10" style="color: var(--text-muted);">คาบทั้งหมด</p>
+            <p class="text-2xl font-bold text-white mt-1 relative z-10">{{ totalClasses }}</p>
+            <p class="text-xs relative z-10" style="color: var(--text-muted);">คาบ/สัปดาห์</p>
           </div>
-          <div class="bg-gray-900 border border-gray-800/80 rounded-2xl p-4 md:p-5">
-            <div class="w-9 h-9 rounded-xl bg-sky-500/15 flex items-center justify-center text-base mb-3">📅</div>
-            <p class="text-[11px] text-gray-500 font-medium uppercase tracking-wide">วันนี้</p>
-            <p class="text-2xl font-bold text-sky-300 mt-1">{{ todaysClasses.length }}</p>
-            <p class="text-xs text-gray-500">คาบ</p>
+          <div class="stat-card">
+            <div class="icon-bubble mb-3" style="background: rgba(14,165,233,0.12);">📅</div>
+            <p class="text-[11px] font-medium uppercase tracking-wide relative z-10" style="color: var(--text-muted);">วันนี้</p>
+            <p class="text-2xl font-bold text-sky-300 mt-1 relative z-10">{{ todaysClasses.length }}</p>
+            <p class="text-xs relative z-10" style="color: var(--text-muted);">คาบ</p>
           </div>
-          <div class="bg-gray-900 border border-gray-800/80 rounded-2xl p-4 md:p-5">
-            <div class="w-9 h-9 rounded-xl bg-amber-500/15 flex items-center justify-center text-base mb-3">⏰</div>
-            <p class="text-[11px] text-gray-500 font-medium uppercase tracking-wide">คาบถัดไป</p>
-            <p class="text-sm font-bold text-white mt-1 truncate">{{ nextClassTitle }}</p>
-            <p class="text-[11px] text-gray-500 mt-0.5">{{ nextClassSubtitle }}</p>
+          <div class="stat-card">
+            <div class="icon-bubble mb-3" style="background: rgba(245,158,11,0.12);">⏰</div>
+            <p class="text-[11px] font-medium uppercase tracking-wide relative z-10" style="color: var(--text-muted);">คาบถัดไป</p>
+            <p class="text-sm font-bold text-white mt-1 truncate relative z-10">{{ nextClassTitle }}</p>
+            <p class="text-[11px] mt-0.5 relative z-10" style="color: var(--text-muted);">{{ nextClassSubtitle }}</p>
           </div>
         </section>
 
         <!-- Weekly Board -->
-        <section class="bg-gray-900 border border-gray-800/80 rounded-2xl overflow-hidden">
+        <section class="section-card">
           <div class="px-5 py-4 border-b border-gray-800/60">
             <h2 class="text-base font-semibold text-white">บอร์ดตารางรายสัปดาห์</h2>
             <p class="text-xs text-gray-500 mt-0.5">แสดงคาบเรียนแต่ละวัน เรียงตามเวลา</p>
@@ -95,7 +95,7 @@
         </section>
 
         <!-- Schedule Grid Table -->
-        <section class="bg-gray-900 border border-gray-800/80 rounded-2xl overflow-hidden">
+        <section class="section-card">
           <div class="px-5 py-4 border-b border-gray-800/60">
             <h2 class="text-base font-semibold text-white">ตารางภาพรวมรายสัปดาห์</h2>
             <p class="text-xs text-gray-500 mt-0.5">มองภาพรวมตามช่วงเวลาและวัน</p>
@@ -141,7 +141,7 @@
         </section>
 
         <!-- All Schedules Table -->
-        <section class="bg-gray-900 border border-gray-800/80 rounded-2xl overflow-hidden">
+        <section class="section-card">
           <div class="flex items-center justify-between gap-3 px-5 py-4 border-b border-gray-800/60">
             <h2 class="text-base font-semibold text-white">รายการคาบเรียนทั้งหมด</h2>
             <span class="text-xs bg-gray-800/80 text-gray-400 border border-gray-700/60 rounded-full px-3 py-1">{{ schedules.length }} รายการ</span>

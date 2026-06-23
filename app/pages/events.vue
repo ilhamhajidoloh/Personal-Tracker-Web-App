@@ -2,22 +2,22 @@
   <AppTabsLayout>
     <div class="flex-1 overflow-y-auto">
       <!-- Page Header -->
-      <header class="sticky top-0 z-10 px-6 md:px-8 py-5 border-b border-gray-800/80 bg-gray-900/95 backdrop-blur-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <header class="sticky top-0 z-10 px-6 md:px-8 py-5 glass-header flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 class="text-xl font-bold text-white tracking-tight">กิจกรรมและนัดหมาย</h1>
-          <p class="text-xs text-gray-500 mt-0.5">บันทึกนัดหมาย วันสำคัญ และกิจกรรมต่างๆ</p>
+          <h1 class="text-xl font-bold text-white tracking-tight">🎉 กิจกรรมและนัดหมาย</h1>
+          <p class="text-xs mt-0.5" style="color: var(--text-muted);">บันทึกนัดหมาย วันสำคัญ และกิจกรรมต่างๆ</p>
         </div>
         <div class="flex items-center gap-2 shrink-0">
           <button
             @click="isEntryModalOpen = true"
-            class="px-4 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-sm font-semibold text-white shadow-md shadow-violet-500/20 transition-all flex items-center gap-1.5"
+            class="btn-primary text-sm flex items-center gap-1.5"
           >
             <span>+</span> เพิ่มกิจกรรม
           </button>
           <button
             @click="loadEvents"
             :disabled="isLoading"
-            class="px-4 py-2 rounded-xl bg-gray-800/80 hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed border border-gray-700/60 text-sm text-gray-400 hover:text-white transition-all"
+            class="btn-secondary text-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {{ isLoading ? 'กำลังโหลด...' : '↻ รีเฟรช' }}
           </button>
@@ -34,7 +34,7 @@
         </div>
 
         <!-- Events List -->
-        <section class="bg-gray-900 border border-gray-800/80 rounded-2xl overflow-hidden">
+        <section class="section-card">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 py-4 border-b border-gray-800/60">
             <h2 class="text-base font-semibold text-white">รายการกิจกรรม</h2>
             <span class="text-xs bg-gray-800/80 text-gray-400 border border-gray-700/60 rounded-full px-3 py-1">
