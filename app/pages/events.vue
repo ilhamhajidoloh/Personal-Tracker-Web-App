@@ -89,6 +89,7 @@
                   </span>
                 </div>
                 <p class="text-xs font-medium" :class="getEventTextColor(item.event_type)">{{ displayEventDateTime(item) }}</p>
+                <p v-if="item.reminder_minutes" class="text-[10px] text-amber-400 mt-1">🔔 เตือนก่อน {{ getReminderLabel(item.reminder_minutes) }}</p>
                 <p v-if="item.description" class="text-xs text-gray-500 mt-1.5 line-clamp-1">{{ item.description }}</p>
               </div>
 
@@ -228,6 +229,21 @@
                 ></textarea>
               </div>
 
+              <!-- Reminder selector -->
+              <div>
+                <label class="block text-xs font-medium text-gray-400 mb-1.5">🔔 แจ้งเตือนล่วงหน้า (LINE)</label>
+                <select
+                  v-model="form.reminderMinutes"
+                  class="w-full bg-gray-800/80 border border-gray-700/60 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20 transition-all"
+                >
+                  <option
+                    v-for="opt in activeReminderOptions"
+                    :key="String(opt.value)"
+                    :value="opt.value"
+                  >{{ opt.label }}</option>
+                </select>
+              </div>
+
               <div class="flex gap-3 pt-2">
                 <button
                   type="button"
@@ -267,6 +283,7 @@ type EventRow = {
   start_time: string | null
   end_date: string | null
   end_time: string | null
+  reminder_minutes: number | null
   created_at: string
 }
 
@@ -278,6 +295,8 @@ type EventPayload = {
   start_time: string | null
   end_date: string | null
   end_time: string | null
+  reminder_minutes: number | null
+  reminder_sent_at: null
 }
 
 definePageMeta({ middleware: 'auth' })
@@ -303,6 +322,21 @@ const eventTypeOptions = [
   { value: 'multi_day' as EventTypeType, label: 'ข้ามวัน', icon: '📅' },
 ]
 
+const reminderOptions = [
+  { value: null as number | null, label: 'ไม่แจ้งเตือน' },
+  { value: 5, label: '5 นาทีก่อน' },
+  { value: 15, label: '15 นาทีก่อน' },
+  { value: 30, label: '30 นาทีก่อน' },
+  { value: 60, label: '1 ชั่วโมงก่อน' },
+  { value: 120, label: '2 ชั่วโมงก่อน' },
+  { value: 1440, label: '1 วันก่อน' },
+]
+
+const allDayReminderOptions = [
+  { value: null as number | null, label: 'ไม่แจ้งเตือน' },
+  { value: 1440, label: '1 วันก่อน (08:00)' },
+]
+
 const form = reactive({
   title: '',
   description: '',
@@ -311,7 +345,12 @@ const form = reactive({
   startTime: '10:00',
   endDate: getTodayTH(),
   endTime: '12:00',
+  reminderMinutes: null as number | null,
 })
+
+const activeReminderOptions = computed(() =>
+  form.eventType === 'same_day_all_day' ? allDayReminderOptions : reminderOptions,
+)
 
 const isEditing = computed(() => Boolean(editingId.value))
 
@@ -323,6 +362,7 @@ const resetForm = () => {
   form.startTime = '10:00'
   form.endDate = getTodayTH()
   form.endTime = '12:00'
+  form.reminderMinutes = null
   editingId.value = ''
 }
 
@@ -335,9 +375,13 @@ const openEditModal = (item: EventRow) => {
   form.startTime = item.start_time ? item.start_time.slice(0, 5) : '10:00'
   form.endDate = item.end_date || item.start_date || getTodayTH()
   form.endTime = item.end_time ? item.end_time.slice(0, 5) : '12:00'
+  form.reminderMinutes = item.reminder_minutes ?? null
   errorMessage.value = ''
   isEntryModalOpen.value = true
 }
+
+const reminderLabelMap: Record<number, string> = { 5: '5 นาที', 15: '15 นาที', 30: '30 นาที', 60: '1 ชั่วโมง', 120: '2 ชั่วโมง', 1440: '1 วัน' }
+const getReminderLabel = (minutes: number) => reminderLabelMap[minutes] || `${minutes} นาที`
 
 const formatDate = (dateString: string) => new Date(dateString).toLocaleDateString('th-TH', { day: '2-digit', month: 'short', year: 'numeric' })
 const getMonthShort = (dateString: string) => new Date(dateString).toLocaleDateString('th-TH', { month: 'short' })
@@ -429,6 +473,7 @@ const submitEvent = async () => {
       title: form.title.trim(), description: form.description.trim() || null,
       event_type: form.eventType, start_date: payloadDateStart, start_time: payloadTimeStart,
       end_date: payloadDateEnd, end_time: payloadTimeEnd,
+      reminder_minutes: form.reminderMinutes, reminder_sent_at: null,
     }
 
     const query = supabase.from('events') as any

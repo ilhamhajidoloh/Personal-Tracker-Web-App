@@ -141,6 +141,10 @@
                     {{ getStatusText(item.status) }}
                   </span>
                 </div>
+                <p
+                  v-if="item.due_date && item.status !== 'completed'"
+                  class="text-[10px] text-amber-400 mt-1"
+                >🔔 {{ item.priority === 'high' ? 'เตือน 1 วันก่อน deadline' : 'เตือนเช้าวัน deadline' }}</p>
               </div>
 
               <!-- Actions -->
