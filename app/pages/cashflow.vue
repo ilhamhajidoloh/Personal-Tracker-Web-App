@@ -844,7 +844,7 @@ watch(() => form.type, () => {
   form.category = ''
   categorySearch.value = ''
   isCategoryDropdownOpen.value = false
-})
+}, { flush: 'sync' })
 
 const dailySummaries = computed<DailySummary[]>(() => {
   let source = transactions.value
