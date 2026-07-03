@@ -37,7 +37,7 @@
         <!-- Stats Cards -->
         <section class="grid grid-cols-3 gap-3 md:gap-4">
           <div class="stat-card">
-            <div class="icon-bubble mb-3" style="background: rgba(139,92,246,0.12);">📚</div>
+            <div class="icon-bubble mb-3" style="background: var(--brand-soft);">📚</div>
             <p class="text-[11px] font-medium uppercase tracking-wide relative z-10" style="color: var(--text-muted);">คาบทั้งหมด</p>
             <p class="text-2xl font-bold text-white mt-1 relative z-10">{{ totalClasses }}</p>
             <p class="text-xs relative z-10" style="color: var(--text-muted);">คาบ/สัปดาห์</p>
@@ -142,9 +142,23 @@
 
         <!-- All Schedules Table -->
         <section class="section-card">
-          <div class="flex items-center justify-between gap-3 px-5 py-4 border-b border-gray-800/60">
-            <h2 class="text-base font-semibold text-white">รายการคาบเรียนทั้งหมด</h2>
-            <span class="text-xs bg-gray-800/80 text-gray-400 border border-gray-700/60 rounded-full px-3 py-1">{{ schedules.length }} รายการ</span>
+          <div class="flex flex-col gap-3 px-5 py-4 border-b border-gray-800/60">
+            <div class="flex items-center justify-between">
+              <h2 class="text-base font-semibold text-white">รายการคาบเรียนทั้งหมด</h2>
+              <span class="text-xs px-2.5 py-1 rounded-full" style="background: var(--bg-elevated); color: var(--text-secondary);">{{ schedulePageInfo }}</span>
+            </div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <select
+                v-model.number="scheduleItemsPerPage"
+                @change="scheduleCurrentPage = 1"
+                class="text-sm px-3 py-2 rounded-xl ml-auto focus:outline-none transition-all"
+                style="background: var(--bg-elevated); border: 1px solid var(--border-default); color: var(--text-primary);"
+              >
+                <option value="10">10 รายการ/หน้า</option>
+                <option value="20">20 รายการ/หน้า</option>
+                <option value="50">50 รายการ/หน้า</option>
+              </select>
+            </div>
           </div>
 
           <div v-if="!schedules.length" class="flex flex-col items-center justify-center py-12 text-center px-5">
@@ -168,7 +182,7 @@
               </thead>
               <tbody class="divide-y divide-gray-800/40">
                 <tr
-                  v-for="item in schedules"
+                  v-for="item in paginatedSchedules"
                   :key="item.id"
                   class="hover:bg-gray-800/20 transition-all"
                   :class="editingScheduleId === item.id ? 'bg-violet-500/5' : ''"
@@ -201,6 +215,41 @@
                 </tr>
               </tbody>
             </table>
+          </div>
+
+          <!-- Pagination Controls -->
+          <div v-if="scheduleTotalPages > 1" class="flex items-center justify-center gap-2 px-5 py-4 border-t border-gray-800/60">
+            <button
+              @click="scheduleCurrentPage = Math.max(1, scheduleCurrentPage - 1)"
+              :disabled="scheduleCurrentPage === 1"
+              class="px-3 py-2 rounded-lg text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              style="background: var(--bg-elevated); border: 1px solid var(--border-default); color: var(--text-secondary);"
+              :style="scheduleCurrentPage === 1 ? {} : { 'cursor': 'pointer', 'color': 'var(--text-primary)' }"
+            >
+              ← ก่อนหน้า
+            </button>
+            <div class="flex items-center gap-1">
+              <button
+                v-for="page in scheduleTotalPages"
+                :key="page"
+                @click="scheduleCurrentPage = page"
+                class="w-9 h-9 rounded-lg text-sm font-medium transition-all"
+                :style="scheduleCurrentPage === page
+                  ? { 'background': 'var(--brand)', 'color': 'white', 'border': '1px solid var(--brand)' }
+                  : { 'background': 'var(--bg-elevated)', 'border': '1px solid var(--border-default)', 'color': 'var(--text-secondary)' }"
+              >
+                {{ page }}
+              </button>
+            </div>
+            <button
+              @click="scheduleCurrentPage = Math.min(scheduleTotalPages, scheduleCurrentPage + 1)"
+              :disabled="scheduleCurrentPage === scheduleTotalPages"
+              class="px-3 py-2 rounded-lg text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              style="background: var(--bg-elevated); border: 1px solid var(--border-default); color: var(--text-secondary);"
+              :style="scheduleCurrentPage === scheduleTotalPages ? {} : { 'cursor': 'pointer', 'color': 'var(--text-primary)' }"
+            >
+              ต่อไป →
+            </button>
           </div>
         </section>
       </div>
@@ -370,6 +419,8 @@ const isDeletingId = ref('')
 const isScheduleModalOpen = ref(false)
 const editingScheduleId = ref('')
 const errorMessage = ref('')
+const scheduleItemsPerPage = ref(20)
+const scheduleCurrentPage = ref(1)
 
 const form = reactive({
   courseName: '', dayOfWeek: 1, startTime: '08:00', endTime: '09:00', location: '', note: '',
@@ -455,6 +506,21 @@ const nextClassTitle = computed(() => nextClass.value?.course_name || 'ยัง
 const nextClassSubtitle = computed(() => {
   if (!nextClass.value) return 'เพิ่มคาบเรียนแรก'
   return `${getDayLabel(nextClass.value.day_of_week)} • ${formatTimeRange(nextClass.value.start_time, nextClass.value.end_time)}`
+})
+
+const scheduleTotalPages = computed(() => Math.ceil(schedules.value.length / scheduleItemsPerPage.value))
+const paginatedSchedules = computed(() => {
+  const start = (scheduleCurrentPage.value - 1) * scheduleItemsPerPage.value
+  const end = start + scheduleItemsPerPage.value
+  return sortedSchedules.value.slice(start, end)
+})
+
+const schedulePageInfo = computed(() => {
+  const total = schedules.value.length
+  if (total === 0) return 'ไม่มีรายการ'
+  const start = (scheduleCurrentPage.value - 1) * scheduleItemsPerPage.value + 1
+  const end = Math.min(scheduleCurrentPage.value * scheduleItemsPerPage.value, total)
+  return `แสดง ${start}-${end} จาก ${total} รายการ`
 })
 
 const normalizeRows = (rows: any[]): ScheduleRow[] => rows.map(row => ({

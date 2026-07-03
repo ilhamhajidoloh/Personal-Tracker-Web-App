@@ -1,4 +1,4 @@
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 
 export type AppTheme = 'night' | 'light'
 
@@ -6,7 +6,7 @@ const THEME_STORAGE_KEY = 'my-life-app-theme'
 
 const getPreferredTheme = (): AppTheme => {
   if (import.meta.server) {
-    return 'night'
+    return 'light'
   }
 
   const savedTheme = localStorage.getItem(THEME_STORAGE_KEY)
@@ -14,12 +14,14 @@ const getPreferredTheme = (): AppTheme => {
     return savedTheme
   }
 
-  return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'night'
+  // Soft Neo leads with the bright canvas; only honour an explicit dark preference.
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'night' : 'light'
 }
 
 export const useAppTheme = () => {
-  const theme = useState<AppTheme>('app-theme', () => 'night')
+  const theme = useState<AppTheme>('app-theme', () => 'light')
   const initialized = useState<boolean>('app-theme-initialized', () => false)
+  const isUserOverride = useState<boolean>('app-theme-override', () => false)
 
   const applyThemeClass = (nextTheme: AppTheme) => {
     if (import.meta.server) {
@@ -31,8 +33,9 @@ export const useAppTheme = () => {
     root.classList.toggle('theme-night', nextTheme === 'night')
   }
 
-  const setTheme = (nextTheme: AppTheme) => {
+  const setTheme = (nextTheme: AppTheme, isOverride = true) => {
     theme.value = nextTheme
+    isUserOverride.value = isOverride
 
     if (import.meta.client) {
       localStorage.setItem(THEME_STORAGE_KEY, nextTheme)
@@ -49,6 +52,7 @@ export const useAppTheme = () => {
 
     const nextTheme = getPreferredTheme()
     theme.value = nextTheme
+    isUserOverride.value = Boolean(localStorage.getItem(THEME_STORAGE_KEY))
 
     if (import.meta.client) {
       localStorage.setItem(THEME_STORAGE_KEY, nextTheme)
@@ -56,10 +60,31 @@ export const useAppTheme = () => {
 
     applyThemeClass(nextTheme)
     initialized.value = true
+
+    // Listen for system theme changes (only if user hasn't manually overridden)
+    if (import.meta.client) {
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+      const handleSystemThemeChange = (e: MediaQueryListEvent | MediaQueryList) => {
+        if (!isUserOverride.value) {
+          const newTheme = e.matches ? 'night' : 'light'
+          theme.value = newTheme
+          applyThemeClass(newTheme)
+        }
+      }
+
+      // Modern browsers
+      if (mediaQuery.addEventListener) {
+        mediaQuery.addEventListener('change', handleSystemThemeChange)
+      } else {
+        // Fallback for older browsers
+        mediaQuery.addListener(handleSystemThemeChange)
+      }
+    }
   }
 
   const toggleTheme = () => {
-    setTheme(theme.value === 'night' ? 'light' : 'night')
+    const newTheme = theme.value === 'night' ? 'light' : 'night'
+    setTheme(newTheme, true)
   }
 
   const isLightTheme = computed(() => theme.value === 'light')

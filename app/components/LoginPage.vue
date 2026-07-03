@@ -1,30 +1,46 @@
 <template>
-  <div class="min-h-screen flex items-center justify-center p-4 relative overflow-hidden" style="background: var(--bg-base, #06060f);">
-    <!-- Animated Background -->
+  <div class="min-h-[100dvh] relative overflow-hidden bg-mesh lg:grid lg:grid-cols-2" style="background-color: var(--bg-base);">
+    <!-- Animated Background blobs -->
     <div class="absolute inset-0 overflow-hidden pointer-events-none">
-      <div class="absolute -top-32 -right-32 w-[600px] h-[600px] rounded-full blur-[150px] opacity-40" style="background: radial-gradient(circle, rgba(139,92,246,0.12), transparent 70%); animation: float 15s ease-in-out infinite;"></div>
-      <div class="absolute -bottom-48 -left-48 w-[500px] h-[500px] rounded-full blur-[130px] opacity-30" style="background: radial-gradient(circle, rgba(99,102,241,0.1), transparent 70%); animation: float 20s ease-in-out infinite reverse;"></div>
-      <div class="absolute top-1/4 left-1/2 -translate-x-1/2 w-[800px] h-[800px] rounded-full blur-[180px] opacity-20" style="background: radial-gradient(circle, rgba(168,85,247,0.08), transparent 60%);"></div>
-      <!-- Floating particles -->
-      <div class="absolute top-[15%] left-[20%] w-1.5 h-1.5 rounded-full bg-violet-400/20" style="animation: float 8s ease-in-out infinite;"></div>
-      <div class="absolute top-[60%] right-[15%] w-2 h-2 rounded-full bg-indigo-400/15" style="animation: float 12s ease-in-out infinite 2s;"></div>
-      <div class="absolute bottom-[25%] left-[35%] w-1 h-1 rounded-full bg-purple-400/25" style="animation: float 10s ease-in-out infinite 4s;"></div>
-      <div class="absolute top-[40%] right-[30%] w-1.5 h-1.5 rounded-full bg-violet-300/15" style="animation: float 14s ease-in-out infinite 1s;"></div>
+      <div class="absolute -top-32 -right-32 w-[600px] h-[600px] rounded-full blur-[150px] opacity-70" style="background: radial-gradient(circle, rgba(245,104,60,0.16), transparent 70%); animation: float 16s ease-in-out infinite;"></div>
+      <div class="absolute -bottom-48 -left-48 w-[520px] h-[520px] rounded-full blur-[130px] opacity-60" style="background: radial-gradient(circle, rgba(246,71,139,0.13), transparent 70%); animation: float 22s ease-in-out infinite reverse;"></div>
+      <div class="absolute top-1/4 left-1/3 w-[420px] h-[420px] rounded-full blur-[150px] opacity-50" style="background: radial-gradient(circle, rgba(56,189,248,0.1), transparent 65%);"></div>
     </div>
 
+    <!-- Brand panel (desktop) -->
+    <div class="hidden lg:flex relative flex-col justify-between p-12 overflow-hidden" style="background: linear-gradient(150deg, var(--brand), var(--brand-2));">
+      <div class="absolute inset-0 opacity-30" style="background: radial-gradient(circle at 30% 20%, rgba(255,255,255,0.35), transparent 45%), radial-gradient(circle at 80% 80%, rgba(255,255,255,0.2), transparent 40%);"></div>
+      <div class="relative flex items-center gap-3">
+        <div class="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center border border-white/30">
+          <span class="text-white font-extrabold text-2xl">M</span>
+        </div>
+        <p class="text-white font-extrabold text-xl tracking-tight">MyLife</p>
+      </div>
+      <div class="relative text-white">
+        <h2 class="text-4xl font-extrabold leading-tight tracking-tight">จัดการทุกด้าน<br>ของชีวิตในที่เดียว</h2>
+        <p class="mt-4 text-white/85 text-base leading-relaxed max-w-sm">การเงิน ตารางเรียน งานที่ต้องทำ และกิจกรรมสำคัญ — สดใส เป็นระเบียบ และพร้อมเตือนคุณผ่าน LINE</p>
+        <div class="mt-8 flex flex-wrap gap-2.5">
+          <span v-for="f in features" :key="f" class="inline-flex items-center gap-1.5 rounded-full bg-white/15 border border-white/25 px-3.5 py-1.5 text-sm font-semibold text-white backdrop-blur">{{ f }}</span>
+        </div>
+      </div>
+      <p class="relative text-white/70 text-xs">© {{ new Date().getFullYear() }} MyLife · Personal Tracker</p>
+    </div>
+
+    <!-- Right side: forms -->
+    <div class="relative flex items-center justify-center p-4 sm:p-8 min-h-[100dvh] lg:min-h-0">
     <!-- Loading / Redirecting -->
     <div
       v-if="isCheckingSession || isRedirecting"
-      class="relative rounded-2xl p-10 flex flex-col items-center gap-5 max-w-sm w-full animate-fade-in"
-      style="background: var(--bg-card); backdrop-filter: blur(20px) saturate(1.5); border: 1px solid var(--border-default);"
+      class="relative rounded-[1.75rem] p-10 flex flex-col items-center gap-5 max-w-sm w-full animate-fade-in"
+      style="background: var(--bg-card); border: 1px solid var(--border-subtle); box-shadow: var(--shadow-lg);"
     >
       <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500 via-purple-500 to-indigo-600 flex items-center justify-center shadow-xl glow-violet relative overflow-hidden">
-        <span class="text-white font-bold text-2xl relative z-10">M</span>
-        <div class="absolute inset-0 bg-gradient-to-t from-white/10 to-transparent"></div>
+        <span class="text-white font-extrabold text-2xl relative z-10">M</span>
+        <div class="absolute inset-0 bg-gradient-to-t from-black/10 to-white/25"></div>
       </div>
-      <span class="inline-block w-10 h-10 border-[3px] border-violet-400/15 border-t-violet-400 rounded-full animate-spin"></span>
+      <span class="inline-block w-10 h-10 border-[3px] border-t-transparent rounded-full animate-spin" style="border-color: var(--brand); border-top-color: transparent;"></span>
       <div class="text-center space-y-1.5">
-        <p class="text-lg font-semibold text-white">
+        <p class="text-lg font-bold" style="color: var(--text-primary);">
           {{ isRedirecting ? 'กำลังพาไปที่ Dashboard...' : 'กำลังตรวจสอบเซสชัน...' }}
         </p>
         <p class="text-sm" style="color: var(--text-muted);">กรุณารอสักครู่</p>
@@ -32,18 +48,18 @@
     </div>
 
     <!-- Login Card -->
-    <div v-else class="relative rounded-2xl max-w-[400px] w-full overflow-hidden animate-slide-up" style="background: var(--bg-card); backdrop-filter: blur(24px) saturate(1.6); border: 1px solid var(--border-default); box-shadow: 0 24px 80px rgba(0,0,0,0.3), 0 0 1px var(--border-subtle);">
+    <div v-else class="relative rounded-[1.75rem] max-w-[420px] w-full overflow-hidden animate-slide-up" style="background: var(--bg-card); border: 1px solid var(--border-subtle); box-shadow: var(--shadow-lg);">
       <!-- Decorative top gradient line -->
-      <div class="h-[2px] w-full" style="background: linear-gradient(90deg, transparent, #8b5cf6, #6366f1, #8b5cf6, transparent);"></div>
+      <div class="h-1.5 w-full" style="background: linear-gradient(90deg, var(--brand), var(--brand-2), var(--brand));"></div>
 
       <!-- Card header -->
       <div class="px-8 pt-8 pb-5 text-center">
-        <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500 via-purple-500 to-indigo-600 flex items-center justify-center shadow-xl glow-violet mx-auto mb-5 relative overflow-hidden">
-          <span class="text-white font-bold text-2xl relative z-10">M</span>
-          <div class="absolute inset-0 bg-gradient-to-t from-white/10 to-transparent"></div>
+        <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500 via-purple-500 to-indigo-600 flex items-center justify-center shadow-xl glow-violet mx-auto mb-5 relative overflow-hidden lg:hidden">
+          <span class="text-white font-extrabold text-2xl relative z-10">M</span>
+          <div class="absolute inset-0 bg-gradient-to-t from-black/10 to-white/25"></div>
         </div>
-        <h1 class="text-2xl font-bold text-white tracking-tight">Welcome to MyLife</h1>
-        <p class="text-sm mt-1.5" style="color: var(--text-muted);">จัดการชีวิตของคุณให้ดีขึ้น</p>
+        <h1 class="text-2xl font-extrabold tracking-tight" style="color: var(--text-primary);">ยินดีต้อนรับ 👋</h1>
+        <p class="text-sm mt-1.5" style="color: var(--text-muted);">เข้าสู่ระบบเพื่อจัดการชีวิตของคุณ</p>
       </div>
 
       <div class="px-8 pb-8 space-y-5">
@@ -70,28 +86,18 @@
         </Transition>
 
         <!-- Tab switcher -->
-        <div class="flex rounded-xl p-1 gap-1" style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);">
+        <div class="flex rounded-2xl p-1 gap-1" style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);">
           <button
             @click="isSignUp = false"
-            :class="[
-              'flex-1 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all duration-300',
-              !isSignUp
-                ? 'text-white shadow-lg'
-                : 'hover:text-white'
-            ]"
-            :style="!isSignUp ? 'background: linear-gradient(135deg, #8b5cf6, #6366f1); box-shadow: 0 4px 16px rgba(139,92,246,0.25);' : 'color: var(--text-muted);'"
+            class="flex-1 py-2.5 px-4 rounded-xl text-sm font-bold transition-all duration-300"
+            :style="!isSignUp ? 'background: linear-gradient(135deg, var(--brand), var(--brand-2)); color: #fff; box-shadow: var(--brand-glow);' : 'color: var(--text-muted);'"
           >
             ลงชื่อเข้าใช้
           </button>
           <button
             @click="isSignUp = true"
-            :class="[
-              'flex-1 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all duration-300',
-              isSignUp
-                ? 'text-white shadow-lg'
-                : 'hover:text-white'
-            ]"
-            :style="isSignUp ? 'background: linear-gradient(135deg, #8b5cf6, #6366f1); box-shadow: 0 4px 16px rgba(139,92,246,0.25);' : 'color: var(--text-muted);'"
+            class="flex-1 py-2.5 px-4 rounded-xl text-sm font-bold transition-all duration-300"
+            :style="isSignUp ? 'background: linear-gradient(135deg, var(--brand), var(--brand-2)); color: #fff; box-shadow: var(--brand-glow);' : 'color: var(--text-muted);'"
           >
             สมัครสมาชิก
           </button>
@@ -201,6 +207,7 @@
         </p>
       </div>
     </div>
+    </div>
   </div>
 </template>
 
@@ -211,6 +218,8 @@ const route = useRoute()
 const router = useRouter()
 const config = useRuntimeConfig()
 const supabase = useSupabaseClient()
+
+const features = ['💸 การเงิน', '📅 ตารางเรียน', '✅ งาน & To-do', '🎉 กิจกรรม', '🔔 เตือนผ่าน LINE']
 
 const isSignUp = ref(false)
 const isLoading = ref(false)

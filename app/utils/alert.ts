@@ -3,9 +3,9 @@ import Swal from 'sweetalert2'
 // Base SweetAlert2 instance
 const swalBase = Swal.mixin({
   customClass: {
-    popup: 'border border-gray-800 rounded-2xl',
-    confirmButton: 'px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 font-medium text-sm text-white border-none',
-    cancelButton: 'px-4 py-2 rounded-xl bg-gray-800 hover:bg-gray-700 font-medium text-sm text-white border-none',
+    popup: 'border border-gray-800 rounded-3xl',
+    confirmButton: 'px-5 py-2.5 rounded-xl bg-rose-500 hover:bg-rose-600 font-semibold text-sm text-white border-none',
+    cancelButton: 'px-5 py-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 font-semibold text-sm border-none',
     actions: 'gap-3',
   },
   buttonsStyling: false,
@@ -32,15 +32,15 @@ export const useAlert = () => {
     const isLight = typeof document !== 'undefined' && document.documentElement.classList.contains('theme-light')
     if (isLight) {
       return {
-        background: isToast ? '#edf2f7' : '#ffffff',
-        color: '#0f172a',
-        iconColor: isToast ? undefined : undefined
+        background: isToast ? '#fffdf8' : '#ffffff',
+        color: '#2c2925',
+        iconColor: undefined
       }
     }
     return {
-      background: isToast ? '#1f2937' : '#111827',
-      color: '#ffffff',
-      iconColor: isToast ? 'white' : undefined
+      background: isToast ? '#2b2739' : '#221f2e',
+      color: '#f2edf6',
+      iconColor: isToast ? undefined : undefined
     }
   }
 

@@ -207,12 +207,16 @@
 
         <!-- Transaction List -->
         <section class="section-card">
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 py-4 border-b border-gray-800/60">
-            <h2 class="text-base font-semibold text-white">รายการทั้งหมด</h2>
+          <div class="flex flex-col gap-3 px-5 py-4" style="border-bottom: 1px solid var(--border-subtle);">
+            <div class="flex items-center justify-between">
+              <h2 class="text-base font-semibold" style="color: var(--text-primary);">รายการทั้งหมด</h2>
+              <span class="text-xs px-2.5 py-1 rounded-full" style="background: var(--bg-elevated); color: var(--text-secondary);">{{ transactionPageInfo }}</span>
+            </div>
             <div class="flex items-center gap-2 flex-wrap">
               <select
                 v-model="transactionFilterMode"
-                class="bg-gray-800/80 border border-gray-700/60 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-violet-500 transition-all"
+                class="text-sm px-3 py-2 rounded-xl focus:outline-none transition-all"
+                style="background: var(--bg-elevated); border: 1px solid var(--border-default); color: var(--text-primary);"
               >
                 <option value="all">ทั้งหมด</option>
                 <option value="day">รายวัน</option>
@@ -222,15 +226,26 @@
                 v-if="transactionFilterMode === 'day'"
                 v-model="transactionFilterDate"
                 type="date"
-                class="bg-gray-800/80 border border-gray-700/60 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-violet-500 transition-all"
+                class="text-sm px-3 py-2 rounded-xl focus:outline-none transition-all"
+                style="background: var(--bg-elevated); border: 1px solid var(--border-default); color: var(--text-primary);"
               />
               <input
                 v-if="transactionFilterMode === 'month'"
                 v-model="transactionFilterMonth"
                 type="month"
-                class="bg-gray-800/80 border border-gray-700/60 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-violet-500 transition-all"
+                class="text-sm px-3 py-2 rounded-xl focus:outline-none transition-all"
+                style="background: var(--bg-elevated); border: 1px solid var(--border-default); color: var(--text-primary);"
               />
-              <span class="text-xs text-gray-500">{{ filteredTransactions.length }} รายการ</span>
+              <select
+                v-model.number="transactionItemsPerPage"
+                @change="transactionCurrentPage = 1"
+                class="text-sm px-3 py-2 rounded-xl ml-auto focus:outline-none transition-all"
+                style="background: var(--bg-elevated); border: 1px solid var(--border-default); color: var(--text-primary);"
+              >
+                <option value="10">10 รายการ/หน้า</option>
+                <option value="20">20 รายการ/หน้า</option>
+                <option value="50">50 รายการ/หน้า</option>
+              </select>
             </div>
           </div>
 
@@ -242,7 +257,7 @@
           <!-- Mobile: Card List (< md) -->
           <div v-else class="md:hidden divide-y divide-gray-800/50">
             <div
-              v-for="item in filteredTransactions"
+              v-for="item in paginatedTransactions"
               :key="item.id"
               class="px-4 py-4 hover:bg-gray-800/20 transition-all"
             >
@@ -296,7 +311,7 @@
               </thead>
               <tbody class="divide-y divide-gray-800/40">
                 <tr
-                  v-for="item in filteredTransactions"
+                  v-for="item in paginatedTransactions"
                   :key="item.id"
                   class="hover:bg-gray-800/20 transition-all"
                 >
@@ -331,6 +346,41 @@
                 </tr>
               </tbody>
             </table>
+          </div>
+
+          <!-- Pagination Controls -->
+          <div v-if="transactionTotalPages > 1" class="flex items-center justify-center gap-2 px-5 py-4 border-t border-gray-800/60">
+            <button
+              @click="transactionCurrentPage = Math.max(1, transactionCurrentPage - 1)"
+              :disabled="transactionCurrentPage === 1"
+              class="px-3 py-2 rounded-lg text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              style="background: var(--bg-elevated); border: 1px solid var(--border-default); color: var(--text-secondary);"
+              :style="transactionCurrentPage === 1 ? {} : { 'cursor': 'pointer', 'color': 'var(--text-primary)' }"
+            >
+              ← ก่อนหน้า
+            </button>
+            <div class="flex items-center gap-1">
+              <button
+                v-for="page in transactionTotalPages"
+                :key="page"
+                @click="transactionCurrentPage = page"
+                class="w-9 h-9 rounded-lg text-sm font-medium transition-all"
+                :style="transactionCurrentPage === page
+                  ? { 'background': 'var(--brand)', 'color': 'white', 'border': '1px solid var(--brand)' }
+                  : { 'background': 'var(--bg-elevated)', 'border': '1px solid var(--border-default)', 'color': 'var(--text-secondary)' }"
+              >
+                {{ page }}
+              </button>
+            </div>
+            <button
+              @click="transactionCurrentPage = Math.min(transactionTotalPages, transactionCurrentPage + 1)"
+              :disabled="transactionCurrentPage === transactionTotalPages"
+              class="px-3 py-2 rounded-lg text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              style="background: var(--bg-elevated); border: 1px solid var(--border-default); color: var(--text-secondary);"
+              :style="transactionCurrentPage === transactionTotalPages ? {} : { 'cursor': 'pointer', 'color': 'var(--text-primary)' }"
+            >
+              ต่อไป →
+            </button>
           </div>
         </section>
       </div>
@@ -680,6 +730,8 @@ const summaryFilterMonth = ref(getThisMonthTH())
 const transactionFilterMode = ref<'all' | 'day' | 'month'>('all')
 const transactionFilterDate = ref(getTodayTH())
 const transactionFilterMonth = ref(getThisMonthTH())
+const transactionItemsPerPage = ref(20)
+const transactionCurrentPage = ref(1)
 
 const form = reactive({
   entryDate: getTodayTH(),
@@ -866,6 +918,21 @@ const filteredTransactions = computed(() => {
   if (transactionFilterMode.value === 'month' && transactionFilterMonth.value)
     return transactions.value.filter(i => i.entry_date.startsWith(transactionFilterMonth.value))
   return transactions.value
+})
+
+const transactionTotalPages = computed(() => Math.ceil(filteredTransactions.value.length / transactionItemsPerPage.value))
+const paginatedTransactions = computed(() => {
+  const start = (transactionCurrentPage.value - 1) * transactionItemsPerPage.value
+  const end = start + transactionItemsPerPage.value
+  return filteredTransactions.value.slice(start, end)
+})
+
+const transactionPageInfo = computed(() => {
+  const total = filteredTransactions.value.length
+  if (total === 0) return 'ไม่มีรายการ'
+  const start = (transactionCurrentPage.value - 1) * transactionItemsPerPage.value + 1
+  const end = Math.min(transactionCurrentPage.value * transactionItemsPerPage.value, total)
+  return `แสดง ${start}-${end} จาก ${total} รายการ`
 })
 
 const resetForm = () => {

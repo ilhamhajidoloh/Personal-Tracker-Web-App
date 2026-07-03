@@ -1,10 +1,13 @@
 <template>
   <AppTabsLayout>
     <!-- Page Header -->
-    <header class="px-6 md:px-8 py-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shrink-0 glass-header">
-      <div class="animate-slide-up">
-        <h1 class="text-2xl font-bold text-white tracking-tight">ภาพรวม Dashboard</h1>
-        <p class="text-sm mt-0.5" style="color: var(--text-muted);">{{ todayText }}</p>
+    <header class="px-5 md:px-8 py-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shrink-0 glass-header">
+      <div class="animate-slide-up flex items-center gap-3.5">
+        <div class="hidden sm:flex w-12 h-12 rounded-2xl items-center justify-center text-2xl shrink-0 glow-violet" style="background: linear-gradient(135deg, var(--brand), var(--brand-2));">👋</div>
+        <div>
+          <h1 class="text-2xl font-extrabold tracking-tight" style="color: var(--text-primary);">{{ greetingText }} <span class="text-gradient">MyLife</span></h1>
+          <p class="text-sm mt-0.5" style="color: var(--text-muted);">{{ todayText }}</p>
+        </div>
       </div>
       <div class="flex items-center gap-2 animate-slide-up delay-100">
         <NuxtLink
@@ -154,10 +157,10 @@
               </div>
               <NuxtLink
                 to="/cashflow"
-                class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-violet-300 transition-all"
-                style="background: rgba(139,92,246,0.1); border: 1px solid rgba(139,92,246,0.15);"
-                @mouseenter="$el.style.background = 'rgba(139,92,246,0.18)'"
-                @mouseleave="$el.style.background = 'rgba(139,92,246,0.1)'"
+                class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all"
+                style="background: var(--brand-soft); border: 1px solid var(--brand-border); color: var(--brand-ink);"
+                @mouseenter="$el.style.background = 'var(--brand-soft-hover)'"
+                @mouseleave="$el.style.background = 'var(--brand-soft)'"
               >
                 ดูรายละเอียดทั้งหมด →
               </NuxtLink>
@@ -487,6 +490,14 @@ const todayText = nowTH().toLocaleDateString('th-TH', {
   day: '2-digit',
   month: 'long',
   year: 'numeric',
+})
+
+const greetingText = computed(() => {
+  const hour = currentTime.value.getHours()
+  if (hour < 12) return 'สวัสดีตอนเช้า'
+  if (hour < 17) return 'สวัสดีตอนบ่าย'
+  if (hour < 20) return 'สวัสดีตอนเย็น'
+  return 'สวัสดีตอนค่ำ'
 })
 
 const dayLabelMap = new Map<number, string>([

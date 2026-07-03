@@ -35,11 +35,23 @@
 
         <!-- Events List -->
         <section class="section-card">
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 py-4 border-b border-gray-800/60">
-            <h2 class="text-base font-semibold text-white">รายการกิจกรรม</h2>
-            <span class="text-xs bg-gray-800/80 text-gray-400 border border-gray-700/60 rounded-full px-3 py-1">
-              ทั้งหมด {{ events.length }} รายการ
-            </span>
+          <div class="flex flex-col gap-3 px-5 py-4 border-b border-gray-800/60">
+            <div class="flex items-center justify-between">
+              <h2 class="text-base font-semibold text-white">รายการกิจกรรม</h2>
+              <span class="text-xs px-2.5 py-1 rounded-full" style="background: var(--bg-elevated); color: var(--text-secondary);">{{ eventPageInfo }}</span>
+            </div>
+            <div class="flex items-center gap-2 flex-wrap justify-end">
+              <select
+                v-model.number="eventItemsPerPage"
+                @change="eventCurrentPage = 1"
+                class="text-sm px-3 py-2 rounded-xl focus:outline-none transition-all"
+                style="background: var(--bg-elevated); border: 1px solid var(--border-default); color: var(--text-primary);"
+              >
+                <option value="10">10 รายการ/หน้า</option>
+                <option value="20">20 รายการ/หน้า</option>
+                <option value="50">50 รายการ/หน้า</option>
+              </select>
+            </div>
           </div>
 
           <!-- Loading -->
@@ -63,7 +75,7 @@
           <!-- Event List -->
           <div v-else class="divide-y divide-gray-800/50">
             <div
-              v-for="item in events"
+              v-for="item in paginatedEvents"
               :key="item.id"
               class="flex items-start gap-4 px-5 py-4 hover:bg-gray-800/20 transition-all"
               :class="getEventRowHoverClass(item.event_type)"
@@ -108,6 +120,41 @@
                 >🗑️</button>
               </div>
             </div>
+          </div>
+
+          <!-- Pagination Controls -->
+          <div v-if="eventTotalPages > 1" class="flex items-center justify-center gap-2 px-5 py-4 border-t border-gray-800/60">
+            <button
+              @click="eventCurrentPage = Math.max(1, eventCurrentPage - 1)"
+              :disabled="eventCurrentPage === 1"
+              class="px-3 py-2 rounded-lg text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              style="background: var(--bg-elevated); border: 1px solid var(--border-default); color: var(--text-secondary);"
+              :style="eventCurrentPage === 1 ? {} : { 'cursor': 'pointer', 'color': 'var(--text-primary)' }"
+            >
+              ← ก่อนหน้า
+            </button>
+            <div class="flex items-center gap-1">
+              <button
+                v-for="page in eventTotalPages"
+                :key="page"
+                @click="eventCurrentPage = page"
+                class="w-9 h-9 rounded-lg text-sm font-medium transition-all"
+                :style="eventCurrentPage === page
+                  ? { 'background': 'var(--brand)', 'color': 'white', 'border': '1px solid var(--brand)' }
+                  : { 'background': 'var(--bg-elevated)', 'border': '1px solid var(--border-default)', 'color': 'var(--text-secondary)' }"
+              >
+                {{ page }}
+              </button>
+            </div>
+            <button
+              @click="eventCurrentPage = Math.min(eventTotalPages, eventCurrentPage + 1)"
+              :disabled="eventCurrentPage === eventTotalPages"
+              class="px-3 py-2 rounded-lg text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              style="background: var(--bg-elevated); border: 1px solid var(--border-default); color: var(--text-secondary);"
+              :style="eventCurrentPage === eventTotalPages ? {} : { 'cursor': 'pointer', 'color': 'var(--text-primary)' }"
+            >
+              ต่อไป →
+            </button>
           </div>
         </section>
       </div>
@@ -314,6 +361,8 @@ const isDeletingId = ref('')
 const editingId = ref('')
 const errorMessage = ref('')
 const events = ref<EventRow[]>([])
+const eventItemsPerPage = ref(20)
+const eventCurrentPage = ref(1)
 const tableMissingCodes = new Set(['42P01', 'PGRST205'])
 
 const eventTypeOptions = [
@@ -353,6 +402,21 @@ const activeReminderOptions = computed(() =>
 )
 
 const isEditing = computed(() => Boolean(editingId.value))
+
+const eventTotalPages = computed(() => Math.ceil(events.value.length / eventItemsPerPage.value))
+const paginatedEvents = computed(() => {
+  const start = (eventCurrentPage.value - 1) * eventItemsPerPage.value
+  const end = start + eventItemsPerPage.value
+  return events.value.slice(start, end)
+})
+
+const eventPageInfo = computed(() => {
+  const total = events.value.length
+  if (total === 0) return 'ไม่มีรายการ'
+  const start = (eventCurrentPage.value - 1) * eventItemsPerPage.value + 1
+  const end = Math.min(eventCurrentPage.value * eventItemsPerPage.value, total)
+  return `แสดง ${start}-${end} จาก ${total} รายการ`
+})
 
 const resetForm = () => {
   form.title = ''
