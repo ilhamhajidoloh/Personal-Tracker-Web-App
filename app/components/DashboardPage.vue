@@ -392,14 +392,25 @@
                 class="glass-card rounded-xl px-4 py-3.5 flex items-center gap-4"
               >
                 <!-- Date badge -->
-                <div class="shrink-0 text-center rounded-xl px-3 py-2.5 min-w-[52px]" style="background: var(--bg-elevated); border: 1px solid var(--border-default);">
-                  <div class="text-[10px] font-bold uppercase text-rose-400 leading-none">{{ getMonthShort(event.start_date) }}</div>
+                <div
+                  class="shrink-0 text-center rounded-xl px-3 py-2.5 min-w-[52px] border"
+                  :class="getDashboardEventDateBadgeClass(event)"
+                >
+                  <div class="text-[10px] font-bold uppercase leading-none" :class="getDashboardEventDateColor(event)">{{ getMonthShort(event.start_date) }}</div>
                   <div class="text-2xl text-white font-bold leading-tight mt-0.5">{{ getDay(event.start_date) }}</div>
                 </div>
                 <!-- Event info -->
                 <div class="flex-1 min-w-0">
-                  <p class="text-sm font-semibold text-white line-clamp-1">{{ event.title }}</p>
-                  <p class="text-[11px] text-sky-400 mt-0.5 font-medium">{{ displayEventDateTimeShort(event) }}</p>
+                  <div class="flex items-center gap-2 min-w-0">
+                    <p class="text-sm font-semibold text-white line-clamp-1 min-w-0">{{ event.title }}</p>
+                    <span
+                      class="shrink-0 text-[10px] px-2 py-0.5 rounded-full border font-semibold whitespace-nowrap"
+                      :class="getDashboardEventStatusBadgeClass(event)"
+                    >
+                      {{ getDashboardEventStatusText(event) }}
+                    </span>
+                  </div>
+                  <p class="text-[11px] mt-0.5 font-medium" :class="getDashboardEventTextColor(event)">{{ displayEventDateTimeShort(event) }}</p>
                 </div>
               </div>
             </div>
@@ -677,6 +688,88 @@ const displayEventDateTimeShort = (item: DashboardEventRow) => {
     return `${formatDate(item.start_date)}${startTimeStr} ถึง ${formatDate(item.end_date || '')}${endTimeStr}`
   }
   return formatDate(item.start_date)
+}
+
+const dashboardSoonThresholdMinutes = 7 * 24 * 60
+
+const normalizeDashboardEventTime = (timeString: string | null, fallback: string) => {
+  if (!timeString) return fallback
+  return timeString.length === 5 ? `${timeString}:00` : timeString
+}
+
+const getDashboardEventDateTimeBounds = (item: DashboardEventRow) => {
+  const endDate = item.end_date || item.start_date
+  const startTime = item.event_type === 'same_day_all_day' ? '00:00:00' : normalizeDashboardEventTime(item.start_time, '00:00:00')
+  const endTime = item.event_type === 'same_day_all_day' ? '23:59:59' : normalizeDashboardEventTime(item.end_time, '23:59:59')
+  return {
+    startMs: new Date(`${item.start_date}T${startTime}`).getTime(),
+    endMs: new Date(`${endDate}T${endTime}`).getTime(),
+  }
+}
+
+const formatDashboardStatusDuration = (minutes: number) => {
+  const safeMinutes = Math.max(1, Math.ceil(minutes))
+  if (safeMinutes < 60) return `${safeMinutes} นาที`
+  const hours = Math.floor(safeMinutes / 60)
+  const remainMinutes = safeMinutes % 60
+  if (hours < 24) return remainMinutes > 0 ? `${hours} ชม. ${remainMinutes} นาที` : `${hours} ชม.`
+  const days = Math.floor(hours / 24)
+  const remainHours = hours % 24
+  if (days < 30) return remainHours > 0 ? `${days} วัน ${remainHours} ชม.` : `${days} วัน`
+  const months = Math.floor(days / 30)
+  const remainDays = days % 30
+  return remainDays > 0 ? `${months} เดือน ${remainDays} วัน` : `${months} เดือน`
+}
+
+const getDashboardEventStatusMeta = (item: DashboardEventRow) => {
+  const { startMs, endMs } = getDashboardEventDateTimeBounds(item)
+  const nowMs = currentTime.value.getTime()
+  const minutesUntilStart = (startMs - nowMs) / 60000
+  const minutesUntilEnd = (endMs - nowMs) / 60000
+
+  if (minutesUntilEnd < 0) {
+    return { status: 'past', text: 'ผ่านไปแล้ว' }
+  }
+
+  if (minutesUntilStart <= 0) {
+    return { status: 'soon', text: 'กำลังจะถึง' }
+  }
+
+  if (minutesUntilStart <= dashboardSoonThresholdMinutes) {
+    return { status: 'soon', text: `กำลังจะถึง อีก ${formatDashboardStatusDuration(minutesUntilStart)}` }
+  }
+
+  return { status: 'future', text: `ยังไม่ถึง อีก ${formatDashboardStatusDuration(minutesUntilStart)}` }
+}
+
+const getDashboardEventStatusText = (item: DashboardEventRow) => getDashboardEventStatusMeta(item).text
+
+const getDashboardEventStatusBadgeClass = (item: DashboardEventRow) => {
+  const status = getDashboardEventStatusMeta(item).status
+  if (status === 'past') return 'border-slate-600/70 bg-slate-700/35 text-slate-300'
+  if (status === 'soon') return 'border-orange-400/60 bg-orange-500/20 text-orange-100'
+  return 'border-cyan-400/55 bg-cyan-500/15 text-cyan-100'
+}
+
+const getDashboardEventDateBadgeClass = (item: DashboardEventRow) => {
+  const status = getDashboardEventStatusMeta(item).status
+  if (status === 'past') return 'bg-slate-700/25 border-slate-600/45'
+  if (status === 'soon') return 'bg-orange-500/15 border-orange-400/45 shadow-[0_0_18px_rgba(251,146,60,0.12)]'
+  return 'bg-cyan-500/10 border-cyan-400/35'
+}
+
+const getDashboardEventDateColor = (item: DashboardEventRow) => {
+  const status = getDashboardEventStatusMeta(item).status
+  if (status === 'past') return 'text-slate-400'
+  if (status === 'soon') return 'text-orange-300'
+  return 'text-cyan-300'
+}
+
+const getDashboardEventTextColor = (item: DashboardEventRow) => {
+  const status = getDashboardEventStatusMeta(item).status
+  if (status === 'past') return 'text-slate-400'
+  if (status === 'soon') return 'text-orange-300'
+  return 'text-cyan-300'
 }
 
 const nextEventMeta = computed(() => {

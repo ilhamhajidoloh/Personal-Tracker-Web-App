@@ -78,14 +78,14 @@
               v-for="item in paginatedEvents"
               :key="item.id"
               class="flex items-start gap-4 px-5 py-4 hover:bg-gray-800/20 transition-all"
-              :class="getEventRowHoverClass(item.event_type)"
+              :class="getEventRowHoverClass(item)"
             >
               <!-- Date badge -->
               <div
                 class="shrink-0 w-14 text-center rounded-xl py-2.5 border mt-0.5"
-                :class="getEventDateBadgeClass(item.event_type)"
+                :class="getEventDateBadgeClass(item)"
               >
-                <div class="text-[10px] font-bold uppercase leading-none" :class="getEventDateColor(item.event_type)">{{ getMonthShort(item.start_date) }}</div>
+                <div class="text-[10px] font-bold uppercase leading-none" :class="getEventDateColor(item)">{{ getMonthShort(item.start_date) }}</div>
                 <div class="text-xl font-bold text-white leading-tight mt-0.5">{{ getDay(item.start_date) }}</div>
               </div>
 
@@ -99,8 +99,14 @@
                   >
                     {{ getEventTypeName(item.event_type) }}
                   </span>
+                  <span
+                    class="text-[10px] px-2 py-0.5 rounded-full border font-semibold whitespace-nowrap"
+                    :class="getEventStatusBadgeClass(item)"
+                  >
+                    {{ getEventStatusText(item) }}
+                  </span>
                 </div>
-                <p class="text-xs font-medium" :class="getEventTextColor(item.event_type)">{{ displayEventDateTime(item) }}</p>
+                <p class="text-xs font-medium" :class="getEventTextColor(item)">{{ displayEventDateTime(item) }}</p>
                 <p v-if="item.reminder_minutes" class="text-[10px] text-amber-400 mt-1">🔔 เตือนก่อน {{ getReminderLabel(item.reminder_minutes) }}</p>
                 <p v-if="item.description" class="text-xs text-gray-500 mt-1.5 line-clamp-1">{{ item.description }}</p>
               </div>
@@ -315,7 +321,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { getTodayTH } from '~/utils/date'
 
 type EventTypeType = 'same_day_time' | 'same_day_all_day' | 'multi_day'
@@ -361,9 +367,11 @@ const isDeletingId = ref('')
 const editingId = ref('')
 const errorMessage = ref('')
 const events = ref<EventRow[]>([])
+const currentTime = ref(new Date())
 const eventItemsPerPage = ref(20)
 const eventCurrentPage = ref(1)
 const tableMissingCodes = new Set(['42P01', 'PGRST205'])
+const soonThresholdMinutes = 7 * 24 * 60
 
 const eventTypeOptions = [
   { value: 'same_day_time' as EventTypeType, label: 'วันเดียวมีเวลา', icon: '🕐' },
@@ -452,13 +460,78 @@ const getMonthShort = (dateString: string) => new Date(dateString).toLocaleDateS
 const getDay = (dateString: string) => new Date(dateString).toLocaleDateString('th-TH', { day: '2-digit' })
 const formatTime = (timeString: string | null) => timeString ? timeString.slice(0, 5) + ' น.' : ''
 
-const getEventDateBadgeClass = (type: EventTypeType) => {
-  if (type === 'same_day_time') return 'bg-sky-500/10 border-sky-500/25'
-  if (type === 'same_day_all_day') return 'bg-emerald-500/10 border-emerald-500/25'
-  return 'bg-violet-500/10 border-violet-500/25'
+const normalizeEventTime = (timeString: string | null, fallback: string) => {
+  if (!timeString) return fallback
+  return timeString.length === 5 ? `${timeString}:00` : timeString
 }
 
-const getEventRowHoverClass = (_type: EventTypeType) => ''
+const getEventDateTimeBounds = (item: EventRow) => {
+  const endDate = item.end_date || item.start_date
+  const startTime = item.event_type === 'same_day_all_day' ? '00:00:00' : normalizeEventTime(item.start_time, '00:00:00')
+  const endTime = item.event_type === 'same_day_all_day' ? '23:59:59' : normalizeEventTime(item.end_time, '23:59:59')
+  return {
+    startMs: new Date(`${item.start_date}T${startTime}`).getTime(),
+    endMs: new Date(`${endDate}T${endTime}`).getTime(),
+  }
+}
+
+const formatStatusDuration = (minutes: number) => {
+  const safeMinutes = Math.max(1, Math.ceil(minutes))
+  if (safeMinutes < 60) return `${safeMinutes} นาที`
+  const hours = Math.floor(safeMinutes / 60)
+  const remainMinutes = safeMinutes % 60
+  if (hours < 24) return remainMinutes > 0 ? `${hours} ชม. ${remainMinutes} นาที` : `${hours} ชม.`
+  const days = Math.floor(hours / 24)
+  const remainHours = hours % 24
+  if (days < 30) return remainHours > 0 ? `${days} วัน ${remainHours} ชม.` : `${days} วัน`
+  const months = Math.floor(days / 30)
+  const remainDays = days % 30
+  return remainDays > 0 ? `${months} เดือน ${remainDays} วัน` : `${months} เดือน`
+}
+
+const getEventStatusMeta = (item: EventRow) => {
+  const { startMs, endMs } = getEventDateTimeBounds(item)
+  const nowMs = currentTime.value.getTime()
+  const minutesUntilStart = (startMs - nowMs) / 60000
+  const minutesUntilEnd = (endMs - nowMs) / 60000
+
+  if (minutesUntilEnd < 0) {
+    return { status: 'past', text: `ผ่านไปแล้ว (${formatStatusDuration(Math.abs(minutesUntilEnd))}ก่อน)` }
+  }
+
+  if (minutesUntilStart <= 0) {
+    return { status: 'soon', text: 'กำลังจะถึง (กำลังดำเนินอยู่)' }
+  }
+
+  if (minutesUntilStart <= soonThresholdMinutes) {
+    return { status: 'soon', text: `กำลังจะถึง (อีก ${formatStatusDuration(minutesUntilStart)})` }
+  }
+
+  return { status: 'future', text: `ยังไม่ถึง (อีก ${formatStatusDuration(minutesUntilStart)})` }
+}
+
+const getEventStatusText = (item: EventRow) => getEventStatusMeta(item).text
+
+const getEventStatusBadgeClass = (item: EventRow) => {
+  const status = getEventStatusMeta(item).status
+  if (status === 'past') return 'border-slate-600/70 bg-slate-700/35 text-slate-300'
+  if (status === 'soon') return 'border-orange-400/60 bg-orange-500/20 text-orange-100'
+  return 'border-cyan-400/55 bg-cyan-500/15 text-cyan-100'
+}
+
+const getEventDateBadgeClass = (item: EventRow) => {
+  const status = getEventStatusMeta(item).status
+  if (status === 'past') return 'bg-slate-700/25 border-slate-600/45'
+  if (status === 'soon') return 'bg-orange-500/15 border-orange-400/45 shadow-[0_0_18px_rgba(251,146,60,0.12)]'
+  return 'bg-cyan-500/10 border-cyan-400/35'
+}
+
+const getEventRowHoverClass = (item: EventRow) => {
+  const status = getEventStatusMeta(item).status
+  if (status === 'past') return 'opacity-70 hover:bg-slate-700/10'
+  if (status === 'soon') return 'hover:bg-orange-500/10'
+  return 'hover:bg-cyan-500/10'
+}
 
 const getEventBadgeClass = (type: EventTypeType) => {
   if (type === 'same_day_time') return 'border-sky-500/30 bg-sky-500/15 text-sky-300'
@@ -466,16 +539,18 @@ const getEventBadgeClass = (type: EventTypeType) => {
   return 'border-violet-500/30 bg-violet-500/15 text-violet-300'
 }
 
-const getEventTextColor = (type: EventTypeType) => {
-  if (type === 'same_day_time') return 'text-sky-400'
-  if (type === 'same_day_all_day') return 'text-emerald-400'
-  return 'text-violet-400'
+const getEventTextColor = (item: EventRow) => {
+  const status = getEventStatusMeta(item).status
+  if (status === 'past') return 'text-slate-400'
+  if (status === 'soon') return 'text-orange-300'
+  return 'text-cyan-300'
 }
 
-const getEventDateColor = (type: EventTypeType) => {
-  if (type === 'same_day_time') return 'text-sky-400'
-  if (type === 'same_day_all_day') return 'text-emerald-400'
-  return 'text-violet-400'
+const getEventDateColor = (item: EventRow) => {
+  const status = getEventStatusMeta(item).status
+  if (status === 'past') return 'text-slate-400'
+  if (status === 'soon') return 'text-orange-300'
+  return 'text-cyan-300'
 }
 
 const getEventTypeName = (type: EventTypeType) => {
@@ -587,5 +662,16 @@ const deleteEvent = async (id: string) => {
   }
 }
 
-onMounted(() => { loadEvents() })
+let clockTimer: ReturnType<typeof setInterval> | null = null
+
+onMounted(() => {
+  loadEvents()
+  clockTimer = setInterval(() => {
+    currentTime.value = new Date()
+  }, 60_000)
+})
+
+onUnmounted(() => {
+  if (clockTimer) clearInterval(clockTimer)
+})
 </script>
