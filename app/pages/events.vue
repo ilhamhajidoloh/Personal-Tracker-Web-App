@@ -83,16 +83,16 @@
               <!-- Date badge -->
               <div
                 class="shrink-0 w-14 text-center rounded-xl py-2.5 border mt-0.5"
-                :class="getEventDateBadgeClass(item)"
+                :style="getEventDateBadgeStyle(item)"
               >
-                <div class="text-[10px] font-bold uppercase leading-none" :class="getEventDateColor(item)">{{ getMonthShort(item.start_date) }}</div>
-                <div class="text-xl font-bold text-white leading-tight mt-0.5">{{ getDay(item.start_date) }}</div>
+                <div class="text-[10px] font-bold uppercase leading-none" :style="getEventStatusTextStyle(item)">{{ getMonthShort(item.start_date) }}</div>
+                <div class="text-xl font-bold leading-tight mt-0.5" style="color: var(--text-primary);">{{ getDay(item.start_date) }}</div>
               </div>
 
               <!-- Content -->
               <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-2 flex-wrap mb-1">
-                  <h3 class="text-sm font-semibold text-white truncate">{{ item.title }}</h3>
+                  <h3 class="text-sm font-semibold truncate" style="color: var(--text-primary);">{{ item.title }}</h3>
                   <span
                     class="text-[10px] px-2 py-0.5 rounded-full border font-semibold whitespace-nowrap"
                     :class="getEventBadgeClass(item.event_type)"
@@ -101,12 +101,12 @@
                   </span>
                   <span
                     class="text-[10px] px-2 py-0.5 rounded-full border font-semibold whitespace-nowrap"
-                    :class="getEventStatusBadgeClass(item)"
+                    :style="getEventStatusBadgeStyle(item)"
                   >
                     {{ getEventStatusText(item) }}
                   </span>
                 </div>
-                <p class="text-xs font-medium" :class="getEventTextColor(item)">{{ displayEventDateTime(item) }}</p>
+                <p class="text-xs font-medium" :style="getEventStatusTextStyle(item)">{{ displayEventDateTime(item) }}</p>
                 <p v-if="item.reminder_minutes" class="text-[10px] text-amber-400 mt-1">🔔 เตือนก่อน {{ getReminderLabel(item.reminder_minutes) }}</p>
                 <p v-if="item.description" class="text-xs text-gray-500 mt-1.5 line-clamp-1">{{ item.description }}</p>
               </div>
@@ -512,25 +512,29 @@ const getEventStatusMeta = (item: EventRow) => {
 
 const getEventStatusText = (item: EventRow) => getEventStatusMeta(item).text
 
-const getEventStatusBadgeClass = (item: EventRow) => {
-  const status = getEventStatusMeta(item).status
-  if (status === 'past') return 'border-slate-600/70 bg-slate-700/35 text-slate-300'
-  if (status === 'soon') return 'border-orange-400/60 bg-orange-500/20 text-orange-100'
-  return 'border-cyan-400/55 bg-cyan-500/15 text-cyan-100'
+const getEventStatusTokenPrefix = (item: EventRow) => `--event-status-${getEventStatusMeta(item).status}`
+
+const getEventStatusBadgeStyle = (item: EventRow) => {
+  const prefix = getEventStatusTokenPrefix(item)
+  return {
+    background: `var(${prefix}-soft)`,
+    borderColor: `var(${prefix}-border)`,
+    color: `var(${prefix}-ink)`,
+  }
 }
 
-const getEventDateBadgeClass = (item: EventRow) => {
-  const status = getEventStatusMeta(item).status
-  if (status === 'past') return 'bg-slate-700/25 border-slate-600/45'
-  if (status === 'soon') return 'bg-orange-500/15 border-orange-400/45 shadow-[0_0_18px_rgba(251,146,60,0.12)]'
-  return 'bg-cyan-500/10 border-cyan-400/35'
+const getEventDateBadgeStyle = (item: EventRow) => {
+  const prefix = getEventStatusTokenPrefix(item)
+  return {
+    background: `var(${prefix}-soft)`,
+    borderColor: `var(${prefix}-border)`,
+    boxShadow: `var(${prefix}-shadow)`,
+  }
 }
 
 const getEventRowHoverClass = (item: EventRow) => {
   const status = getEventStatusMeta(item).status
-  if (status === 'past') return 'opacity-70 hover:bg-slate-700/10'
-  if (status === 'soon') return 'hover:bg-orange-500/10'
-  return 'hover:bg-cyan-500/10'
+  return status === 'past' ? 'opacity-70' : ''
 }
 
 const getEventBadgeClass = (type: EventTypeType) => {
@@ -539,18 +543,9 @@ const getEventBadgeClass = (type: EventTypeType) => {
   return 'border-violet-500/30 bg-violet-500/15 text-violet-300'
 }
 
-const getEventTextColor = (item: EventRow) => {
-  const status = getEventStatusMeta(item).status
-  if (status === 'past') return 'text-slate-400'
-  if (status === 'soon') return 'text-orange-300'
-  return 'text-cyan-300'
-}
-
-const getEventDateColor = (item: EventRow) => {
-  const status = getEventStatusMeta(item).status
-  if (status === 'past') return 'text-slate-400'
-  if (status === 'soon') return 'text-orange-300'
-  return 'text-cyan-300'
+const getEventStatusTextStyle = (item: EventRow) => {
+  const prefix = getEventStatusTokenPrefix(item)
+  return { color: `var(${prefix}-ink)` }
 }
 
 const getEventTypeName = (type: EventTypeType) => {

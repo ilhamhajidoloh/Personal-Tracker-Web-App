@@ -394,23 +394,23 @@
                 <!-- Date badge -->
                 <div
                   class="shrink-0 text-center rounded-xl px-3 py-2.5 min-w-[52px] border"
-                  :class="getDashboardEventDateBadgeClass(event)"
+                  :style="getDashboardEventDateBadgeStyle(event)"
                 >
-                  <div class="text-[10px] font-bold uppercase leading-none" :class="getDashboardEventDateColor(event)">{{ getMonthShort(event.start_date) }}</div>
-                  <div class="text-2xl text-white font-bold leading-tight mt-0.5">{{ getDay(event.start_date) }}</div>
+                  <div class="text-[10px] font-bold uppercase leading-none" :style="getDashboardEventStatusTextStyle(event)">{{ getMonthShort(event.start_date) }}</div>
+                  <div class="text-2xl font-bold leading-tight mt-0.5" style="color: var(--text-primary);">{{ getDay(event.start_date) }}</div>
                 </div>
                 <!-- Event info -->
                 <div class="flex-1 min-w-0">
                   <div class="flex items-center gap-2 min-w-0">
-                    <p class="text-sm font-semibold text-white line-clamp-1 min-w-0">{{ event.title }}</p>
+                    <p class="text-sm font-semibold line-clamp-1 min-w-0" style="color: var(--text-primary);">{{ event.title }}</p>
                     <span
                       class="shrink-0 text-[10px] px-2 py-0.5 rounded-full border font-semibold whitespace-nowrap"
-                      :class="getDashboardEventStatusBadgeClass(event)"
+                      :style="getDashboardEventStatusBadgeStyle(event)"
                     >
                       {{ getDashboardEventStatusText(event) }}
                     </span>
                   </div>
-                  <p class="text-[11px] mt-0.5 font-medium" :class="getDashboardEventTextColor(event)">{{ displayEventDateTimeShort(event) }}</p>
+                  <p class="text-[11px] mt-0.5 font-medium" :style="getDashboardEventStatusTextStyle(event)">{{ displayEventDateTimeShort(event) }}</p>
                 </div>
               </div>
             </div>
@@ -744,32 +744,29 @@ const getDashboardEventStatusMeta = (item: DashboardEventRow) => {
 
 const getDashboardEventStatusText = (item: DashboardEventRow) => getDashboardEventStatusMeta(item).text
 
-const getDashboardEventStatusBadgeClass = (item: DashboardEventRow) => {
-  const status = getDashboardEventStatusMeta(item).status
-  if (status === 'past') return 'border-slate-600/70 bg-slate-700/35 text-slate-300'
-  if (status === 'soon') return 'border-orange-400/60 bg-orange-500/20 text-orange-100'
-  return 'border-cyan-400/55 bg-cyan-500/15 text-cyan-100'
+const getDashboardEventStatusTokenPrefix = (item: DashboardEventRow) => `--event-status-${getDashboardEventStatusMeta(item).status}`
+
+const getDashboardEventStatusBadgeStyle = (item: DashboardEventRow) => {
+  const prefix = getDashboardEventStatusTokenPrefix(item)
+  return {
+    background: `var(${prefix}-soft)`,
+    borderColor: `var(${prefix}-border)`,
+    color: `var(${prefix}-ink)`,
+  }
 }
 
-const getDashboardEventDateBadgeClass = (item: DashboardEventRow) => {
-  const status = getDashboardEventStatusMeta(item).status
-  if (status === 'past') return 'bg-slate-700/25 border-slate-600/45'
-  if (status === 'soon') return 'bg-orange-500/15 border-orange-400/45 shadow-[0_0_18px_rgba(251,146,60,0.12)]'
-  return 'bg-cyan-500/10 border-cyan-400/35'
+const getDashboardEventDateBadgeStyle = (item: DashboardEventRow) => {
+  const prefix = getDashboardEventStatusTokenPrefix(item)
+  return {
+    background: `var(${prefix}-soft)`,
+    borderColor: `var(${prefix}-border)`,
+    boxShadow: `var(${prefix}-shadow)`,
+  }
 }
 
-const getDashboardEventDateColor = (item: DashboardEventRow) => {
-  const status = getDashboardEventStatusMeta(item).status
-  if (status === 'past') return 'text-slate-400'
-  if (status === 'soon') return 'text-orange-300'
-  return 'text-cyan-300'
-}
-
-const getDashboardEventTextColor = (item: DashboardEventRow) => {
-  const status = getDashboardEventStatusMeta(item).status
-  if (status === 'past') return 'text-slate-400'
-  if (status === 'soon') return 'text-orange-300'
-  return 'text-cyan-300'
+const getDashboardEventStatusTextStyle = (item: DashboardEventRow) => {
+  const prefix = getDashboardEventStatusTokenPrefix(item)
+  return { color: `var(${prefix}-ink)` }
 }
 
 const nextEventMeta = computed(() => {
