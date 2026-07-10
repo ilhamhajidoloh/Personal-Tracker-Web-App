@@ -59,10 +59,13 @@ export default defineEventHandler(async (event): Promise<SyncEventResponse> => {
   const eventRow = eventRowData as GoogleEventRow & { user_id: string; google_event_id: string | null }
 
   try {
+    console.log('[sync-event] Syncing event:', eventId, 'existing google_event_id:', eventRow.google_event_id)
     const googleEventId = await upsertGoogleCalendarEvent(accessToken, eventRow.google_event_id, eventRow)
+    console.log('[sync-event] Google returned event ID:', googleEventId)
 
     if (googleEventId !== eventRow.google_event_id) {
       await supabaseAdmin.from('events').update({ google_event_id: googleEventId }).eq('id', eventId)
+      console.log('[sync-event] Updated google_event_id in Supabase to:', googleEventId)
     }
 
     return { synced: true }

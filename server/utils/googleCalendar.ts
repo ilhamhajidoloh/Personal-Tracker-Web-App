@@ -223,11 +223,34 @@ export const upsertGoogleCalendarEvent = async (
   googleEventId: string | null,
   eventRow: GoogleEventRow,
 ): Promise<string> => {
+  let activeGoogleEventId = googleEventId
+
+  // If we have an existing Google Event ID, check if it's active and not cancelled on Google Calendar
+  if (activeGoogleEventId) {
+    try {
+      const checkRes = await fetch(`${GOOGLE_CALENDAR_EVENTS_ENDPOINT}/${activeGoogleEventId}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      })
+      if (checkRes.ok) {
+        const checkData = await checkRes.json() as { status?: string }
+        if (checkData.status === 'cancelled') {
+          // Event was cancelled/deleted on Google. Treat as a new event creation.
+          activeGoogleEventId = null
+        }
+      } else if (checkRes.status === 404 || checkRes.status === 410) {
+        // Event not found on Google. Treat as a new event creation.
+        activeGoogleEventId = null
+      }
+    } catch (err) {
+      console.error('Failed to verify Google Calendar event status:', err)
+    }
+  }
+
   const body = toGoogleCalendarEvent(eventRow)
-  let url = googleEventId
-    ? `${GOOGLE_CALENDAR_EVENTS_ENDPOINT}/${googleEventId}`
+  let url = activeGoogleEventId
+    ? `${GOOGLE_CALENDAR_EVENTS_ENDPOINT}/${activeGoogleEventId}`
     : GOOGLE_CALENDAR_EVENTS_ENDPOINT
-  let method = googleEventId ? 'PATCH' : 'POST'
+  let method = activeGoogleEventId ? 'PATCH' : 'POST'
 
   let response = await fetch(url, {
     method,
@@ -240,7 +263,7 @@ export const upsertGoogleCalendarEvent = async (
 
   // If the update (PATCH) failed because the event was deleted on Google Calendar (404/410),
   // retry as a new event creation (POST)
-  if (!response.ok && googleEventId && (response.status === 404 || response.status === 410)) {
+  if (!response.ok && activeGoogleEventId && (response.status === 404 || response.status === 410)) {
     url = GOOGLE_CALENDAR_EVENTS_ENDPOINT
     method = 'POST'
     response = await fetch(url, {
