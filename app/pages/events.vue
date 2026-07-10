@@ -115,13 +115,22 @@
               <!-- Actions -->
               <div class="flex items-center gap-1 shrink-0">
                 <button
+                  @click="syncSingleEvent(item.id)"
+                  :disabled="isSyncingId === item.id || isDeletingId === item.id"
+                  class="w-8 h-8 rounded-lg flex items-center justify-center text-sm text-gray-400 hover:text-emerald-300 hover:bg-emerald-500/15 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  :title="item.google_event_id ? 'ซิงค์ซ้ำเพื่ออัปเดต Google Calendar' : 'ซิงค์ไปยัง Google Calendar'"
+                >
+                  <span v-if="isSyncingId === item.id" class="w-3.5 h-3.5 border-2 border-emerald-400/30 border-t-emerald-400 rounded-full animate-spin"></span>
+                  <span v-else>🔄</span>
+                </button>
+                <button
                   @click="openEditModal(item)"
                   class="w-8 h-8 rounded-lg flex items-center justify-center text-sm text-gray-400 hover:text-sky-300 hover:bg-sky-500/15 transition-all"
                   title="แก้ไข"
                 >✏️</button>
                 <button
                   @click="deleteEvent(item.id)"
-                  :disabled="isDeletingId === item.id"
+                  :disabled="isDeletingId === item.id || isSyncingId === item.id"
                   class="w-8 h-8 rounded-lg flex items-center justify-center text-sm text-gray-400 hover:text-rose-300 hover:bg-rose-500/15 disabled:opacity-50 transition-all"
                   title="ลบ"
                 >🗑️</button>
@@ -367,6 +376,7 @@ const isLoading = ref(true)
 const isSubmitting = ref(false)
 const isEntryModalOpen = ref(false)
 const isDeletingId = ref('')
+const isSyncingId = ref('')
 const editingId = ref('')
 const errorMessage = ref('')
 const events = ref<EventRow[]>([])
@@ -660,6 +670,29 @@ const deleteEvent = async (id: string) => {
     toastError('ลบกิจกรรมไม่สำเร็จ')
   } finally {
     isDeletingId.value = ''
+  }
+}
+
+const syncSingleEvent = async (id: string) => {
+  if (!id || isSyncingId.value) return
+  isSyncingId.value = id
+  try {
+    const res = await syncEventToGoogle(id)
+    if (res.synced) {
+      toastSuccess('ซิงค์กับ Google Calendar สำเร็จแล้ว')
+      await loadEvents()
+    } else {
+      if (res.reason === 'not_connected') {
+        toastError('กรุณาเชื่อมต่อ Google Calendar ที่หน้าโปรไฟล์ก่อนซิงค์')
+      } else {
+        toastError('ซิงค์กับ Google Calendar ล้มเหลว')
+      }
+    }
+  } catch (error) {
+    console.error('Single event sync error:', error)
+    toastError('เกิดข้อผิดพลาดในการซิงค์')
+  } finally {
+    isSyncingId.value = ''
   }
 }
 

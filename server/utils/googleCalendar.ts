@@ -224,12 +224,12 @@ export const upsertGoogleCalendarEvent = async (
   eventRow: GoogleEventRow,
 ): Promise<string> => {
   const body = toGoogleCalendarEvent(eventRow)
-  const url = googleEventId
+  let url = googleEventId
     ? `${GOOGLE_CALENDAR_EVENTS_ENDPOINT}/${googleEventId}`
     : GOOGLE_CALENDAR_EVENTS_ENDPOINT
-  const method = googleEventId ? 'PATCH' : 'POST'
+  let method = googleEventId ? 'PATCH' : 'POST'
 
-  const response = await fetch(url, {
+  let response = await fetch(url, {
     method,
     headers: {
       'Content-Type': 'application/json',
@@ -237,6 +237,21 @@ export const upsertGoogleCalendarEvent = async (
     },
     body: JSON.stringify(body),
   })
+
+  // If the update (PATCH) failed because the event was deleted on Google Calendar (404/410),
+  // retry as a new event creation (POST)
+  if (!response.ok && googleEventId && (response.status === 404 || response.status === 410)) {
+    url = GOOGLE_CALENDAR_EVENTS_ENDPOINT
+    method = 'POST'
+    response = await fetch(url, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify(body),
+    })
+  }
 
   if (!response.ok) {
     throw new Error(`Google Calendar upsert failed (${response.status}): ${await response.text()}`)
