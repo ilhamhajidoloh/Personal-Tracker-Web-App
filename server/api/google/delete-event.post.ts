@@ -33,7 +33,9 @@ export default defineEventHandler(async (event): Promise<DeleteEventResponse> =>
   }
 
   const config = useRuntimeConfig(event)
-  const supabaseAdmin = serverSupabaseServiceRole(event)
+  const supabaseAdmin = serverSupabaseServiceRole(event) as any
+
+  console.log('[delete-event] Request to delete Google Event ID:', googleEventId)
 
   const accessToken = await getValidGoogleAccessToken(supabaseAdmin, authUserId, {
     clientId: config.google.clientId,
@@ -42,11 +44,13 @@ export default defineEventHandler(async (event): Promise<DeleteEventResponse> =>
   })
 
   if (!accessToken) {
+    console.log('[delete-event] Access token not found or not connected')
     return { deleted: false, reason: 'not_connected' }
   }
 
   try {
     await deleteGoogleCalendarEvent(accessToken, googleEventId)
+    console.log('[delete-event] Successfully deleted event from Google Calendar:', googleEventId)
     return { deleted: true }
   } catch (err) {
     console.error('Google Calendar delete-event error:', err)

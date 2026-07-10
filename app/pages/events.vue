@@ -640,9 +640,9 @@ const submitEvent = async () => {
     toastSuccess(isEditing.value ? 'แก้ไขกิจกรรมสำเร็จ' : 'เพิ่มกิจกรรมสำเร็จ')
     isEntryModalOpen.value = false
     resetForm()
+    if (savedRow?.id) await syncEventToGoogle(savedRow.id)
     await loadEvents()
     void notify(lineMessage)
-    if (savedRow?.id) void syncEventToGoogle(savedRow.id)
   } catch (error: any) {
     console.error('Save event error:', error)
     errorMessage.value = error?.message || 'บันทึกกิจกรรมไม่สำเร็จ'
