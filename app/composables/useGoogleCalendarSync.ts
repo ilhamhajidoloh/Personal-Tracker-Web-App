@@ -8,6 +8,13 @@ type DeleteEventResponse = {
   reason?: string
 }
 
+type SyncAllResponse = {
+  success: boolean
+  processedCount: number
+  failedCount: number
+  reason?: string
+}
+
 export const useGoogleCalendarSync = () => {
   const syncEventToGoogle = async (eventId: string): Promise<SyncEventResponse> => {
     if (!import.meta.client || !eventId) {
@@ -41,8 +48,24 @@ export const useGoogleCalendarSync = () => {
     }
   }
 
+  const syncAllEventsToGoogle = async (): Promise<SyncAllResponse> => {
+    if (!import.meta.client) {
+      return { success: false, processedCount: 0, failedCount: 0, reason: 'skipped' }
+    }
+
+    try {
+      return await $fetch<SyncAllResponse>('/api/google/sync-all', {
+        method: 'POST',
+      })
+    } catch (error) {
+      console.error('Google Calendar sync-all error:', error)
+      return { success: false, processedCount: 0, failedCount: 0, reason: 'error' }
+    }
+  }
+
   return {
     syncEventToGoogle,
     deleteEventFromGoogle,
+    syncAllEventsToGoogle,
   }
 }

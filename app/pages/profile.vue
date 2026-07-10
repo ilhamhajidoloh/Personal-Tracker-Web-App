@@ -324,6 +324,15 @@
                   {{ isDisconnectingGoogle ? 'กำลังยกเลิก...' : 'ยกเลิกการเชื่อมต่อ' }}
                 </button>
                 <button
+                  v-if="googleStatus.connected"
+                  type="button"
+                  @click="syncAllEvents"
+                  :disabled="isSyncingAllGoogle"
+                  class="px-3 py-2 rounded-xl bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/25 disabled:opacity-50 disabled:cursor-not-allowed text-xs text-violet-300 transition-all"
+                >
+                  {{ isSyncingAllGoogle ? 'กำลังซิงค์...' : 'ซิงค์กิจกรรมย้อนหลัง' }}
+                </button>
+                <button
                   type="button"
                   @click="refreshGoogleStatus"
                   :disabled="isGoogleLoading"
@@ -389,6 +398,8 @@ const lineNotificationsEnabled = ref(true)
 const isGoogleLoading = ref(true)
 const isDisconnectingGoogle = ref(false)
 const googleStatus = ref<GoogleCalendarStatus>({ connected: false, connectedAt: null })
+const isSyncingAllGoogle = ref(false)
+const { syncAllEventsToGoogle } = useGoogleCalendarSync()
 
 let lineStatusPollingTimer: ReturnType<typeof setInterval> | null = null
 
@@ -612,6 +623,32 @@ const disconnectGoogle = async () => {
     toastError(getRequestErrorMessage(error, 'ยกเลิกการเชื่อมต่อ Google Calendar ไม่สำเร็จ'))
   } finally {
     isDisconnectingGoogle.value = false
+  }
+}
+
+const syncAllEvents = async () => {
+  if (isSyncingAllGoogle.value) return
+  isSyncingAllGoogle.value = true
+  try {
+    const res = await syncAllEventsToGoogle()
+    if (res.success) {
+      if (res.processedCount === 0) {
+        toastSuccess('ไม่มีกิจกรรมย้อนหลังที่ค้างการซิงค์')
+      } else {
+        toastSuccess(`ซิงค์กิจกรรมย้อนหลังสำเร็จทั้งหมด ${res.processedCount} รายการ`)
+      }
+    } else {
+      if (res.reason === 'not_connected') {
+        toastError('กรุณาเชื่อมต่อ Google Calendar ก่อนซิงค์กิจกรรม')
+      } else {
+        toastError(`ซิงค์สำเร็จ ${res.processedCount} รายการ, ล้มเหลว ${res.failedCount} รายการ`)
+      }
+    }
+  } catch (error: any) {
+    console.error('Sync all events error:', error)
+    toastError(getRequestErrorMessage(error, 'เกิดข้อผิดพลาดในการซิงค์กิจกรรมย้อนหลัง'))
+  } finally {
+    isSyncingAllGoogle.value = false
   }
 }
 
