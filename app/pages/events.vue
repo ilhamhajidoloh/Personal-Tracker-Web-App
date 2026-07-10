@@ -108,6 +108,7 @@
                 </div>
                 <p class="text-xs font-medium" :style="getEventStatusTextStyle(item)">{{ displayEventDateTime(item) }}</p>
                 <p v-if="item.reminder_minutes" class="text-[10px] text-amber-400 mt-1">🔔 เตือนก่อน {{ getReminderLabel(item.reminder_minutes) }}</p>
+                <p v-if="item.google_event_id" class="text-[10px] text-sky-400 mt-1">📅 ซิงก์กับ Google Calendar แล้ว</p>
                 <p v-if="item.description" class="text-xs text-gray-500 mt-1.5 line-clamp-1">{{ item.description }}</p>
               </div>
 
@@ -337,6 +338,7 @@ type EventRow = {
   end_date: string | null
   end_time: string | null
   reminder_minutes: number | null
+  google_event_id: string | null
   created_at: string
 }
 
@@ -359,6 +361,7 @@ const router = useRouter()
 const supabase = useSupabaseClient()
 const { toastSuccess, toastError, confirmDelete } = useAlert()
 const { notify, buildEventSavedMessage } = useLineMessaging()
+const { syncEventToGoogle, deleteEventFromGoogle } = useGoogleCalendarSync()
 
 const isLoading = ref(true)
 const isSubmitting = ref(false)
@@ -611,9 +614,9 @@ const submitEvent = async () => {
     }
 
     const query = supabase.from('events') as any
-    const { error } = isEditing.value
-      ? await query.update(payload).eq('id', editingId.value).eq('user_id', userData.user.id)
-      : await query.insert({ user_id: userData.user.id, ...payload })
+    const { data: savedRow, error } = isEditing.value
+      ? await query.update(payload).eq('id', editingId.value).eq('user_id', userData.user.id).select('id').single()
+      : await query.insert({ user_id: userData.user.id, ...payload }).select('id').single()
 
     if (error) {
       if (tableMissingCodes.has(error.code || '')) { errorMessage.value = 'ยังไม่พบตาราง events ใน Supabase'; return }
@@ -629,6 +632,7 @@ const submitEvent = async () => {
     resetForm()
     await loadEvents()
     void notify(lineMessage)
+    if (savedRow?.id) void syncEventToGoogle(savedRow.id)
   } catch (error: any) {
     console.error('Save event error:', error)
     errorMessage.value = error?.message || 'บันทึกกิจกรรมไม่สำเร็จ'
@@ -645,10 +649,12 @@ const deleteEvent = async (id: string) => {
   try {
     const { data: userData } = await supabase.auth.getUser()
     if (!userData.user) return
+    const deletedItem = events.value.find(t => t.id === id)
     const { error } = await supabase.from('events').delete().eq('id', id).eq('user_id', userData.user.id)
     if (error) throw error
     events.value = events.value.filter(t => t.id !== id)
     toastSuccess('ลบกิจกรรมสำเร็จ')
+    if (deletedItem?.google_event_id) void deleteEventFromGoogle(deletedItem.google_event_id)
   } catch (error: any) {
     console.error('Delete event error:', error)
     toastError('ลบกิจกรรมไม่สำเร็จ')

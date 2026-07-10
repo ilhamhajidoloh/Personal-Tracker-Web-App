@@ -281,6 +281,59 @@
               </div>
             </div>
           </section>
+
+          <!-- Google Calendar Integration -->
+          <section class="section-card">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-5 py-4 border-b border-gray-800/60">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-sky-500/15 flex items-center justify-center text-xl shrink-0">📅</div>
+                <div>
+                  <h3 class="text-base font-semibold text-white">Google Calendar</h3>
+                  <p class="text-xs text-gray-500 mt-0.5">ส่งกิจกรรมที่เพิ่ม/แก้ไขในแท็บกิจกรรมไปยัง Google Calendar อัตโนมัติ</p>
+                </div>
+              </div>
+              <span
+                class="inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-semibold shrink-0"
+                :class="googleStatusBadgeClass"
+              >
+                {{ googleStatusLabel }}
+              </span>
+            </div>
+
+            <div class="p-5">
+              <div v-if="isGoogleLoading" class="flex items-center gap-2 text-sm text-gray-400 py-4">
+                <span class="inline-block w-4 h-4 border-2 border-violet-400/30 border-t-violet-400 rounded-full animate-spin"></span>
+                กำลังตรวจสอบการเชื่อมต่อ Google Calendar...
+              </div>
+
+              <div v-else class="flex flex-wrap items-center gap-2">
+                <a
+                  v-if="!googleStatus.connected"
+                  href="/api/google/auth"
+                  class="px-3 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-xs font-semibold text-white shadow-sm shadow-violet-500/20 transition-all"
+                >
+                  เชื่อมต่อ Google Calendar
+                </a>
+                <button
+                  v-else
+                  type="button"
+                  @click="disconnectGoogle"
+                  :disabled="isDisconnectingGoogle"
+                  class="px-3 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/25 disabled:opacity-50 disabled:cursor-not-allowed text-xs text-rose-400 transition-all"
+                >
+                  {{ isDisconnectingGoogle ? 'กำลังยกเลิก...' : 'ยกเลิกการเชื่อมต่อ' }}
+                </button>
+                <button
+                  type="button"
+                  @click="refreshGoogleStatus"
+                  :disabled="isGoogleLoading"
+                  class="px-3 py-2 rounded-xl bg-gray-800/70 hover:bg-gray-800 border border-gray-700/60 disabled:opacity-50 disabled:cursor-not-allowed text-xs text-gray-400 hover:text-white transition-all"
+                >
+                  ตรวจสอบสถานะ
+                </button>
+              </div>
+            </div>
+          </section>
         </template>
       </div>
     </div>
@@ -304,10 +357,16 @@ type LineLinkCodeResponse = {
   expiresInSeconds: number
 }
 
+type GoogleCalendarStatus = {
+  connected: boolean
+  connectedAt: string | null
+}
+
 definePageMeta({ middleware: 'auth' })
 useHead({ title: 'Profile' })
 
 const router = useRouter()
+const route = useRoute()
 const supabase = useSupabaseClient()
 const user = useSupabaseUser()
 const { toastSuccess, toastError } = useAlert()
@@ -326,6 +385,10 @@ const lineStatus = ref<LineConnectionStatus>({
 const lineLinkCode = ref<LineLinkCodeResponse | null>(null)
 const lineUserIdInput = ref('')
 const lineNotificationsEnabled = ref(true)
+
+const isGoogleLoading = ref(true)
+const isDisconnectingGoogle = ref(false)
+const googleStatus = ref<GoogleCalendarStatus>({ connected: false, connectedAt: null })
 
 let lineStatusPollingTimer: ReturnType<typeof setInterval> | null = null
 
@@ -372,6 +435,12 @@ const lineStatusBadgeClass = computed(() => {
     ? 'border-emerald-500/30 bg-emerald-500/15 text-emerald-300'
     : 'border-amber-500/30 bg-amber-500/15 text-amber-300'
 })
+
+const googleStatusLabel = computed(() => googleStatus.value.connected ? 'เชื่อมต่อแล้ว' : 'ยังไม่ได้เชื่อมต่อ')
+
+const googleStatusBadgeClass = computed(() => googleStatus.value.connected
+  ? 'border-emerald-500/30 bg-emerald-500/15 text-emerald-300'
+  : 'border-gray-700 bg-gray-800/40 text-gray-400')
 
 const lineLinkCodeExpiresAtText = computed(() => lineLinkCode.value?.expiresAt ? new Date(lineLinkCode.value.expiresAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Bangkok' }) : '-')
 const hasLineLinkCode = computed(() => Boolean(lineLinkCode.value?.code))
@@ -515,6 +584,46 @@ const sendLineTestMessage = async () => {
   finally { isTestingLine.value = false }
 }
 
+const loadGoogleStatus = async () => {
+  isGoogleLoading.value = true
+  try {
+    googleStatus.value = await $fetch<GoogleCalendarStatus>('/api/google/status')
+  } catch (error) {
+    console.error('Load Google Calendar status error:', error)
+    googleStatus.value = { connected: false, connectedAt: null }
+  } finally {
+    isGoogleLoading.value = false
+  }
+}
+
+const refreshGoogleStatus = async () => {
+  await loadGoogleStatus()
+  if (!googleStatus.value.connected) toastError('ยังไม่พบการเชื่อมต่อ Google Calendar')
+}
+
+const disconnectGoogle = async () => {
+  if (!googleStatus.value.connected || isDisconnectingGoogle.value) return
+  isDisconnectingGoogle.value = true
+  try {
+    googleStatus.value = await $fetch<GoogleCalendarStatus>('/api/google/disconnect', { method: 'POST' })
+    toastSuccess('ยกเลิกการเชื่อมต่อ Google Calendar แล้ว')
+  } catch (error: any) {
+    console.error('Disconnect Google Calendar error:', error)
+    toastError(getRequestErrorMessage(error, 'ยกเลิกการเชื่อมต่อ Google Calendar ไม่สำเร็จ'))
+  } finally {
+    isDisconnectingGoogle.value = false
+  }
+}
+
+const consumeGoogleRedirectStatus = () => {
+  const googleQuery = route.query.google
+  if (!googleQuery) return
+  if (googleQuery === 'success') toastSuccess('เชื่อมต่อ Google Calendar สำเร็จแล้ว')
+  else if (googleQuery === 'error') toastError('เชื่อมต่อ Google Calendar ไม่สำเร็จ กรุณาลองใหม่')
+  const { google, ...restQuery } = route.query
+  router.replace({ query: restQuery })
+}
+
 const loadProfile = async () => {
   isLoading.value = true; errorMessage.value = ''
   try {
@@ -538,6 +647,6 @@ const loadProfile = async () => {
   }
 }
 
-onMounted(() => { loadProfile(); loadLineStatus() })
+onMounted(() => { loadProfile(); loadLineStatus(); loadGoogleStatus(); consumeGoogleRedirectStatus() })
 onBeforeUnmount(() => { stopLineStatusPolling() })
 </script>

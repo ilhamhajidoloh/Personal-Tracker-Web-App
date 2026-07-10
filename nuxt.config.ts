@@ -8,6 +8,10 @@ export default defineNuxtConfig({
       channelAccessToken: '',
       channelSecret: '',
     },
+    google: {
+      clientId: '',
+      clientSecret: '',
+    },
     public: {
       appUrl: '',
       line: {
