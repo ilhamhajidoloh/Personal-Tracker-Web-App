@@ -1,31 +1,35 @@
 <template>
   <AppTabsLayout>
-    <div class="flex-1 overflow-y-auto">
-      <!-- Page Header -->
-      <header class="sticky top-0 z-10 px-6 md:px-8 py-5 glass-header flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+    <div class="mx-auto w-full max-w-[1240px] px-4 md:px-6 py-6 md:py-8">
+      <!-- Page head -->
+      <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
-          <h1 class="text-xl font-bold text-white tracking-tight">📅 ตารางเรียน</h1>
-          <p class="text-xs mt-0.5" style="color: var(--text-muted);">เพิ่มข้อมูลวิชา เวลาเรียน และดูภาพรวมรายสัปดาห์</p>
+          <p class="eyebrow text-gray-500 uppercase tracking-widest text-[11px]">ตารางเรียน · TIMETABLE</p>
+          <h1 class="text-4xl md:text-5xl font-normal mt-1.5 font-itim text-white">ตารางเรียน</h1>
+          <p class="text-xs mt-2 text-gray-400 font-medium">ภาคเรียนที่ 1 / 2569 &bull; {{ uniqueSubjectsCount }} รายวิชา</p>
         </div>
         <div class="flex items-center gap-2 shrink-0">
           <button
             type="button"
             @click="openCreateScheduleModal"
-            class="btn-primary text-sm flex items-center gap-1.5"
+            class="text-sm inline-flex items-center gap-2 tap-scale touch-target px-4 py-2.5 rounded-xl font-semibold text-white shadow-lg transition-all"
+            style="background: linear-gradient(135deg, #6366f1, #8b5cf6); box-shadow: 0 4px 14px rgba(99, 102, 241, 0.5); border: 1px solid rgba(255,255,255,0.1);"
           >
-            <span>+</span> เพิ่มคาบเรียน
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+            เพิ่มคาบเรียน
           </button>
           <button
             @click="loadSchedules"
             :disabled="isLoading"
-            class="btn-secondary text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            class="btn-secondary text-sm inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed tap-scale touch-target"
           >
-            {{ isLoading ? 'กำลังโหลด...' : '↻ รีเฟรช' }}
+            <svg class="w-4 h-4" :class="isLoading ? 'animate-spin' : ''" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5M21 12a9 9 0 0 1-15 6.7L3 16M3 21v-5h5"/></svg>
+            {{ isLoading ? 'กำลังโหลด...' : 'รีเฟรช' }}
           </button>
         </div>
-      </header>
+      </div>
 
-      <div class="px-6 md:px-8 py-6 space-y-5">
+      <div class="space-y-5 mt-6">
         <!-- Error -->
         <div
           v-if="errorMessage"
@@ -34,109 +38,128 @@
           <span>⚠️</span><span>{{ errorMessage }}</span>
         </div>
 
-        <!-- Stats Cards -->
-        <section class="grid grid-cols-3 gap-3 md:gap-4">
-          <div class="stat-card">
-            <div class="icon-bubble mb-3" style="background: var(--brand-soft);">📚</div>
-            <p class="text-[11px] font-medium uppercase tracking-wide relative z-10" style="color: var(--text-muted);">คาบทั้งหมด</p>
-            <p class="text-2xl font-bold text-white mt-1 relative z-10">{{ totalClasses }}</p>
-            <p class="text-xs relative z-10" style="color: var(--text-muted);">คาบ/สัปดาห์</p>
-          </div>
-          <div class="stat-card">
-            <div class="icon-bubble mb-3" style="background: rgba(14,165,233,0.12);">📅</div>
-            <p class="text-[11px] font-medium uppercase tracking-wide relative z-10" style="color: var(--text-muted);">วันนี้</p>
-            <p class="text-2xl font-bold text-sky-300 mt-1 relative z-10">{{ todaysClasses.length }}</p>
-            <p class="text-xs relative z-10" style="color: var(--text-muted);">คาบ</p>
-          </div>
-          <div class="stat-card">
-            <div class="icon-bubble mb-3" style="background: rgba(245,158,11,0.12);">⏰</div>
-            <p class="text-[11px] font-medium uppercase tracking-wide relative z-10" style="color: var(--text-muted);">คาบถัดไป</p>
-            <p class="text-sm font-bold text-white mt-1 truncate relative z-10">{{ nextClassTitle }}</p>
-            <p class="text-[11px] mt-0.5 relative z-10" style="color: var(--text-muted);">{{ nextClassSubtitle }}</p>
-          </div>
-        </section>
-
-        <!-- Weekly Board -->
-        <section class="section-card">
-          <div class="px-5 py-4 border-b border-gray-800/60">
-            <h2 class="text-base font-semibold text-white">บอร์ดตารางรายสัปดาห์</h2>
-            <p class="text-xs text-gray-500 mt-0.5">แสดงคาบเรียนแต่ละวัน เรียงตามเวลา</p>
-          </div>
-          <div class="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-            <div
-              v-for="day in weeklyBoard"
-              :key="day.value"
-              class="border border-gray-800/70 rounded-xl overflow-hidden"
-              :class="day.value === todayWeekday ? 'border-sky-500/30 bg-sky-500/5' : ''"
-            >
-              <div class="flex items-center justify-between px-3 py-2.5 border-b border-gray-800/50" :class="day.value === todayWeekday ? 'bg-sky-500/10' : 'bg-gray-800/30'">
-                <div class="flex items-center gap-2">
-                  <p class="text-sm font-semibold" :class="day.value === todayWeekday ? 'text-sky-300' : 'text-white'">{{ day.label }}</p>
-                  <span v-if="day.value === todayWeekday" class="text-[10px] px-1.5 py-0.5 rounded-full bg-sky-500/20 text-sky-400 border border-sky-500/30 font-semibold">วันนี้</span>
-                </div>
-                <span class="text-[11px] text-gray-500">{{ day.items.length }} คาบ</span>
-              </div>
-              <div class="p-2.5">
-                <div v-if="!day.items.length" class="text-xs text-gray-600 text-center py-3">ไม่มีคาบ</div>
-                <div v-else class="space-y-1.5">
-                  <div
-                    v-for="item in day.items"
-                    :key="item.id"
-                    class="rounded-lg border bg-gray-800/40 border-gray-700/50 px-2.5 py-2 hover:bg-gray-800/60 transition-all"
-                  >
-                    <p class="text-xs font-semibold text-white truncate">{{ item.course_name }}</p>
-                    <p class="text-[11px] text-gray-500 mt-0.5">{{ formatTimeRange(item.start_time, item.end_time) }}</p>
-                    <p v-if="item.location" class="text-[11px] text-gray-600 mt-0.5 truncate">📍 {{ item.location }}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
         <!-- Schedule Grid Table -->
         <section class="section-card">
-          <div class="px-5 py-4 border-b border-gray-800/60">
-            <h2 class="text-base font-semibold text-white">ตารางภาพรวมรายสัปดาห์</h2>
-            <p class="text-xs text-gray-500 mt-0.5">มองภาพรวมตามช่วงเวลาและวัน</p>
+          <!-- Empty State -->
+          <div v-if="!schedules.length" class="flex flex-col items-center justify-center py-14 text-center px-5">
+            <div class="w-12 h-12 rounded-xl flex items-center justify-center mb-3" style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);">
+              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
+            </div>
+            <p class="text-sm font-medium" style="color: var(--text-secondary);">ยังไม่มีคาบเรียน</p>
           </div>
-          <div v-if="!gridTimeSlots.length" class="flex flex-col items-center justify-center py-12 text-center px-5">
-            <div class="w-14 h-14 rounded-2xl bg-gray-800/70 flex items-center justify-center text-2xl mb-3">📋</div>
-            <p class="text-sm font-medium text-gray-400">ยังไม่มีคาบเรียน</p>
-          </div>
-          <div v-else class="overflow-x-auto p-4">
-            <table class="min-w-full text-xs border-separate border-spacing-0">
-              <thead>
-                <tr>
-                  <th class="text-left py-2 px-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">เวลา</th>
-                  <th
-                    v-for="day in dayOptions"
-                    :key="day.value"
-                    class="text-left py-2 px-3 text-[11px] font-semibold uppercase tracking-wide whitespace-nowrap"
-                    :class="day.value === todayWeekday ? 'text-sky-400' : 'text-gray-500'"
-                  >{{ day.label }}</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-gray-800/40">
-                <tr v-for="slot in gridTimeSlots" :key="slot.key" class="hover:bg-gray-800/10">
-                  <td class="py-2 px-3 text-gray-400 whitespace-nowrap font-medium">{{ slot.label }}</td>
-                  <td v-for="day in dayOptions" :key="day.value" class="py-2 px-3 align-top">
-                    <div v-if="scheduleGrid[day.value]?.[slot.key]?.length" class="space-y-1">
-                      <div
-                        v-for="item in scheduleGrid[day.value]?.[slot.key]"
-                        :key="item.id"
-                        class="rounded-lg border border-gray-700/60 bg-gray-800/50 px-2 py-1.5"
-                        :class="day.value === todayWeekday ? 'border-sky-500/30 bg-sky-500/8' : ''"
+
+          <!-- Timeline Grid -->
+          <div v-else class="overflow-x-auto">
+            <div class="min-w-[850px] w-full flex flex-col" style="background: #111322;">
+              
+              <!-- Grid Header Row -->
+              <div 
+                class="grid border-b" 
+                :style="{ 
+                  gridTemplateColumns: `80px repeat(${gridDays.length}, 1fr)`,
+                  borderColor: '#1d2033',
+                  background: '#151726'
+                }"
+              >
+                <div class="py-3 px-3 text-center text-xs font-semibold select-none border-r text-gray-400" style="border-color: #1d2033;">เวลา</div>
+                <div 
+                  v-for="day in gridDays" 
+                  :key="day.value" 
+                  class="py-3 px-3 text-center text-xs font-semibold select-none border-r last:border-r-0"
+                  :style="{ 
+                    color: day.value === todayWeekday ? 'var(--brand-ink)' : 'var(--text-secondary)',
+                    borderColor: '#1d2033'
+                  }"
+                >
+                  {{ day.value === 4 ? 'พฤหัส' : day.label }}
+                </div>
+              </div>
+
+              <!-- Grid Body Container -->
+              <div class="relative w-full" :style="{ height: `${totalHours * hourHeight}px` }">
+                <div class="grid h-full" :style="{ gridTemplateColumns: `80px repeat(${gridDays.length}, 1fr)` }">
+                  
+                  <!-- Time Column -->
+                  <div class="relative h-full border-r" style="border-color: #1d2033;">
+                    <div 
+                      v-for="(hour, idx) in timelineHours" 
+                      :key="hour" 
+                      class="absolute left-0 right-0 num text-right pr-4 text-[11px] select-none flex items-center justify-end border-b"
+                      :style="{ 
+                        top: `${idx * hourHeight}px`, 
+                        height: `${hourHeight}px`,
+                        borderColor: '#1d2033',
+                        background: '#151726'
+                      }"
+                    >
+                      {{ formatHour(hour) }}
+                    </div>
+                  </div>
+
+                  <!-- Day Columns -->
+                  <div 
+                    v-for="day in gridDays" 
+                    :key="day.value" 
+                    class="relative h-full border-r last:border-r-0" 
+                    :style="{ 
+                      borderColor: '#1d2033',
+                      background: day.value === todayWeekday ? 'rgba(99, 102, 241, 0.03)' : 'transparent'
+                    }"
+                  >
+                    <!-- Background slots -->
+                    <div 
+                      v-for="idx in totalHours" 
+                      :key="idx" 
+                      class="absolute left-0 right-0 border-b"
+                      :style="{ 
+                        top: `${(idx - 1) * hourHeight}px`, 
+                        height: `${hourHeight}px`,
+                        borderColor: '#1d2033'
+                      }"
+                    ></div>
+
+                    <!-- Absolute Course Cards -->
+                    <div
+                      v-for="item in getPositionedSchedulesForDay(day.value)"
+                      :key="item.id"
+                      class="absolute transition-all duration-200 group cursor-pointer hover:z-20 p-[3px]"
+                      :style="{
+                        top: `${item.top}%`,
+                        height: `${item.height}%`,
+                        left: `${item.left}%`,
+                        width: `${item.width}%`,
+                      }"
+                      @click="openEditScheduleModal(item)"
+                    >
+                      <div 
+                        class="course-card-inner w-full h-full rounded-xl p-3 flex flex-col justify-between border select-none transition-all duration-200"
+                        :style="{
+                          background: 'color-mix(in srgb, ' + courseTint(item.course_name) + ' 10%, transparent)',
+                          borderColor: 'color-mix(in srgb, ' + courseTint(item.course_name) + ' 25%, transparent)',
+                          '--hover-bg': 'color-mix(in srgb, ' + courseTint(item.course_name) + ' 16%, transparent)',
+                          '--hover-border': 'color-mix(in srgb, ' + courseTint(item.course_name) + ' 45%, transparent)',
+                        }"
                       >
-                        <p class="text-[11px] font-semibold text-white">{{ item.course_name }}</p>
-                        <p v-if="item.location" class="text-[10px] text-gray-500 mt-0.5">{{ item.location }}</p>
+                        <div>
+                          <p class="text-[12.5px] font-bold leading-tight" :style="{ color: courseInk(item.course_name) }">
+                            {{ item.course_name }}
+                          </p>
+                          <p v-if="item.location" class="num text-[10px] mt-1.5 font-semibold" :style="{ color: courseInk(item.course_name), opacity: 0.8 }">
+                            {{ item.location }}
+                          </p>
+                        </div>
+                        <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 num text-[9px] font-semibold self-end" :style="{ color: courseInk(item.course_name), opacity: 0.6 }">
+                          {{ formatTimeRange(item.start_time, item.end_time) }}
+                        </span>
                       </div>
                     </div>
-                    <span v-else class="text-[11px] text-gray-600">—</span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+
+                  </div>
+
+                </div>
+              </div>
+
+            </div>
           </div>
         </section>
 
@@ -164,7 +187,7 @@
           <div v-if="!schedules.length" class="flex flex-col items-center justify-center py-12 text-center px-5">
             <div class="w-14 h-14 rounded-2xl bg-gray-800/70 flex items-center justify-center text-2xl mb-3">📚</div>
             <p class="text-sm font-medium text-gray-400">ยังไม่มีคาบเรียน</p>
-            <button @click="openCreateScheduleModal" class="mt-4 px-4 py-2 rounded-xl bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/30 text-sm font-medium text-violet-300 transition-all">
+            <button               @click="openCreateScheduleModal" class="mt-4 px-4 py-2 rounded-xl bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/30 text-sm font-medium text-violet-300 transition-all tap-scale touch-target">
               + เพิ่มคาบแรก
             </button>
           </div>
@@ -203,12 +226,12 @@
                       <button
                         @click="openEditScheduleModal(item)"
                         :disabled="isDeletingId === item.id"
-                        class="px-3 py-1.5 rounded-lg text-xs bg-sky-500/15 text-sky-400 hover:bg-sky-500/25 border border-sky-500/20 disabled:opacity-50 transition-all font-medium"
+                        class="px-3 py-1.5 rounded-lg text-xs bg-sky-500/15 text-sky-400 hover:bg-sky-500/25 border border-sky-500/20 disabled:opacity-50 transition-all font-medium tap-scale touch-target"
                       >แก้ไข</button>
                       <button
                         @click="deleteSchedule(item.id)"
                         :disabled="isDeletingId === item.id"
-                        class="px-3 py-1.5 rounded-lg text-xs bg-rose-500/15 text-rose-400 hover:bg-rose-500/25 border border-rose-500/20 disabled:opacity-50 transition-all font-medium"
+                        class="px-3 py-1.5 rounded-lg text-xs bg-rose-500/15 text-rose-400 hover:bg-rose-500/25 border border-rose-500/20 disabled:opacity-50 transition-all font-medium tap-scale touch-target"
                       >{{ isDeletingId === item.id ? 'ลบ...' : 'ลบ' }}</button>
                     </div>
                   </td>
@@ -222,7 +245,7 @@
             <button
               @click="scheduleCurrentPage = Math.max(1, scheduleCurrentPage - 1)"
               :disabled="scheduleCurrentPage === 1"
-              class="px-3 py-2 rounded-lg text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              class="px-3 py-2 rounded-lg text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed tap-scale touch-target"
               style="background: var(--bg-elevated); border: 1px solid var(--border-default); color: var(--text-secondary);"
               :style="scheduleCurrentPage === 1 ? {} : { 'cursor': 'pointer', 'color': 'var(--text-primary)' }"
             >
@@ -233,7 +256,7 @@
                 v-for="page in scheduleTotalPages"
                 :key="page"
                 @click="scheduleCurrentPage = page"
-                class="w-9 h-9 rounded-lg text-sm font-medium transition-all"
+                class="w-9 h-9 rounded-lg text-sm font-medium transition-all tap-scale touch-target"
                 :style="scheduleCurrentPage === page
                   ? { 'background': 'var(--brand)', 'color': 'white', 'border': '1px solid var(--brand)' }
                   : { 'background': 'var(--bg-elevated)', 'border': '1px solid var(--border-default)', 'color': 'var(--text-secondary)' }"
@@ -244,7 +267,7 @@
             <button
               @click="scheduleCurrentPage = Math.min(scheduleTotalPages, scheduleCurrentPage + 1)"
               :disabled="scheduleCurrentPage === scheduleTotalPages"
-              class="px-3 py-2 rounded-lg text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              class="px-3 py-2 rounded-lg text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed tap-scale touch-target"
               style="background: var(--bg-elevated); border: 1px solid var(--border-default); color: var(--text-secondary);"
               :style="scheduleCurrentPage === scheduleTotalPages ? {} : { 'cursor': 'pointer', 'color': 'var(--text-primary)' }"
             >
@@ -257,14 +280,15 @@
 
     <!-- Modal -->
     <Teleport to="body">
-      <div
-        v-if="isScheduleModalOpen"
-        class="fixed inset-0 z-[90] flex items-center justify-center p-4"
-        @click.self="closeScheduleModal"
-      >
-        <div class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
-
-        <div class="relative w-full max-w-md bg-gray-900 border border-gray-700/80 rounded-2xl shadow-2xl overflow-hidden">
+      <Transition name="backdrop">
+        <div
+          v-if="isScheduleModalOpen"
+          class="fixed inset-0 z-[90] flex items-center justify-center p-4"
+          style="background: rgba(3,5,12,0.62); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);"
+          @click.self="closeScheduleModal"
+        >
+          <Transition name="modal">
+            <div v-if="isScheduleModalOpen" class="relative z-10 w-full max-w-md bg-gray-900 border border-gray-700/80 rounded-2xl shadow-2xl overflow-hidden">
           <!-- Modal Header -->
           <div class="flex items-center justify-between px-6 py-4 border-b border-gray-800/80">
             <div class="flex items-center gap-3">
@@ -277,7 +301,7 @@
             <button
               type="button"
               @click="closeScheduleModal"
-              class="w-8 h-8 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white flex items-center justify-center transition-all"
+              class="w-8 h-8 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white flex items-center justify-center transition-all tap-scale touch-target"
             >✕</button>
           </div>
 
@@ -349,12 +373,12 @@
               <button
                 type="button"
                 @click="closeScheduleModal"
-                class="flex-1 py-2.5 rounded-xl bg-gray-800/80 hover:bg-gray-800 border border-gray-700/60 text-sm font-medium text-gray-300 hover:text-white transition-all"
+                class="flex-1 py-2.5 rounded-xl bg-gray-800/80 hover:bg-gray-800 border border-gray-700/60 text-sm font-medium text-gray-300 hover:text-white transition-all tap-scale touch-target"
               >ยกเลิก</button>
               <button
                 type="submit"
                 :disabled="isSubmitting"
-                class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-semibold text-white shadow-md shadow-violet-500/20 transition-all flex items-center justify-center gap-2"
+                class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-semibold text-white shadow-md shadow-violet-500/20 transition-all flex items-center justify-center gap-2 tap-scale touch-target"
               >
                 <span v-if="isSubmitting" class="inline-block w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
                 {{ submitButtonText }}
@@ -362,7 +386,10 @@
             </div>
           </form>
         </div>
-      </div>
+          </Transition>
+          <div class="absolute inset-0 z-0 bg-black/70 backdrop-blur-sm" @click="closeScheduleModal"></div>
+        </div>
+      </Transition>
     </Teleport>
   </AppTabsLayout>
 </template>
@@ -411,6 +438,39 @@ const dayOptions: DayOption[] = [
 
 const dayLabelMap = new Map(dayOptions.map(item => [item.value, item.label]))
 
+// Grid shows Mon–Fri by default; a weekend column appears only when it has classes
+const gridDays = computed(() => dayOptions.filter(day =>
+  day.value <= 5 || schedules.value.some(item => item.day_of_week === day.value)
+))
+
+// Deterministic colour per course (smart mapping to match mockup, hash fallback)
+const courseColorMap: Record<string, number> = {
+  'โครงสร้างข้อมูล': 0, // Blue (var(--brand))
+  'ปฏิบัติการเว็บ': 1,  // Green (var(--ink-emerald))
+  'แคลคูลัส': 1,      // Green (var(--ink-emerald))
+  'ภาษาอังกฤษ': 2,    // Yellow (var(--ink-amber))
+  'ระบบฐานข้อมูล': 3,   // Purple (var(--brand-2))
+  'เครือข่าย': 4,       // Pink/Red (var(--ink-rose))
+}
+
+const courseColorIndex = (name: string) => {
+  const trimmed = name.trim()
+  if (courseColorMap[trimmed] !== undefined) {
+    return courseColorMap[trimmed]
+  }
+  for (const [key, val] of Object.entries(courseColorMap)) {
+    if (trimmed.includes(key) || key.includes(trimmed)) return val
+  }
+  let hash = 0
+  for (let i = 0; i < trimmed.length; i += 1) {
+    hash = ((hash * 31) + trimmed.charCodeAt(i)) >>> 0
+  }
+  return hash % 5
+}
+
+const courseTint = (name: string) => ['var(--brand)', 'var(--ink-emerald)', 'var(--ink-amber)', 'var(--brand-2)', 'var(--ink-rose)'][courseColorIndex(name)]
+const courseInk = (name: string) => ['var(--brand-ink)', 'var(--ink-emerald)', 'var(--ink-amber)', 'var(--brand-2)', 'var(--ink-rose)'][courseColorIndex(name)]
+
 const schedules = ref<ScheduleRow[]>([])
 const currentTime = ref(nowTH())
 const isLoading = ref(true)
@@ -433,6 +493,125 @@ const formatTimeRange = (start: string, end: string) => `${start.slice(0, 5)} - 
 const toMinutes = (time: string) => {
   const [hour = '0', minute = '0'] = time.split(':')
   return (Number(hour) * 60) + Number(minute)
+}
+
+const hourHeight = 70 // pixels per hour row
+
+const uniqueSubjectsCount = computed(() => {
+  const names = schedules.value.map(item => item.course_name.trim())
+  return new Set(names).size
+})
+
+const startHour = computed(() => {
+  if (!schedules.value.length) return 8
+  const hours = schedules.value.map(item => toMinutes(item.start_time) / 60)
+  return Math.max(0, Math.min(8, Math.floor(Math.min(...hours))))
+})
+
+const endHour = computed(() => {
+  if (!schedules.value.length) return 18
+  const hours = schedules.value.map(item => toMinutes(item.end_time) / 60)
+  return Math.min(24, Math.max(18, Math.ceil(Math.max(...hours))))
+})
+
+const totalHours = computed(() => endHour.value - startHour.value)
+
+const timelineHours = computed(() => {
+  const hours: number[] = []
+  for (let h = startHour.value; h < endHour.value; h++) {
+    hours.push(h)
+  }
+  return hours
+})
+
+const formatHour = (hour: number) => {
+  return `${String(hour).padStart(2, '0')}:00`
+}
+
+interface PositionedSchedule extends ScheduleRow {
+  top: number
+  height: number
+  width: number
+  left: number
+}
+
+const getPositionedSchedulesForDay = (dayValue: number): PositionedSchedule[] => {
+  const dayClasses = sortedSchedules.value.filter(item => item.day_of_week === dayValue)
+  if (!dayClasses.length) return []
+
+  const startH = startHour.value
+  const endH = endHour.value
+  const totalMinutes = (endH - startH) * 60
+
+  const items = dayClasses.map(item => {
+    const startM = toMinutes(item.start_time)
+    const endM = toMinutes(item.end_time)
+    const relativeStart = Math.max(0, startM - startH * 60)
+    const relativeEnd = Math.min(totalMinutes, endM - startH * 60)
+    const duration = Math.max(15, relativeEnd - relativeStart)
+
+    return {
+      ...item,
+      startM,
+      endM,
+      top: (relativeStart / totalMinutes) * 100,
+      height: (duration / totalMinutes) * 100,
+      width: 100,
+      left: 0,
+      column: 0,
+      maxColumns: 1
+    }
+  })
+
+  items.sort((a, b) => {
+    if (a.startM !== b.startM) return a.startM - b.startM
+    return (b.endM - b.startM) - (a.endM - a.startM)
+  })
+
+  const clusters: (typeof items)[] = []
+  for (const item of items) {
+    let assigned = false
+    for (const cluster of clusters) {
+      const hasOverlap = cluster.some(c => item.startM < c.endM && item.endM > c.startM)
+      if (hasOverlap) {
+        cluster.push(item)
+        assigned = true
+        break
+      }
+    }
+    if (!assigned) {
+      clusters.push([item])
+    }
+  }
+
+  for (const cluster of clusters) {
+    const cols: (typeof items)[] = []
+    for (const item of cluster) {
+      let colIdx = 0
+      while (true) {
+        let col = cols[colIdx]
+        if (!col) {
+          col = []
+          cols[colIdx] = col
+        }
+        const overlap = col.some(c => item.startM < c.endM && item.endM > c.startM)
+        if (!overlap) {
+          col.push(item)
+          item.column = colIdx
+          break
+        }
+        colIdx++
+      }
+    }
+    const totalCols = cols.length
+    for (const item of cluster) {
+      item.maxColumns = totalCols
+      item.width = 100 / totalCols
+      item.left = item.column * (100 / totalCols)
+    }
+  }
+
+  return items
 }
 
 const totalClasses = computed(() => schedules.value.length)
@@ -640,3 +819,18 @@ onUnmounted(() => {
   if (clockTimer) clearInterval(clockTimer)
 })
 </script>
+
+<style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Itim&display=swap');
+
+.font-itim {
+  font-family: 'Itim', cursive, sans-serif;
+}
+
+.course-card-inner:hover {
+  background-color: var(--hover-bg) !important;
+  border-color: var(--hover-border) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  transform: translateY(-1px);
+}
+</style>

@@ -16,7 +16,11 @@ onMounted(() => {
 <template>
   <div>
     <NuxtPwaManifest />
-    <NuxtPage :page-key="route => route.fullPath" />
+    <NuxtPage :page-key="route => route.fullPath" v-slot="{ Component }">
+      <Transition name="page" mode="out-in">
+        <component :is="Component" />
+      </Transition>
+    </NuxtPage>
     <InstallPrompt />
   </div>
 </template>

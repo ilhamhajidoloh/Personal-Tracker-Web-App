@@ -1,30 +1,33 @@
 <template>
   <AppTabsLayout>
-    <div class="flex-1 overflow-y-auto">
-      <!-- Page Header -->
-      <header class="md:sticky md:top-0 md:z-10 px-4 md:px-8 py-3.5 md:py-5 glass-header flex flex-row items-center justify-between gap-3">
+    <div class="mx-auto w-full max-w-[1240px] px-4 md:px-6 py-6 md:py-8">
+      <!-- Page head -->
+      <div class="flex flex-wrap items-end justify-between gap-4">
         <div class="min-w-0">
-          <h1 class="text-base md:text-xl font-bold text-white tracking-tight truncate">💸 รายรับรายจ่าย</h1>
-          <p class="text-[11px] mt-0.5 hidden sm:block" style="color: var(--text-muted);">บันทึกรายการรายวัน พร้อมสรุปยอดเงินคงเหลือ</p>
+          <p class="eyebrow">การเงิน · Cashflow</p>
+          <h1 class="text-2xl md:text-[30px] font-extrabold tracking-tight mt-1.5" style="color: var(--text-primary);">รายรับ<span class="text-gradient">·</span>รายจ่าย</h1>
+          <p class="text-xs mt-2 text-gray-400 font-medium">{{ currentMonthYearLabel }} &bull; {{ transactions.length }} รายการ</p>
         </div>
         <div class="flex items-center gap-2 shrink-0">
           <button
             @click="isEntryModalOpen = true"
-            class="btn-primary text-sm flex items-center gap-1.5"
+            class="btn-primary text-sm inline-flex items-center gap-2 tap-scale touch-target"
           >
-            <span>+</span><span class="hidden sm:inline"> เพิ่มรายการ</span><span class="sm:hidden">เพิ่ม</span>
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+            <span class="hidden sm:inline">เพิ่มรายการ</span><span class="sm:hidden">เพิ่ม</span>
           </button>
           <button
             @click="loadTransactions"
             :disabled="isLoading"
-            class="btn-secondary text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            class="btn-secondary text-sm inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed tap-scale touch-target"
           >
-            {{ isLoading ? '...' : '↻' }}<span class="hidden sm:inline"> {{ isLoading ? 'กำลังโหลด...' : 'รีเฟรช' }}</span>
+            <svg class="w-4 h-4" :class="isLoading ? 'animate-spin' : ''" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5M21 12a9 9 0 0 1-15 6.7L3 16M3 21v-5h5"/></svg>
+            <span class="hidden sm:inline">{{ isLoading ? 'กำลังโหลด...' : 'รีเฟรช' }}</span>
           </button>
         </div>
-      </header>
+      </div>
 
-      <div class="px-6 md:px-8 py-6 space-y-5">
+      <div class="space-y-5 mt-6">
         <!-- Error -->
         <div
           v-if="errorMessage"
@@ -33,60 +36,36 @@
           <span>⚠️</span><span>{{ errorMessage }}</span>
         </div>
 
-        <!-- Stats Cards -->
-        <div class="grid grid-cols-2 xl:grid-cols-4 gap-3 md:gap-4">
+        <!-- Summary tiles -->
+        <div class="section-card grid grid-cols-1 sm:grid-cols-3">
           <!-- Income -->
-          <div class="stat-card">
-            <div class="flex items-center justify-between gap-2 mb-3 relative z-10">
-              <div class="icon-bubble" style="background: rgba(16,185,129,0.12);">📈</div>
+          <div class="p-5 border-b sm:border-b-0 sm:border-r" style="border-color: var(--border-subtle);">
+            <div class="flex items-center justify-between gap-2">
+              <p class="eyebrow">รายรับ</p>
               <button
                 v-if="incomeCategoryRankings.length > 0"
                 @click="isIncomeRankingModalOpen = true"
-                class="px-2.5 py-1 rounded-lg text-[11px] text-emerald-400 hover:text-emerald-300 font-medium transition-all"
-                style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);"
-              >
-                ดูอันดับรายรับ
-              </button>
+                class="eyebrow"
+                style="color: var(--brand);"
+              >อันดับ →</button>
             </div>
-            <p class="text-[11px] font-medium uppercase tracking-wide relative z-10" style="color: var(--text-muted);">รายรับรวม</p>
-            <p class="text-2xl font-bold text-emerald-400 mt-1 relative z-10">{{ formatCurrency(totalIncome) }}</p>
+            <p class="num text-2xl md:text-[26px] font-bold mt-2" style="color: var(--ink-emerald);">+{{ formatCurrency(totalIncome) }}</p>
           </div>
 
           <!-- Expense -->
-          <div class="stat-card">
-            <div class="icon-bubble mb-3" style="background: rgba(244,63,94,0.12);">📉</div>
-            <p class="text-[11px] font-medium uppercase tracking-wide relative z-10" style="color: var(--text-muted);">รายจ่ายรวม</p>
-            <p class="text-2xl font-bold text-rose-400 mt-1 relative z-10">{{ formatCurrency(totalExpense) }}</p>
-            <div class="mt-3 relative z-10">
-              <div class="progress-bar">
-                <div class="h-full rounded-full bg-gradient-to-r from-rose-500 to-pink-400 transition-all duration-700" :style="{ width: `${expenseProgressPercent}%` }"></div>
-              </div>
-              <p class="text-[11px] mt-1.5" style="color: var(--text-muted);">
-                {{ expenseProgressText }}
-                <span v-if="overspentAmount > 0" class="text-amber-400"> (เกิน {{ formatCurrency(overspentAmount) }})</span>
-              </p>
-            </div>
+          <div class="p-5 border-b sm:border-b-0 sm:border-r" style="border-color: var(--border-subtle);">
+            <p class="eyebrow">รายจ่าย</p>
+            <p class="num text-2xl md:text-[26px] font-bold mt-2" style="color: var(--ink-rose);">−{{ formatCurrency(totalExpense) }}</p>
+            <p class="num text-[11px] mt-1.5" style="color: var(--text-muted);">
+              {{ expenseProgressText }}<span v-if="overspentAmount > 0" style="color: var(--event-status-soon-ink);"> · เกิน {{ formatCurrency(overspentAmount) }}</span>
+            </p>
           </div>
 
           <!-- Balance -->
-          <div class="stat-card">
-            <div class="icon-bubble mb-3" :style="remainingBalance >= 0 ? 'background: rgba(14,165,233,0.12);' : 'background: rgba(245,158,11,0.12);'">💰</div>
-            <p class="text-[11px] font-medium uppercase tracking-wide relative z-10" style="color: var(--text-muted);">เงินคงเหลือ</p>
-            <p class="text-2xl font-bold mt-1 relative z-10" :class="remainingBalance >= 0 ? 'text-sky-300' : 'text-amber-300'">{{ formatCurrency(remainingBalance) }}</p>
-            <div class="mt-3 relative z-10">
-              <div class="progress-bar">
-                <div class="h-full rounded-full transition-all duration-700" :class="remainingBalance >= 0 ? 'bg-gradient-to-r from-sky-500 to-cyan-400' : 'bg-gradient-to-r from-amber-500 to-orange-400'" :style="{ width: `${remainingProgressPercent}%` }"></div>
-              </div>
-              <p class="text-[11px] mt-1.5" style="color: var(--text-muted);">{{ remainingProgressText }}</p>
-            </div>
-          </div>
-
-          <!-- Top Category -->
-          <div class="stat-card">
-            <div class="icon-bubble mb-3" style="background: rgba(245,158,11,0.12);">🏷️</div>
-            <p class="text-[11px] font-medium uppercase tracking-wide relative z-10" style="color: var(--text-muted);">หมวดสูงสุด</p>
-            <p class="text-lg font-bold text-white mt-1 truncate relative z-10">{{ topExpenseCategory.name }}</p>
-            <p class="text-xs mt-0.5 relative z-10" style="color: var(--text-muted);">{{ formatCurrency(topExpenseCategory.amount) }}</p>
+          <div class="p-5">
+            <p class="eyebrow">คงเหลือสุทธิ</p>
+            <p class="num text-2xl md:text-[26px] font-bold mt-2" :style="{ color: remainingBalance >= 0 ? 'var(--text-primary)' : 'var(--ink-rose)' }">{{ formatCurrency(remainingBalance) }}</p>
+            <p class="num text-[11px] mt-1.5" style="color: var(--text-muted);">หมวดสูงสุด · {{ topExpenseCategory.name }}</p>
           </div>
         </div>
 
@@ -104,7 +83,7 @@
               </div>
               <button
                 @click="isRankingModalOpen = true"
-                class="px-3 py-1.5 rounded-lg bg-gray-800/70 hover:bg-gray-800 border border-gray-700/60 text-xs text-gray-400 hover:text-white transition-all whitespace-nowrap"
+                class="px-3 py-1.5 rounded-lg bg-gray-800/70 hover:bg-gray-800 border border-gray-700/60 text-xs text-gray-400 hover:text-white transition-all whitespace-nowrap tap-scale touch-target"
               >ดูทั้งหมด →</button>
             </div>
             <div class="space-y-2">
@@ -164,7 +143,7 @@
               <button
                 v-if="summaryFilterMonth"
                 @click="summaryFilterMonth = ''"
-                class="text-xs text-gray-500 hover:text-white px-2 py-1 rounded-lg hover:bg-gray-800 transition-all"
+                class="text-xs text-gray-500 hover:text-white px-2 py-1 rounded-lg hover:bg-gray-800 transition-all tap-scale touch-target"
               >ล้าง ✕</button>
               <span class="text-xs bg-gray-800/80 text-gray-400 border border-gray-700/60 rounded-full px-3 py-1">{{ dailySummaries.length }} วัน</span>
             </div>
@@ -250,102 +229,60 @@
           </div>
 
           <div v-if="!filteredTransactions.length" class="flex flex-col items-center justify-center py-12 text-center px-5">
-            <div class="w-14 h-14 rounded-2xl bg-gray-800/70 flex items-center justify-center text-2xl mb-3">💳</div>
-            <p class="text-sm font-medium text-gray-400">ยังไม่มีรายการ</p>
+            <div class="w-12 h-12 rounded-xl flex items-center justify-center mb-3" style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);">
+              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+            </div>
+            <p class="text-sm font-medium" style="color: var(--text-secondary);">ยังไม่มีรายการ</p>
           </div>
 
-          <!-- Mobile: Card List (< md) -->
-          <div v-else class="md:hidden divide-y divide-gray-800/50">
+          <!-- Unified transaction rows -->
+          <div v-else>
             <div
               v-for="item in paginatedTransactions"
               :key="item.id"
-              class="px-4 py-4 hover:bg-gray-800/20 transition-all"
+              class="group grid grid-cols-[36px_1fr_auto] items-center gap-3 px-4 md:px-5 py-3 transition-colors"
+              style="border-bottom: 1px solid var(--border-subtle);"
             >
-              <div class="flex items-start justify-between gap-3">
-                <div class="min-w-0 flex-1">
-                  <div class="flex items-center gap-2 mb-1.5 flex-wrap">
-                    <span
-                      class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold shrink-0"
-                      :class="item.type === 'income'
-                        ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/25'
-                        : 'bg-rose-500/15 text-rose-400 border border-rose-500/25'"
-                    >{{ item.type === 'income' ? '↑ รับ' : '↓ จ่าย' }}</span>
-                    <span class="text-sm font-medium text-white truncate">{{ item.category || 'ไม่ระบุหมวดหมู่' }}</span>
-                  </div>
-                  <p class="text-xs text-gray-500">{{ formatDate(item.entry_date) }}</p>
-                  <p v-if="item.description" class="text-xs text-gray-600 mt-0.5 line-clamp-1">{{ item.description }}</p>
-                </div>
-                <div class="shrink-0 text-right">
-                  <p class="text-base font-bold" :class="item.type === 'income' ? 'text-emerald-400' : 'text-rose-400'">
-                    {{ item.type === 'income' ? '+' : '-' }}{{ formatCurrency(item.amount) }}
-                  </p>
-                  <div class="flex items-center justify-end gap-1.5 mt-2">
-                    <button
-                      @click="openEditTransactionModal(item)"
-                      :disabled="isDeletingId === item.id"
-                      class="px-2.5 py-1 rounded-lg text-[11px] bg-sky-500/15 text-sky-400 hover:bg-sky-500/25 border border-sky-500/20 disabled:opacity-50 transition-all font-medium"
-                    >แก้ไข</button>
-                    <button
-                      @click="deleteTransaction(item.id)"
-                      :disabled="isDeletingId === item.id"
-                      class="px-2.5 py-1 rounded-lg text-[11px] bg-rose-500/15 text-rose-400 hover:bg-rose-500/25 border border-rose-500/20 disabled:opacity-50 transition-all font-medium"
-                    >{{ isDeletingId === item.id ? 'ลบ...' : 'ลบ' }}</button>
-                  </div>
+              <!-- direction icon -->
+              <span class="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);">
+                <svg v-if="item.type === 'income'" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="var(--ink-emerald)" stroke-width="2"><path d="M7 17L17 7M17 7H9M17 7v8"/></svg>
+                <svg v-else class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="var(--ink-rose)" stroke-width="2"><path d="M17 7L7 17M7 17h8M7 17V9"/></svg>
+              </span>
+              <!-- title + meta -->
+              <div class="min-w-0">
+                <p class="text-[13.5px] font-medium truncate" style="color: var(--text-primary);">{{ item.category || 'ไม่ระบุหมวดหมู่' }}</p>
+                <p class="num text-[10.5px] mt-0.5 truncate" style="color: var(--text-muted);">
+                  {{ item.type === 'income' ? 'รายรับ' : 'รายจ่าย' }} · {{ formatDate(item.entry_date) }}<span v-if="item.description"> · {{ item.description }}</span>
+                </p>
+              </div>
+              <!-- amount + actions -->
+              <div class="flex items-center gap-2.5 shrink-0">
+                <span class="num text-[14px] font-semibold text-right whitespace-nowrap" :style="{ color: item.type === 'income' ? 'var(--ink-emerald)' : 'var(--ink-rose)' }">
+                  {{ item.type === 'income' ? '+' : '−' }}{{ formatCurrency(item.amount) }}
+                </span>
+                <div class="flex items-center gap-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                  <button
+                    @click="openEditTransactionModal(item)"
+                    :disabled="isDeletingId === item.id"
+                    class="w-8 h-8 rounded-lg flex items-center justify-center disabled:opacity-50 transition-all tap-scale"
+                    style="background: var(--bg-elevated); border: 1px solid var(--border-subtle); color: var(--ink-sky);"
+                    aria-label="แก้ไข"
+                  >
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+                  </button>
+                  <button
+                    @click="deleteTransaction(item.id)"
+                    :disabled="isDeletingId === item.id"
+                    class="w-8 h-8 rounded-lg flex items-center justify-center disabled:opacity-50 transition-all tap-scale"
+                    style="background: var(--bg-elevated); border: 1px solid var(--border-subtle); color: var(--ink-rose);"
+                    aria-label="ลบ"
+                  >
+                    <svg v-if="isDeletingId !== item.id" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
+                    <span v-else class="inline-block w-3 h-3 border-2 rounded-full animate-spin" style="border-color: var(--border-strong); border-top-color: var(--ink-rose);"></span>
+                  </button>
                 </div>
               </div>
             </div>
-          </div>
-
-          <!-- Desktop: Table (md+) -->
-          <div v-if="filteredTransactions.length" class="hidden md:block overflow-x-auto">
-            <table class="min-w-full text-sm">
-              <thead>
-                <tr class="border-b border-gray-800/60 bg-gray-800/20">
-                  <th class="text-left py-3 px-5 text-[11px] font-semibold text-gray-500 uppercase tracking-wide">วันที่</th>
-                  <th class="text-left py-3 px-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide">ประเภท</th>
-                  <th class="text-left py-3 px-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide">หมวดหมู่</th>
-                  <th class="text-left py-3 px-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide">รายละเอียด</th>
-                  <th class="text-right py-3 px-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide">จำนวนเงิน</th>
-                  <th class="text-right py-3 px-5 text-[11px] font-semibold text-gray-500 uppercase tracking-wide">จัดการ</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-gray-800/40">
-                <tr
-                  v-for="item in paginatedTransactions"
-                  :key="item.id"
-                  class="hover:bg-gray-800/20 transition-all"
-                >
-                  <td class="py-3 px-5 text-gray-300 text-xs whitespace-nowrap">{{ formatDate(item.entry_date) }}</td>
-                  <td class="py-3 px-3">
-                    <span
-                      class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold"
-                      :class="item.type === 'income'
-                        ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/25'
-                        : 'bg-rose-500/15 text-rose-400 border border-rose-500/25'"
-                    >{{ item.type === 'income' ? '↑ รับ' : '↓ จ่าย' }}</span>
-                  </td>
-                  <td class="py-3 px-3 text-gray-300 text-xs">{{ item.category || '-' }}</td>
-                  <td class="py-3 px-3 text-gray-500 text-xs max-w-[200px] truncate">{{ item.description || '-' }}</td>
-                  <td class="py-3 px-3 text-right font-semibold text-sm" :class="item.type === 'income' ? 'text-emerald-400' : 'text-rose-400'">
-                    {{ item.type === 'income' ? '+' : '-' }}{{ formatCurrency(item.amount) }}
-                  </td>
-                  <td class="py-3 px-5 text-right">
-                    <div class="flex items-center justify-end gap-1.5">
-                      <button
-                        @click="openEditTransactionModal(item)"
-                        :disabled="isDeletingId === item.id"
-                        class="px-3 py-1.5 rounded-lg text-xs bg-sky-500/15 text-sky-400 hover:bg-sky-500/25 border border-sky-500/20 disabled:opacity-50 transition-all font-medium"
-                      >แก้ไข</button>
-                      <button
-                        @click="deleteTransaction(item.id)"
-                        :disabled="isDeletingId === item.id"
-                        class="px-3 py-1.5 rounded-lg text-xs bg-rose-500/15 text-rose-400 hover:bg-rose-500/25 border border-rose-500/20 disabled:opacity-50 transition-all font-medium"
-                      >{{ isDeletingId === item.id ? 'ลบ...' : 'ลบ' }}</button>
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
           </div>
 
           <!-- Pagination Controls -->
@@ -353,7 +290,7 @@
             <button
               @click="transactionCurrentPage = Math.max(1, transactionCurrentPage - 1)"
               :disabled="transactionCurrentPage === 1"
-              class="px-3 py-2 rounded-lg text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              class="px-3 py-2 rounded-lg text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed tap-scale touch-target"
               style="background: var(--bg-elevated); border: 1px solid var(--border-default); color: var(--text-secondary);"
               :style="transactionCurrentPage === 1 ? {} : { 'cursor': 'pointer', 'color': 'var(--text-primary)' }"
             >
@@ -364,7 +301,7 @@
                 v-for="page in transactionTotalPages"
                 :key="page"
                 @click="transactionCurrentPage = page"
-                class="w-9 h-9 rounded-lg text-sm font-medium transition-all"
+                class="w-9 h-9 rounded-lg text-sm font-medium transition-all tap-scale touch-target"
                 :style="transactionCurrentPage === page
                   ? { 'background': 'var(--brand)', 'color': 'white', 'border': '1px solid var(--brand)' }
                   : { 'background': 'var(--bg-elevated)', 'border': '1px solid var(--border-default)', 'color': 'var(--text-secondary)' }"
@@ -375,7 +312,7 @@
             <button
               @click="transactionCurrentPage = Math.min(transactionTotalPages, transactionCurrentPage + 1)"
               :disabled="transactionCurrentPage === transactionTotalPages"
-              class="px-3 py-2 rounded-lg text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              class="px-3 py-2 rounded-lg text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed tap-scale touch-target"
               style="background: var(--bg-elevated); border: 1px solid var(--border-default); color: var(--text-secondary);"
               :style="transactionCurrentPage === transactionTotalPages ? {} : { 'cursor': 'pointer', 'color': 'var(--text-primary)' }"
             >
@@ -388,13 +325,14 @@
 
     <!-- Expense Ranking Modal -->
     <Teleport to="body">
-      <div
-        v-if="isRankingModalOpen"
-        class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-6"
-      >
-        <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" @click="isRankingModalOpen = false"></div>
-
-        <div class="relative w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl border border-gray-700/80 bg-gray-900 shadow-2xl flex flex-col max-h-[88vh] sm:max-h-[80vh]">
+      <Transition name="backdrop">
+        <div
+          v-if="isRankingModalOpen"
+          class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-6"
+          style="background: rgba(3,5,12,0.62); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);"
+        >
+          <Transition name="modal">
+            <div v-if="isRankingModalOpen" class="relative z-10 w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl border border-gray-700/80 bg-gray-900 shadow-2xl flex flex-col max-h-[88vh] sm:max-h-[80vh]">
           <!-- Header -->
           <div class="flex items-center justify-between px-5 py-4 border-b border-gray-800/80 shrink-0">
             <div class="flex items-center gap-3">
@@ -408,7 +346,7 @@
             </div>
             <button
               @click="isRankingModalOpen = false"
-              class="w-8 h-8 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white flex items-center justify-center text-sm transition-all shrink-0"
+              class="w-8 h-8 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white flex items-center justify-center text-sm transition-all shrink-0 tap-scale touch-target"
               aria-label="ปิด"
             >✕</button>
           </div>
@@ -418,7 +356,7 @@
             <div
               v-for="(cat, i) in expenseCategoryRankings"
               :key="cat.name"
-              class="px-5 py-3.5 border-b border-gray-800/40 last:border-0 hover:bg-gray-800/20 transition-all"
+              class="px-5 py-3.5 border-b border-gray-800/40 last:border-0 hover:bg-gray-800/20 transition-all tap-scale"
             >
               <div class="flex items-center gap-3 mb-2">
                 <span
@@ -455,18 +393,22 @@
             <p class="text-sm font-bold text-rose-400">{{ formatCurrency(totalExpense) }}</p>
           </div>
         </div>
-      </div>
+          </Transition>
+          <div class="absolute inset-0 z-0 bg-black/70 backdrop-blur-sm" @click="isRankingModalOpen = false"></div>
+        </div>
+      </Transition>
     </Teleport>
 
     <!-- Income Ranking Modal -->
     <Teleport to="body">
-      <div
-        v-if="isIncomeRankingModalOpen"
-        class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-6"
-      >
-        <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" @click="isIncomeRankingModalOpen = false"></div>
-
-        <div class="relative w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl border border-gray-700/80 bg-gray-900 shadow-2xl flex flex-col max-h-[88vh] sm:max-h-[80vh]">
+      <Transition name="backdrop">
+        <div
+          v-if="isIncomeRankingModalOpen"
+          class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-6"
+          style="background: rgba(3,5,12,0.62); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);"
+        >
+          <Transition name="modal">
+            <div v-if="isIncomeRankingModalOpen" class="relative z-10 w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl border border-gray-700/80 bg-gray-900 shadow-2xl flex flex-col max-h-[88vh] sm:max-h-[80vh]">
           <!-- Header -->
           <div class="flex items-center justify-between px-5 py-4 border-b border-gray-800/80 shrink-0">
             <div class="flex items-center gap-3">
@@ -480,7 +422,7 @@
             </div>
             <button
               @click="isIncomeRankingModalOpen = false"
-              class="w-8 h-8 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white flex items-center justify-center text-sm transition-all shrink-0"
+              class="w-8 h-8 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white flex items-center justify-center text-sm transition-all shrink-0 tap-scale touch-target"
               aria-label="ปิด"
             >✕</button>
           </div>
@@ -490,7 +432,7 @@
             <div
               v-for="(cat, i) in incomeCategoryRankings"
               :key="cat.name"
-              class="px-5 py-3.5 border-b border-gray-800/40 last:border-0 hover:bg-gray-800/20 transition-all"
+              class="px-5 py-3.5 border-b border-gray-800/40 last:border-0 hover:bg-gray-800/20 transition-all tap-scale"
             >
               <div class="flex items-center gap-3 mb-2">
                 <span
@@ -527,18 +469,22 @@
             <p class="text-sm font-bold text-emerald-400">{{ formatCurrency(totalIncome) }}</p>
           </div>
         </div>
-      </div>
+          </Transition>
+          <div class="absolute inset-0 z-0 bg-black/70 backdrop-blur-sm" @click="isIncomeRankingModalOpen = false"></div>
+        </div>
+      </Transition>
     </Teleport>
 
     <!-- Add/Edit Modal -->
     <Teleport to="body">
-      <div
-        v-if="isEntryModalOpen"
-        class="fixed inset-0 z-50 flex items-center justify-center p-4"
-      >
-        <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" @click="isEntryModalOpen = false"></div>
-
-        <div class="relative w-full max-w-lg rounded-2xl border border-gray-700/80 bg-gray-900 shadow-2xl overflow-hidden">
+      <Transition name="backdrop">
+        <div
+          v-if="isEntryModalOpen"
+          class="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style="background: rgba(3,5,12,0.62); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);"
+        >
+          <Transition name="modal">
+            <div v-if="isEntryModalOpen" class="relative z-10 w-full max-w-lg rounded-2xl border border-gray-700/80 bg-gray-900 shadow-2xl overflow-hidden">
           <!-- Modal Header -->
           <div class="flex items-center justify-between px-6 py-4 border-b border-gray-800/80">
             <div class="flex items-center gap-3">
@@ -552,7 +498,7 @@
             </div>
             <button
               @click="() => { isEntryModalOpen = false; resetForm() }"
-              class="w-8 h-8 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white flex items-center justify-center text-sm transition-all"
+              class="w-8 h-8 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white flex items-center justify-center text-sm transition-all tap-scale touch-target"
               aria-label="ปิด"
             >✕</button>
           </div>
@@ -660,12 +606,12 @@
               <button
                 type="button"
                 @click="() => { isEntryModalOpen = false; resetForm() }"
-                class="flex-1 py-2.5 rounded-xl bg-gray-800/80 hover:bg-gray-800 border border-gray-700/60 text-sm font-medium text-gray-300 hover:text-white transition-all"
+                class="flex-1 py-2.5 rounded-xl bg-gray-800/80 hover:bg-gray-800 border border-gray-700/60 text-sm font-medium text-gray-300 hover:text-white transition-all tap-scale touch-target"
               >ยกเลิก</button>
               <button
                 type="submit"
                 :disabled="isSubmitting"
-                class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-semibold text-white shadow-md shadow-violet-500/20 transition-all flex items-center justify-center gap-2"
+                class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-semibold text-white shadow-md shadow-violet-500/20 transition-all flex items-center justify-center gap-2 tap-scale touch-target"
               >
                 <span v-if="isSubmitting" class="inline-block w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
                 {{ submitButtonText }}
@@ -673,7 +619,10 @@
             </div>
           </form>
         </div>
-      </div>
+          </Transition>
+          <div class="absolute inset-0 z-0 bg-black/70 backdrop-blur-sm" @click="isEntryModalOpen = false"></div>
+        </div>
+      </Transition>
     </Teleport>
   </AppTabsLayout>
 </template>
@@ -749,6 +698,19 @@ const formatCurrency = (amount: number) => new Intl.NumberFormat('th-TH', {
 
 const formatDate = (dateString: string) => new Date(dateString).toLocaleDateString('th-TH', {
   day: '2-digit', month: 'short', year: 'numeric',
+})
+
+const currentMonthYearLabel = computed(() => {
+  if (!summaryFilterMonth.value) return 'เดือนนี้'
+  const [yearStr, monthStr] = summaryFilterMonth.value.split('-')
+  if (!yearStr || !monthStr) return 'เดือนนี้'
+  const year = Number(yearStr) + 543
+  const monthNames = [
+    'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+    'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
+  ]
+  const monthName = monthNames[Number(monthStr) - 1] || 'ไม่ระบุ'
+  return `${monthName} ${year}`
 })
 
 const totalIncome = computed(() => transactions.value.filter(i => i.type === 'income').reduce((s, i) => s + i.amount, 0))

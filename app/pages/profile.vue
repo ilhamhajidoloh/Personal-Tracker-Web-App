@@ -1,22 +1,24 @@
 <template>
   <AppTabsLayout>
-    <div class="flex-1 overflow-y-auto">
-      <!-- Page Header -->
-      <header class="sticky top-0 z-10 px-6 md:px-8 py-5 glass-header flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+    <div class="mx-auto w-full max-w-5xl px-4 md:px-6 py-6 md:py-8">
+      <!-- Page head -->
+      <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
-          <h1 class="text-xl font-bold text-white tracking-tight">👤 โปรไฟล์</h1>
-          <p class="text-xs mt-0.5" style="color: var(--text-muted);">ข้อมูลบัญชีผู้ใช้และการตั้งค่า</p>
+          <p class="eyebrow">โปรไฟล์ · Account</p>
+          <h1 class="text-2xl md:text-[30px] font-extrabold tracking-tight mt-1.5" style="color: var(--text-primary);">โปรไฟล์</h1>
+          <p class="text-xs mt-2" style="color: var(--text-muted);">ข้อมูลบัญชีผู้ใช้และการตั้งค่า</p>
         </div>
         <button
           @click="loadProfile"
           :disabled="isLoading"
-          class="btn-secondary text-sm disabled:opacity-50 disabled:cursor-not-allowed self-start"
+          class="btn-secondary text-sm inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed self-start tap-scale touch-target"
         >
-          {{ isLoading ? 'กำลังโหลด...' : '↻ รีเฟรช' }}
+          <svg class="w-4 h-4" :class="isLoading ? 'animate-spin' : ''" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5M21 12a9 9 0 0 1-15 6.7L3 16M3 21v-5h5"/></svg>
+          {{ isLoading ? 'กำลังโหลด...' : 'รีเฟรช' }}
         </button>
-      </header>
+      </div>
 
-      <div class="max-w-5xl mx-auto px-6 md:px-8 py-6 space-y-5">
+      <div class="space-y-5 mt-6">
         <!-- Error -->
         <div
           v-if="errorMessage"
@@ -152,7 +154,7 @@
                         :href="lineBotAddFriendUrl"
                         target="_blank"
                         rel="noopener noreferrer"
-                        class="px-3 py-2 rounded-xl bg-gray-800/70 hover:bg-gray-800 border border-gray-700/60 text-xs text-gray-300 hover:text-white transition-all"
+                        class="px-3 py-2 rounded-xl bg-gray-800/70 hover:bg-gray-800 border border-gray-700/60 text-xs text-gray-300 hover:text-white transition-all tap-scale touch-target"
                       >
                         เพิ่มเพื่อน {{ lineBotDisplayName }}
                       </a>
@@ -161,7 +163,7 @@
                         type="button"
                         @click="generateLineLinkCode()"
                         :disabled="isGeneratingLineCode || isSavingLine || isTestingLine"
-                        class="px-3 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-semibold text-white shadow-sm shadow-violet-500/20 transition-all"
+                        class="px-3 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-semibold text-white shadow-sm shadow-violet-500/20 transition-all tap-scale touch-target"
                       >
                         {{ isGeneratingLineCode ? 'กำลังสร้าง...' : (hasLineLinkCode ? 'สร้างโค้ดใหม่' : 'สร้างโค้ดเชื่อมต่อ') }}
                       </button>
@@ -170,7 +172,7 @@
                         type="button"
                         @click="openLineForConnection"
                         :disabled="isGeneratingLineCode || isSavingLine || isTestingLine"
-                        class="px-3 py-2 rounded-xl bg-emerald-600/80 hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-semibold text-white transition-all"
+                        class="px-3 py-2 rounded-xl bg-emerald-600/80 hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-semibold text-white transition-all tap-scale touch-target"
                       >
                         เปิด LINE พร้อมข้อความ
                       </button>
@@ -179,7 +181,7 @@
                         type="button"
                         @click="refreshLineStatus"
                         :disabled="isLineLoading || isGeneratingLineCode"
-                        class="px-3 py-2 rounded-xl bg-gray-800/70 hover:bg-gray-800 border border-gray-700/60 disabled:opacity-50 disabled:cursor-not-allowed text-xs text-gray-400 hover:text-white transition-all"
+                        class="px-3 py-2 rounded-xl bg-gray-800/70 hover:bg-gray-800 border border-gray-700/60 disabled:opacity-50 disabled:cursor-not-allowed text-xs text-gray-400 hover:text-white transition-all tap-scale touch-target"
                       >
                         ตรวจสอบสถานะ
                       </button>
@@ -200,7 +202,7 @@
                           <button
                             type="button"
                             @click="copyLineLinkCode"
-                            class="px-2.5 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 border border-gray-700/60 text-[11px] text-gray-300 transition-all"
+                            class="px-2.5 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 border border-gray-700/60 text-[11px] text-gray-300 transition-all tap-scale touch-target"
                           >คัดลอก</button>
                         </div>
                       </div>
@@ -227,7 +229,7 @@
                         type="button"
                         @click="saveLinePreferences"
                         :disabled="!lineStatus.connected || isSavingLine || isTestingLine"
-                        class="flex-1 px-3 py-2 rounded-xl bg-violet-600/80 hover:bg-violet-600 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-semibold text-white transition-all"
+                        class="flex-1 px-3 py-2 rounded-xl bg-violet-600/80 hover:bg-violet-600 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-semibold text-white transition-all tap-scale touch-target"
                       >
                         {{ isSavingLine ? 'กำลังบันทึก...' : 'บันทึกการตั้งค่า' }}
                       </button>
@@ -235,7 +237,7 @@
                         type="button"
                         @click="sendLineTestMessage"
                         :disabled="!lineStatus.connected || isSavingLine || isTestingLine"
-                        class="flex-1 px-3 py-2 rounded-xl bg-gray-800/70 hover:bg-gray-800 border border-gray-700/60 disabled:opacity-50 disabled:cursor-not-allowed text-xs text-gray-300 hover:text-white transition-all"
+                        class="flex-1 px-3 py-2 rounded-xl bg-gray-800/70 hover:bg-gray-800 border border-gray-700/60 disabled:opacity-50 disabled:cursor-not-allowed text-xs text-gray-300 hover:text-white transition-all tap-scale touch-target"
                       >
                         {{ isTestingLine ? 'กำลังส่ง...' : 'ทดสอบ' }}
                       </button>
@@ -243,7 +245,7 @@
                         type="button"
                         @click="disconnectLine"
                         :disabled="!lineStatus.connected || isSavingLine || isTestingLine"
-                        class="flex-1 px-3 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/25 disabled:opacity-50 disabled:cursor-not-allowed text-xs text-rose-400 transition-all"
+                        class="flex-1 px-3 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/25 disabled:opacity-50 disabled:cursor-not-allowed text-xs text-rose-400 transition-all tap-scale touch-target"
                       >
                         ยกเลิกการเชื่อมต่อ
                       </button>
@@ -271,7 +273,7 @@
                       <button
                         type="submit"
                         :disabled="isSavingLine || isTestingLine"
-                        class="w-full px-4 py-2.5 rounded-xl bg-gray-800/80 hover:bg-gray-800 border border-gray-700/60 disabled:opacity-50 disabled:cursor-not-allowed text-sm text-gray-300 hover:text-white transition-all font-medium"
+                        class="w-full px-4 py-2.5 rounded-xl bg-gray-800/80 hover:bg-gray-800 border border-gray-700/60 disabled:opacity-50 disabled:cursor-not-allowed text-sm text-gray-300 hover:text-white transition-all font-medium tap-scale touch-target"
                       >
                         {{ isSavingLine ? 'กำลังบันทึก...' : (lineStatus.connected ? 'อัปเดตการเชื่อมต่อ' : 'เชื่อมต่อ') }}
                       </button>
@@ -310,7 +312,7 @@
                 <a
                   v-if="!googleStatus.connected"
                   href="/api/google/auth"
-                  class="px-3 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-xs font-semibold text-white shadow-sm shadow-violet-500/20 transition-all"
+                  class="px-3 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-xs font-semibold text-white shadow-sm shadow-violet-500/20 transition-all tap-scale touch-target"
                 >
                   เชื่อมต่อ Google Calendar
                 </a>
@@ -319,7 +321,7 @@
                   type="button"
                   @click="disconnectGoogle"
                   :disabled="isDisconnectingGoogle"
-                  class="px-3 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/25 disabled:opacity-50 disabled:cursor-not-allowed text-xs text-rose-400 transition-all"
+                  class="px-3 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/25 disabled:opacity-50 disabled:cursor-not-allowed text-xs text-rose-400 transition-all tap-scale touch-target"
                 >
                   {{ isDisconnectingGoogle ? 'กำลังยกเลิก...' : 'ยกเลิกการเชื่อมต่อ' }}
                 </button>
@@ -328,7 +330,7 @@
                   type="button"
                   @click="syncAllEvents"
                   :disabled="isSyncingAllGoogle"
-                  class="px-3 py-2 rounded-xl bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/25 disabled:opacity-50 disabled:cursor-not-allowed text-xs text-violet-300 transition-all"
+                  class="px-3 py-2 rounded-xl bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/25 disabled:opacity-50 disabled:cursor-not-allowed text-xs text-violet-300 transition-all tap-scale touch-target"
                 >
                   {{ isSyncingAllGoogle ? 'กำลังซิงค์...' : 'ซิงค์กิจกรรมย้อนหลัง' }}
                 </button>
@@ -336,7 +338,7 @@
                   type="button"
                   @click="refreshGoogleStatus"
                   :disabled="isGoogleLoading"
-                  class="px-3 py-2 rounded-xl bg-gray-800/70 hover:bg-gray-800 border border-gray-700/60 disabled:opacity-50 disabled:cursor-not-allowed text-xs text-gray-400 hover:text-white transition-all"
+                  class="px-3 py-2 rounded-xl bg-gray-800/70 hover:bg-gray-800 border border-gray-700/60 disabled:opacity-50 disabled:cursor-not-allowed text-xs text-gray-400 hover:text-white transition-all tap-scale touch-target"
                 >
                   ตรวจสอบสถานะ
                 </button>

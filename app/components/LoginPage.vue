@@ -2,9 +2,9 @@
   <div class="min-h-[100dvh] relative overflow-hidden bg-mesh lg:grid lg:grid-cols-2" style="background-color: var(--bg-base);">
     <!-- Animated Background blobs -->
     <div class="absolute inset-0 overflow-hidden pointer-events-none">
-      <div class="absolute -top-32 -right-32 w-[600px] h-[600px] rounded-full blur-[150px] opacity-70" style="background: radial-gradient(circle, rgba(245,104,60,0.16), transparent 70%); animation: float 16s ease-in-out infinite;"></div>
-      <div class="absolute -bottom-48 -left-48 w-[520px] h-[520px] rounded-full blur-[130px] opacity-60" style="background: radial-gradient(circle, rgba(246,71,139,0.13), transparent 70%); animation: float 22s ease-in-out infinite reverse;"></div>
-      <div class="absolute top-1/4 left-1/3 w-[420px] h-[420px] rounded-full blur-[150px] opacity-50" style="background: radial-gradient(circle, rgba(56,189,248,0.1), transparent 65%);"></div>
+      <div class="absolute -top-32 -right-32 w-[600px] h-[600px] rounded-full blur-[150px] opacity-60" style="background: radial-gradient(circle, rgba(59,78,240,0.16), transparent 70%); animation: float 16s ease-in-out infinite;"></div>
+      <div class="absolute -bottom-48 -left-48 w-[520px] h-[520px] rounded-full blur-[130px] opacity-50" style="background: radial-gradient(circle, rgba(111,91,255,0.13), transparent 70%); animation: float 22s ease-in-out infinite reverse;"></div>
+      <div class="absolute top-1/4 left-1/3 w-[420px] h-[420px] rounded-full blur-[150px] opacity-40" style="background: radial-gradient(circle, rgba(13,139,164,0.10), transparent 65%);"></div>
     </div>
 
     <!-- Brand panel (desktop) -->
@@ -89,14 +89,14 @@
         <div class="flex rounded-2xl p-1 gap-1" style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);">
           <button
             @click="isSignUp = false"
-            class="flex-1 py-2.5 px-4 rounded-xl text-sm font-bold transition-all duration-300"
+            class="flex-1 py-2.5 px-4 rounded-xl text-sm font-bold transition-all duration-300 tap-scale touch-target"
             :style="!isSignUp ? 'background: linear-gradient(135deg, var(--brand), var(--brand-2)); color: #fff; box-shadow: var(--brand-glow);' : 'color: var(--text-muted);'"
           >
             ลงชื่อเข้าใช้
           </button>
           <button
             @click="isSignUp = true"
-            class="flex-1 py-2.5 px-4 rounded-xl text-sm font-bold transition-all duration-300"
+            class="flex-1 py-2.5 px-4 rounded-xl text-sm font-bold transition-all duration-300 tap-scale touch-target"
             :style="isSignUp ? 'background: linear-gradient(135deg, var(--brand), var(--brand-2)); color: #fff; box-shadow: var(--brand-glow);' : 'color: var(--text-muted);'"
           >
             สมัครสมาชิก
@@ -112,6 +112,7 @@
               type="email"
               placeholder="your@email.com"
               required
+              autocomplete="email"
               class="w-full input-glass text-sm"
             />
           </div>
@@ -122,13 +123,14 @@
               type="password"
               placeholder="••••••••"
               required
+              autocomplete="current-password"
               class="w-full input-glass text-sm"
             />
           </div>
           <button
             type="submit"
             :disabled="isLoading"
-            class="w-full btn-primary text-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+            class="w-full btn-primary text-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none tap-scale touch-target"
           >
             <span v-if="isLoading" class="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
             {{ isLoading ? 'กำลังเข้าสู่ระบบ...' : 'ลงชื่อเข้าใช้' }}
@@ -144,6 +146,7 @@
               type="email"
               placeholder="your@email.com"
               required
+              autocomplete="email"
               class="w-full input-glass text-sm"
             />
           </div>
@@ -155,6 +158,7 @@
               placeholder="••••••••"
               required
               minlength="6"
+              autocomplete="new-password"
               class="w-full input-glass text-sm"
             />
             <p class="text-[11px] mt-1.5" style="color: var(--text-muted);">อย่างน้อย 6 ตัวอักษร</p>
@@ -167,13 +171,14 @@
               placeholder="••••••••"
               required
               minlength="6"
+              autocomplete="new-password"
               class="w-full input-glass text-sm"
             />
           </div>
           <button
             type="submit"
             :disabled="isLoading || password !== confirmPassword"
-            class="w-full btn-primary text-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+            class="w-full btn-primary text-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none tap-scale touch-target"
           >
             <span v-if="isLoading" class="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
             {{ isLoading ? 'กำลังสร้างบัญชี...' : 'สมัครสมาชิก' }}
@@ -191,7 +196,7 @@
         <button
           @click="handleGoogleSignIn"
           :disabled="isLoading"
-          class="w-full btn-secondary text-sm font-medium flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+          class="w-full btn-secondary text-sm font-medium flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed tap-scale touch-target"
         >
           <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24">
             <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>

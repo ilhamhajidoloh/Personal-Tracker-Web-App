@@ -1,30 +1,33 @@
 <template>
   <AppTabsLayout>
-    <div class="flex-1 overflow-y-auto">
-      <!-- Page Header -->
-      <header class="sticky top-0 z-10 px-6 md:px-8 py-5 glass-header flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+    <div class="mx-auto w-full max-w-[1240px] px-4 md:px-6 py-6 md:py-8">
+      <!-- Page head -->
+      <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
-          <h1 class="text-xl font-bold text-white tracking-tight">✅ งานและ To-do</h1>
-          <p class="text-xs mt-0.5" style="color: var(--text-muted);">จัดการสิ่งที่ต้องทำ งานค้าง และกำหนดส่ง</p>
+          <p class="eyebrow">งาน · Tasks</p>
+          <h1 class="text-2xl md:text-[30px] font-extrabold tracking-tight mt-1.5" style="color: var(--text-primary);">งานและ To-do</h1>
+          <p class="text-xs mt-2 text-gray-400 font-medium">เสร็จแล้ว {{ completedTodos.length }} จาก {{ totalTodosCount }} &bull; ค้าง {{ pendingTodos.length }} รายการ</p>
         </div>
         <div class="flex items-center gap-2 shrink-0">
           <button
             @click="isEntryModalOpen = true"
-            class="btn-primary text-sm flex items-center gap-1.5"
+            class="btn-primary text-sm inline-flex items-center gap-2 tap-scale touch-target"
           >
-            <span>+</span> เพิ่มงานใหม่
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+            เพิ่มงานใหม่
           </button>
           <button
             @click="loadTodos"
             :disabled="isLoading"
-            class="btn-secondary text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            class="btn-secondary text-sm inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed tap-scale touch-target"
           >
-            {{ isLoading ? 'กำลังโหลด...' : '↻ รีเฟรช' }}
+            <svg class="w-4 h-4" :class="isLoading ? 'animate-spin' : ''" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5M21 12a9 9 0 0 1-15 6.7L3 16M3 21v-5h5"/></svg>
+            {{ isLoading ? 'กำลังโหลด...' : 'รีเฟรช' }}
           </button>
         </div>
-      </header>
+      </div>
 
-      <div class="px-6 md:px-8 py-6 space-y-5">
+      <div class="space-y-5 mt-6">
         <!-- Error -->
         <div
           v-if="errorMessage"
@@ -108,16 +111,16 @@
             <div
               v-for="item in paginatedTodos"
               :key="item.id"
-              class="flex items-start gap-4 px-5 py-4 hover:bg-gray-800/30 transition-all"
+              class="flex items-start gap-4 px-5 py-4 hover:bg-gray-800/30 transition-all tap-scale"
               :class="{ 'opacity-60': item.status === 'completed' }"
             >
               <!-- Checkbox -->
               <button
                 @click="toggleStatus(item)"
-                class="mt-0.5 shrink-0 w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all"
-                :class="item.status === 'completed'
-                  ? 'bg-emerald-500 border-emerald-500 text-white'
-                  : 'border-gray-600 hover:border-violet-400'"
+                class="mt-0.5 shrink-0 w-6 h-6 rounded-md flex items-center justify-center transition-all touch-target text-white"
+                :style="item.status === 'completed'
+                  ? 'background: linear-gradient(140deg, var(--brand), var(--brand-2)); border: 1px solid transparent;'
+                  : 'border: 1.5px solid var(--border-strong);'"
               >
                 <svg v-if="item.status === 'completed'" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
@@ -142,8 +145,9 @@
                 </div>
                 <p v-if="item.description" class="text-xs text-gray-500 line-clamp-1 mb-1.5">{{ item.description }}</p>
                 <div class="flex items-center gap-3 text-xs">
-                  <span v-if="item.due_date" class="flex items-center gap-1 font-medium" :class="getDueDateColor(item)">
-                    📅 {{ formatDate(item.due_date) }}
+                  <span v-if="item.due_date" class="num flex items-center gap-1.5 font-medium" :class="getDueDateColor(item)">
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
+                    {{ formatDate(item.due_date) }}
                   </span>
                   <span
                     class="px-2 py-0.5 rounded-full text-[10px] font-medium border"
@@ -166,15 +170,22 @@
               <div class="flex items-center gap-1 shrink-0">
                 <button
                   @click="openEditModal(item)"
-                  class="w-8 h-8 rounded-lg flex items-center justify-center text-sm text-gray-400 hover:text-sky-300 hover:bg-sky-500/15 transition-all"
+                  class="w-9 h-9 rounded-lg flex items-center justify-center transition-all tap-scale touch-target"
+                  style="color: var(--text-muted);"
                   title="แก้ไข"
-                >✏️</button>
+                >
+                  <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+                </button>
                 <button
                   @click="deleteTodo(item.id)"
                   :disabled="isDeletingId === item.id"
-                  class="w-8 h-8 rounded-lg flex items-center justify-center text-sm text-gray-400 hover:text-rose-300 hover:bg-rose-500/15 disabled:opacity-50 transition-all"
+                  class="w-9 h-9 rounded-lg flex items-center justify-center disabled:opacity-50 transition-all tap-scale touch-target"
+                  style="color: var(--text-muted);"
                   title="ลบ"
-                >🗑️</button>
+                >
+                  <svg v-if="isDeletingId !== item.id" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
+                  <span v-else class="inline-block w-3.5 h-3.5 border-2 rounded-full animate-spin" style="border-color: var(--border-strong); border-top-color: var(--ink-rose);"></span>
+                </button>
               </div>
             </div>
           </div>
@@ -219,26 +230,27 @@
 
     <!-- Add/Edit Modal -->
     <Teleport to="body">
-      <div
-        v-if="isEntryModalOpen"
-        class="fixed inset-0 z-50 flex items-center justify-center p-4"
-      >
-        <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" @click="isEntryModalOpen = false"></div>
-
-        <div class="relative w-full max-w-lg rounded-2xl border border-gray-700/80 bg-gray-900 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-          <!-- Modal Header -->
-          <div class="flex items-center justify-between px-6 py-4 border-b border-gray-800/80 shrink-0">
-            <div class="flex items-center gap-3">
-              <div class="w-9 h-9 rounded-xl bg-violet-500/20 flex items-center justify-center text-base">{{ isEditing ? '✏️' : '➕' }}</div>
-              <div>
-                <h3 class="text-base font-semibold text-white">{{ isEditing ? 'แก้ไขงาน' : 'เพิ่มงานใหม่' }}</h3>
+      <Transition name="backdrop">
+        <div
+          v-if="isEntryModalOpen"
+          class="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style="background: rgba(3,5,12,0.62); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);"
+        >
+          <Transition name="modal">
+            <div v-if="isEntryModalOpen" class="relative z-10 w-full max-w-lg rounded-2xl border border-gray-700/80 bg-gray-900 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+              <!-- Modal Header -->
+              <div class="flex items-center justify-between px-6 py-4 border-b border-gray-800/80 shrink-0">
+                <div class="flex items-center gap-3">
+                  <div class="w-9 h-9 rounded-xl bg-violet-500/20 flex items-center justify-center text-base">{{ isEditing ? '✏️' : '➕' }}</div>
+                  <div>
+                    <h3 class="text-base font-semibold text-white">{{ isEditing ? 'แก้ไขงาน' : 'เพิ่มงานใหม่' }}</h3>
+                  </div>
+                </div>
+                <button
+                  @click="() => { isEntryModalOpen = false; resetForm() }"
+                  class="w-8 h-8 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white flex items-center justify-center text-sm transition-all tap-scale touch-target"
+                >✕</button>
               </div>
-            </div>
-            <button
-              @click="() => { isEntryModalOpen = false; resetForm() }"
-              class="w-8 h-8 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white flex items-center justify-center text-sm transition-all"
-            >✕</button>
-          </div>
 
           <!-- Modal Body -->
           <div class="p-6 overflow-y-auto">
@@ -303,14 +315,14 @@
                 <button
                   type="button"
                   @click="() => { isEntryModalOpen = false; resetForm() }"
-                  class="flex-1 py-2.5 rounded-xl bg-gray-800/80 hover:bg-gray-800 border border-gray-700/60 text-sm font-medium text-gray-300 hover:text-white transition-all"
+                  class="flex-1 py-2.5 rounded-xl bg-gray-800/80 hover:bg-gray-800 border border-gray-700/60 text-sm font-medium text-gray-300 hover:text-white transition-all tap-scale touch-target"
                 >
                   ยกเลิก
                 </button>
                 <button
                   type="submit"
                   :disabled="isSubmitting"
-                  class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 disabled:opacity-50 text-sm font-semibold text-white shadow-md shadow-violet-500/20 transition-all flex items-center justify-center gap-2"
+                  class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 disabled:opacity-50 text-sm font-semibold text-white shadow-md shadow-violet-500/20 transition-all flex items-center justify-center gap-2 tap-scale touch-target"
                 >
                   <span v-if="isSubmitting" class="inline-block w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
                   {{ isSubmitting ? 'กำลังบันทึก...' : 'บันทึกงาน' }}
@@ -319,7 +331,10 @@
             </form>
           </div>
         </div>
-      </div>
+          </Transition>
+          <div class="absolute inset-0 z-0 bg-black/70 backdrop-blur-sm" @click="isEntryModalOpen = false"></div>
+        </div>
+      </Transition>
     </Teleport>
   </AppTabsLayout>
 </template>
@@ -382,6 +397,7 @@ const tableMissingCodes = new Set(['42P01', 'PGRST205'])
 
 const isEditing = computed(() => Boolean(editingId.value))
 
+const totalTodosCount = computed(() => todos.value.length)
 const pendingTodos = computed(() => todos.value.filter(t => t.status !== 'completed'))
 const completedTodos = computed(() => todos.value.filter(t => t.status === 'completed'))
 const urgentTodos = computed(() => {

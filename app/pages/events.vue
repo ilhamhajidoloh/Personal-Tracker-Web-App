@@ -1,30 +1,33 @@
 <template>
   <AppTabsLayout>
-    <div class="flex-1 overflow-y-auto">
-      <!-- Page Header -->
-      <header class="sticky top-0 z-10 px-6 md:px-8 py-5 glass-header flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+    <div class="mx-auto w-full max-w-[1240px] px-4 md:px-6 py-6 md:py-8">
+      <!-- Page head -->
+      <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
-          <h1 class="text-xl font-bold text-white tracking-tight">🎉 กิจกรรมและนัดหมาย</h1>
-          <p class="text-xs mt-0.5" style="color: var(--text-muted);">บันทึกนัดหมาย วันสำคัญ และกิจกรรมต่างๆ</p>
+          <p class="eyebrow">กิจกรรม · Events</p>
+          <h1 class="text-2xl md:text-[30px] font-extrabold tracking-tight mt-1.5" style="color: var(--text-primary);">กิจกรรมและนัดหมาย</h1>
+          <p class="text-xs mt-2 text-gray-400 font-medium">กำลังจะมาถึง {{ upcomingEventsCount }} &bull; ที่ผ่านมา {{ pastEventsCount }}</p>
         </div>
         <div class="flex items-center gap-2 shrink-0">
           <button
             @click="isEntryModalOpen = true"
-            class="btn-primary text-sm flex items-center gap-1.5"
+            class="btn-primary text-sm inline-flex items-center gap-2 tap-scale touch-target"
           >
-            <span>+</span> เพิ่มกิจกรรม
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+            เพิ่มกิจกรรม
           </button>
           <button
             @click="loadEvents"
             :disabled="isLoading"
-            class="btn-secondary text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            class="btn-secondary text-sm inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed tap-scale touch-target"
           >
-            {{ isLoading ? 'กำลังโหลด...' : '↻ รีเฟรช' }}
+            <svg class="w-4 h-4" :class="isLoading ? 'animate-spin' : ''" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5M21 12a9 9 0 0 1-15 6.7L3 16M3 21v-5h5"/></svg>
+            {{ isLoading ? 'กำลังโหลด...' : 'รีเฟรช' }}
           </button>
         </div>
-      </header>
+      </div>
 
-      <div class="px-6 md:px-8 py-6 space-y-5">
+      <div class="space-y-5 mt-6">
         <!-- Error -->
         <div
           v-if="errorMessage"
@@ -66,74 +69,81 @@
             <p class="text-sm text-gray-500 mt-1">กดปุ่มด้านบนเพื่อเพิ่มกิจกรรมแรก</p>
             <button
               @click="isEntryModalOpen = true"
-              class="mt-4 px-4 py-2 rounded-xl bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/30 text-sm font-medium text-violet-300 transition-all"
+              class="mt-4 px-4 py-2 rounded-xl bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/30 text-sm font-medium text-violet-300 transition-all tap-scale touch-target"
             >
               + เพิ่มกิจกรรม
             </button>
           </div>
 
-          <!-- Event List -->
-          <div v-else class="divide-y divide-gray-800/50">
+          <!-- Event cards -->
+          <div v-else class="p-4 grid grid-cols-1 md:grid-cols-2 gap-3">
             <div
               v-for="item in paginatedEvents"
               :key="item.id"
-              class="flex items-start gap-4 px-5 py-4 hover:bg-gray-800/20 transition-all"
-              :class="getEventRowHoverClass(item)"
+              class="relative rounded-[10px] overflow-hidden p-4 pl-5 tap-scale transition-all"
+              style="background: var(--bg-card); border: 1px solid var(--border-subtle); box-shadow: var(--shadow-sm);"
             >
-              <!-- Date badge -->
-              <div
-                class="shrink-0 w-14 text-center rounded-xl py-2.5 border mt-0.5"
-                :style="getEventDateBadgeStyle(item)"
-              >
-                <div class="text-[10px] font-bold uppercase leading-none" :style="getEventStatusTextStyle(item)">{{ getMonthShort(item.start_date) }}</div>
-                <div class="text-xl font-bold leading-tight mt-0.5" style="color: var(--text-primary);">{{ getDay(item.start_date) }}</div>
+              <!-- Status stripe -->
+              <span class="absolute left-0 top-0 bottom-0 w-1" :style="{ background: getEventStatusTextStyle(item).color }"></span>
+
+              <!-- Top: badges + date -->
+              <div class="flex items-start justify-between gap-2">
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  <span
+                    class="text-[10px] px-2 py-0.5 rounded-md border font-semibold uppercase tracking-wide whitespace-nowrap"
+                    :style="getEventStatusBadgeStyle(item)"
+                  >{{ getEventStatusText(item) }}</span>
+                  <span
+                    class="text-[10px] px-2 py-0.5 rounded-md border font-semibold whitespace-nowrap"
+                    :class="getEventBadgeClass(item.event_type)"
+                  >{{ getEventTypeName(item.event_type) }}</span>
+                </div>
+                <div class="shrink-0 text-center rounded-lg px-2.5 py-1.5 border" :style="getEventDateBadgeStyle(item)">
+                  <div class="num text-[9px] font-bold uppercase leading-none" :style="getEventStatusTextStyle(item)">{{ getMonthShort(item.start_date) }}</div>
+                  <div class="num text-lg font-bold leading-none mt-0.5" style="color: var(--text-primary);">{{ getDay(item.start_date) }}</div>
+                </div>
               </div>
 
-              <!-- Content -->
-              <div class="flex-1 min-w-0">
-                <div class="flex items-center gap-2 flex-wrap mb-1">
-                  <h3 class="text-sm font-semibold truncate" style="color: var(--text-primary);">{{ item.title }}</h3>
-                  <span
-                    class="text-[10px] px-2 py-0.5 rounded-full border font-semibold whitespace-nowrap"
-                    :class="getEventBadgeClass(item.event_type)"
-                  >
-                    {{ getEventTypeName(item.event_type) }}
-                  </span>
-                  <span
-                    class="text-[10px] px-2 py-0.5 rounded-full border font-semibold whitespace-nowrap"
-                    :style="getEventStatusBadgeStyle(item)"
-                  >
-                    {{ getEventStatusText(item) }}
-                  </span>
-                </div>
-                <p class="text-xs font-medium" :style="getEventStatusTextStyle(item)">{{ displayEventDateTime(item) }}</p>
-                <p v-if="item.reminder_minutes" class="text-[10px] text-amber-400 mt-1">🔔 เตือนก่อน {{ getReminderLabel(item.reminder_minutes) }}</p>
-                <p v-if="item.google_event_id" class="text-[10px] text-sky-400 mt-1">📅 ซิงก์กับ Google Calendar แล้ว</p>
-                <p v-if="item.description" class="text-xs text-gray-500 mt-1.5 line-clamp-1">{{ item.description }}</p>
+              <!-- Title + datetime -->
+              <h3 class="text-[15px] font-semibold mt-2.5 line-clamp-2" style="color: var(--text-primary);">{{ item.title }}</h3>
+              <p class="num text-[11px] mt-1.5 font-medium" :style="getEventStatusTextStyle(item)">{{ displayEventDateTime(item) }}</p>
+
+              <div v-if="item.reminder_minutes || item.google_event_id" class="flex flex-wrap gap-x-3 gap-y-1 mt-2">
+                <span v-if="item.reminder_minutes" class="num text-[10px]" style="color: var(--event-status-soon-ink);">⏰ เตือนก่อน {{ getReminderLabel(item.reminder_minutes) }}</span>
+                <span v-if="item.google_event_id" class="num text-[10px]" style="color: var(--ink-sky);">ซิงก์ Google แล้ว</span>
               </div>
+              <p v-if="item.description" class="text-xs mt-1.5 line-clamp-2" style="color: var(--text-muted);">{{ item.description }}</p>
 
               <!-- Actions -->
-              <div class="flex items-center gap-1 shrink-0">
+              <div class="flex items-center gap-1 mt-3 pt-3" style="border-top: 1px solid var(--border-subtle);">
                 <button
                   @click="syncSingleEvent(item.id)"
                   :disabled="isSyncingId === item.id || isDeletingId === item.id"
-                  class="w-8 h-8 rounded-lg flex items-center justify-center text-sm text-gray-400 hover:text-emerald-300 hover:bg-emerald-500/15 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  class="w-9 h-9 rounded-lg flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed transition-all tap-scale touch-target"
+                  style="color: var(--ink-emerald);"
                   :title="item.google_event_id ? 'ซิงค์ซ้ำเพื่ออัปเดต Google Calendar' : 'ซิงค์ไปยัง Google Calendar'"
                 >
-                  <span v-if="isSyncingId === item.id" class="w-3.5 h-3.5 border-2 border-emerald-400/30 border-t-emerald-400 rounded-full animate-spin"></span>
-                  <span v-else>🔄</span>
+                  <span v-if="isSyncingId === item.id" class="w-3.5 h-3.5 border-2 rounded-full animate-spin" style="border-color: var(--border-strong); border-top-color: var(--ink-emerald);"></span>
+                  <svg v-else class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5M21 12a9 9 0 0 1-15 6.7L3 16M3 21v-5h5"/></svg>
                 </button>
                 <button
                   @click="openEditModal(item)"
-                  class="w-8 h-8 rounded-lg flex items-center justify-center text-sm text-gray-400 hover:text-sky-300 hover:bg-sky-500/15 transition-all"
+                  class="w-9 h-9 rounded-lg flex items-center justify-center transition-all tap-scale touch-target"
+                  style="color: var(--ink-sky);"
                   title="แก้ไข"
-                >✏️</button>
+                >
+                  <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+                </button>
                 <button
                   @click="deleteEvent(item.id)"
                   :disabled="isDeletingId === item.id || isSyncingId === item.id"
-                  class="w-8 h-8 rounded-lg flex items-center justify-center text-sm text-gray-400 hover:text-rose-300 hover:bg-rose-500/15 disabled:opacity-50 transition-all"
+                  class="w-9 h-9 rounded-lg flex items-center justify-center disabled:opacity-50 transition-all tap-scale touch-target ml-auto"
+                  style="color: var(--ink-rose);"
                   title="ลบ"
-                >🗑️</button>
+                >
+                  <svg v-if="isDeletingId !== item.id" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
+                  <span v-else class="inline-block w-3.5 h-3.5 border-2 rounded-full animate-spin" style="border-color: var(--border-strong); border-top-color: var(--ink-rose);"></span>
+                </button>
               </div>
             </div>
           </div>
@@ -143,7 +153,7 @@
             <button
               @click="eventCurrentPage = Math.max(1, eventCurrentPage - 1)"
               :disabled="eventCurrentPage === 1"
-              class="px-3 py-2 rounded-lg text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              class="px-3 py-2 rounded-lg text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed tap-scale touch-target"
               style="background: var(--bg-elevated); border: 1px solid var(--border-default); color: var(--text-secondary);"
               :style="eventCurrentPage === 1 ? {} : { 'cursor': 'pointer', 'color': 'var(--text-primary)' }"
             >
@@ -154,7 +164,7 @@
                 v-for="page in eventTotalPages"
                 :key="page"
                 @click="eventCurrentPage = page"
-                class="w-9 h-9 rounded-lg text-sm font-medium transition-all"
+                class="w-9 h-9 rounded-lg text-sm font-medium transition-all tap-scale touch-target"
                 :style="eventCurrentPage === page
                   ? { 'background': 'var(--brand)', 'color': 'white', 'border': '1px solid var(--brand)' }
                   : { 'background': 'var(--bg-elevated)', 'border': '1px solid var(--border-default)', 'color': 'var(--text-secondary)' }"
@@ -165,7 +175,7 @@
             <button
               @click="eventCurrentPage = Math.min(eventTotalPages, eventCurrentPage + 1)"
               :disabled="eventCurrentPage === eventTotalPages"
-              class="px-3 py-2 rounded-lg text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              class="px-3 py-2 rounded-lg text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed tap-scale touch-target"
               style="background: var(--bg-elevated); border: 1px solid var(--border-default); color: var(--text-secondary);"
               :style="eventCurrentPage === eventTotalPages ? {} : { 'cursor': 'pointer', 'color': 'var(--text-primary)' }"
             >
@@ -178,13 +188,14 @@
 
     <!-- Modal -->
     <Teleport to="body">
-      <div
-        v-if="isEntryModalOpen"
-        class="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-hidden"
-      >
-        <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" @click="isEntryModalOpen = false"></div>
-
-        <div class="relative w-full max-w-lg rounded-2xl border border-gray-700/80 bg-gray-900 shadow-2xl flex flex-col max-h-[90vh]">
+      <Transition name="backdrop">
+        <div
+          v-if="isEntryModalOpen"
+          class="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-hidden"
+          style="background: rgba(3,5,12,0.62); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);"
+        >
+          <Transition name="modal">
+            <div v-if="isEntryModalOpen" class="relative z-10 w-full max-w-lg rounded-2xl border border-gray-700/80 bg-gray-900 shadow-2xl flex flex-col max-h-[90vh]">
           <!-- Modal Header -->
           <div class="flex items-center justify-between px-6 py-4 border-b border-gray-800/80 shrink-0">
             <div class="flex items-center gap-3">
@@ -193,7 +204,7 @@
             </div>
             <button
               @click="() => { isEntryModalOpen = false; resetForm() }"
-              class="w-8 h-8 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white flex items-center justify-center text-sm transition-all"
+              class="w-8 h-8 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white flex items-center justify-center text-sm transition-all tap-scale touch-target"
             >✕</button>
           </div>
 
@@ -311,12 +322,12 @@
                 <button
                   type="button"
                   @click="() => { isEntryModalOpen = false; resetForm() }"
-                  class="flex-1 py-2.5 rounded-xl bg-gray-800/80 hover:bg-gray-800 border border-gray-700/60 text-sm font-medium text-gray-300 hover:text-white transition-all"
+                  class="flex-1 py-2.5 rounded-xl bg-gray-800/80 hover:bg-gray-800 border border-gray-700/60 text-sm font-medium text-gray-300 hover:text-white transition-all tap-scale touch-target"
                 >ยกเลิก</button>
                 <button
                   type="submit"
                   :disabled="isSubmitting"
-                  class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 disabled:opacity-50 text-sm font-semibold text-white shadow-md shadow-violet-500/20 transition-all flex items-center justify-center gap-2"
+                  class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 disabled:opacity-50 text-sm font-semibold text-white shadow-md shadow-violet-500/20 transition-all flex items-center justify-center gap-2 tap-scale touch-target"
                 >
                   <span v-if="isSubmitting" class="inline-block w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
                   {{ isSubmitting ? 'กำลังบันทึก...' : 'บันทึกกิจกรรม' }}
@@ -325,7 +336,10 @@
             </form>
           </div>
         </div>
-      </div>
+          </Transition>
+          <div class="absolute inset-0 z-0 bg-black/70 backdrop-blur-sm" @click="isEntryModalOpen = false"></div>
+        </div>
+      </Transition>
     </Teleport>
   </AppTabsLayout>
 </template>
@@ -423,6 +437,22 @@ const activeReminderOptions = computed(() =>
 )
 
 const isEditing = computed(() => Boolean(editingId.value))
+
+const upcomingEventsCount = computed(() => {
+  const nowMs = currentTime.value.getTime()
+  return events.value.filter(item => {
+    const { endMs } = getEventDateTimeBounds(item)
+    return endMs >= nowMs
+  }).length
+})
+
+const pastEventsCount = computed(() => {
+  const nowMs = currentTime.value.getTime()
+  return events.value.filter(item => {
+    const { endMs } = getEventDateTimeBounds(item)
+    return endMs < nowMs
+  }).length
+})
 
 const eventTotalPages = computed(() => Math.ceil(events.value.length / eventItemsPerPage.value))
 const paginatedEvents = computed(() => {
