@@ -48,117 +48,182 @@
           </div>
 
           <!-- Timeline Grid -->
-          <div v-else class="overflow-x-auto">
-            <div class="min-w-[850px] w-full flex flex-col" style="background: var(--bg-card);">
-              
-              <!-- Grid Header Row -->
-              <div 
-                class="grid border-b" 
-                :style="{ 
-                  gridTemplateColumns: `80px repeat(${gridDays.length}, 1fr)`,
-                  borderColor: 'var(--border-subtle)',
-                  background: 'var(--bg-elevated)'
-                }"
-              >
-                <div class="py-3 px-3 text-center text-xs font-semibold select-none border-r" style="border-color: var(--border-subtle); color: var(--text-secondary);">เวลา</div>
-                <div 
-                  v-for="day in gridDays" 
-                  :key="day.value" 
-                  class="py-3 px-3 text-center text-xs font-semibold select-none border-r last:border-r-0"
-                  :style="{ 
-                    color: day.value === todayWeekday ? 'var(--brand-ink)' : 'var(--text-secondary)',
-                    borderColor: 'var(--border-subtle)'
-                  }"
+          <div v-else>
+            <!-- Mobile View (md:hidden) -->
+            <div class="block md:hidden">
+              <!-- Day tabs selector -->
+              <div class="flex items-center gap-1.5 px-3 py-2.5 border-b overflow-x-auto" style="border-color: var(--border-subtle); background: var(--bg-elevated); scrollbar-width: none;">
+                <button
+                  v-for="day in gridDays"
+                  :key="day.value"
+                  type="button"
+                  @click="selectedMobileDay = day.value"
+                  class="flex-1 min-w-[54px] py-2 rounded-xl flex flex-col items-center gap-0.5 transition-all tap-scale touch-target"
+                  :style="selectedMobileDay === day.value
+                    ? { background: 'var(--brand)', color: 'white', boxShadow: 'var(--brand-glow)' }
+                    : { background: 'var(--bg-hover)', color: 'var(--text-secondary)' }"
                 >
-                  {{ day.value === 4 ? 'พฤหัส' : day.label }}
-                </div>
+                  <span class="text-[10px] font-medium opacity-85">{{ getDayLabelAbbr(day.value) }}</span>
+                  <span class="text-xs font-bold">{{ day.value === todayWeekday ? 'วันนี้' : (day.value === 4 ? 'พฤหัส' : day.label) }}</span>
+                </button>
               </div>
 
-              <!-- Grid Body Container -->
-              <div class="relative w-full" :style="{ height: `${totalHours * hourHeight}px` }">
-                <div class="grid h-full" :style="{ gridTemplateColumns: `80px repeat(${gridDays.length}, 1fr)` }">
-                  
-                  <!-- Time Column -->
-                  <div class="relative h-full border-r" style="border-color: var(--border-subtle);">
-                    <div 
-                      v-for="(hour, idx) in timelineHours" 
-                      :key="hour" 
-                      class="absolute left-0 right-0 num text-right pr-4 text-[11px] select-none flex items-center justify-end border-b"
-                      :style="{ 
-                        top: `${idx * hourHeight}px`, 
-                        height: `${hourHeight}px`,
-                        borderColor: 'var(--border-subtle)',
-                        background: 'var(--bg-elevated)',
-                        color: 'var(--text-muted)'
-                      }"
-                    >
-                      {{ formatHour(hour) }}
-                    </div>
-                  </div>
+              <!-- Class Cards for Selected Day -->
+              <div class="p-4 space-y-3">
+                <div v-if="!getSchedulesForDay(selectedMobileDay).length" class="flex flex-col items-center justify-center py-10 text-center">
+                  <div class="w-11 h-11 rounded-full flex items-center justify-center text-lg mb-2" style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);">🌴</div>
+                  <p class="text-xs font-semibold" style="color: var(--text-secondary);">ไม่มีเรียนในวันนี้</p>
+                  <p class="text-[11px]" style="color: var(--text-muted);">พักผ่อนให้เต็มที่ หรือทำงานที่ค้างไว้!</p>
+                </div>
 
-                  <!-- Day Columns -->
-                  <div 
-                    v-for="day in gridDays" 
-                    :key="day.value" 
-                    class="relative h-full border-r last:border-r-0" 
-                    :style="{ 
-                      borderColor: 'var(--border-subtle)',
-                      background: day.value === todayWeekday ? 'var(--brand-soft)' : 'transparent'
-                    }"
-                  >
-                    <!-- Background slots -->
-                    <div 
-                      v-for="idx in totalHours" 
-                      :key="idx" 
-                      class="absolute left-0 right-0 border-b"
-                      :style="{ 
-                        top: `${(idx - 1) * hourHeight}px`, 
-                        height: `${hourHeight}px`,
-                        borderColor: 'var(--border-subtle)'
-                      }"
-                    ></div>
-
-                    <!-- Absolute Course Cards -->
-                    <div
-                      v-for="item in getPositionedSchedulesForDay(day.value)"
-                      :key="item.id"
-                      class="absolute transition-all duration-200 group cursor-pointer hover:z-20 p-[3px]"
-                      :style="{
-                        top: `${item.top}%`,
-                        height: `${item.height}%`,
-                        left: `${item.left}%`,
-                        width: `${item.width}%`,
-                      }"
-                      @click="openEditScheduleModal(item)"
-                    >
-                      <div 
-                        class="course-card-inner w-full h-full rounded-xl p-3 flex flex-col justify-between border select-none transition-all duration-200"
-                        :style="{
-                          background: 'color-mix(in srgb, ' + courseTint(item.course_name) + ' 10%, transparent)',
-                          borderColor: 'color-mix(in srgb, ' + courseTint(item.course_name) + ' 25%, transparent)',
-                          '--hover-bg': 'color-mix(in srgb, ' + courseTint(item.course_name) + ' 16%, transparent)',
-                          '--hover-border': 'color-mix(in srgb, ' + courseTint(item.course_name) + ' 45%, transparent)',
-                        }"
-                      >
-                        <div>
-                          <p class="text-[12.5px] font-bold leading-tight" :style="{ color: courseInk(item.course_name) }">
-                            {{ item.course_name }}
-                          </p>
-                          <p v-if="item.location" class="num text-[10px] mt-1.5 font-semibold" :style="{ color: courseInk(item.course_name), opacity: 0.8 }">
-                            {{ item.location }}
-                          </p>
-                        </div>
-                        <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 num text-[9px] font-semibold self-end" :style="{ color: courseInk(item.course_name), opacity: 0.6 }">
-                          {{ formatTimeRange(item.start_time, item.end_time) }}
+                <div
+                  v-else
+                  v-for="item in getSchedulesForDay(selectedMobileDay)"
+                  :key="item.id"
+                  @click="openEditScheduleModal(item)"
+                  class="relative rounded-xl overflow-hidden p-4 border tap-scale cursor-pointer transition-all duration-200"
+                  :style="{
+                    background: 'color-mix(in srgb, ' + courseTint(item.course_name) + ' 7%, var(--bg-card))',
+                    borderColor: 'color-mix(in srgb, ' + courseTint(item.course_name) + ' 25%, var(--border-subtle))',
+                  }"
+                >
+                  <span class="absolute left-0 top-0 bottom-0 w-1" :style="{ background: courseTint(item.course_name) }"></span>
+                  <div class="flex items-start justify-between gap-2">
+                    <div>
+                      <h3 class="text-[14px] font-bold" :style="{ color: courseInk(item.course_name) }">{{ item.course_name }}</h3>
+                      <div class="flex items-center gap-3 mt-2 flex-wrap">
+                        <span class="num text-[11px] font-semibold flex items-center gap-1" style="color: var(--text-secondary);">
+                          🕒 {{ formatTimeRange(item.start_time, item.end_time) }}
+                        </span>
+                        <span v-if="item.location" class="num text-[11px] font-semibold flex items-center gap-1" style="color: var(--text-muted);">
+                          📍 {{ item.location }}
                         </span>
                       </div>
                     </div>
-
+                    <span class="text-[10px] px-2 py-0.5 rounded border font-semibold" :style="{ color: courseInk(item.course_name), borderColor: 'color-mix(in srgb, ' + courseTint(item.course_name) + ' 35%, transparent)' }">
+                      แก้ไข
+                    </span>
                   </div>
-
+                  <p v-if="item.note" class="text-[11.5px] mt-2.5 pt-2 border-t border-dashed" :style="{ color: 'var(--text-muted)', borderColor: 'color-mix(in srgb, ' + courseTint(item.course_name) + ' 20%, transparent)' }">
+                    📝 {{ item.note }}
+                  </p>
                 </div>
               </div>
+            </div>
 
+            <!-- Desktop View (hidden md:block) -->
+            <div class="hidden md:block overflow-x-auto">
+              <div class="min-w-[850px] w-full flex flex-col" style="background: var(--bg-card);">
+                
+                <!-- Grid Header Row -->
+                <div 
+                  class="grid border-b" 
+                  :style="{ 
+                    gridTemplateColumns: `80px repeat(${gridDays.length}, 1fr)`,
+                    borderColor: 'var(--border-subtle)',
+                    background: 'var(--bg-elevated)'
+                  }"
+                >
+                  <div class="py-3 px-3 text-center text-xs font-semibold select-none border-r" style="border-color: var(--border-subtle); color: var(--text-secondary);">เวลา</div>
+                  <div 
+                    v-for="day in gridDays" 
+                    :key="day.value" 
+                    class="py-3 px-3 text-center text-xs font-semibold select-none border-r last:border-r-0"
+                    :style="{ 
+                      color: day.value === todayWeekday ? 'var(--brand-ink)' : 'var(--text-secondary)',
+                      borderColor: 'var(--border-subtle)'
+                    }"
+                  >
+                    {{ day.value === 4 ? 'พฤหัส' : day.label }}
+                  </div>
+                </div>
+
+                <!-- Grid Body Container -->
+                <div class="relative w-full" :style="{ height: `${totalHours * hourHeight}px` }">
+                  <div class="grid h-full" :style="{ gridTemplateColumns: `80px repeat(${gridDays.length}, 1fr)` }">
+                    
+                    <!-- Time Column -->
+                    <div class="relative h-full border-r" style="border-color: var(--border-subtle);">
+                      <div 
+                        v-for="(hour, idx) in timelineHours" 
+                        :key="hour" 
+                        class="absolute left-0 right-0 num text-right pr-4 text-[11px] select-none flex items-center justify-end border-b"
+                        :style="{ 
+                          top: `${idx * hourHeight}px`, 
+                          height: `${hourHeight}px`,
+                          borderColor: 'var(--border-subtle)',
+                          background: 'var(--bg-elevated)',
+                          color: 'var(--text-muted)'
+                        }"
+                      >
+                        {{ formatHour(hour) }}
+                      </div>
+                    </div>
+
+                    <!-- Day Columns -->
+                    <div 
+                      v-for="day in gridDays" 
+                      :key="day.value" 
+                      class="relative h-full border-r last:border-r-0" 
+                      :style="{ 
+                        borderColor: 'var(--border-subtle)',
+                        background: day.value === todayWeekday ? 'var(--brand-soft)' : 'transparent'
+                      }"
+                    >
+                      <!-- Background slots -->
+                      <div 
+                        v-for="idx in totalHours" 
+                        :key="idx" 
+                        class="absolute left-0 right-0 border-b"
+                        :style="{ 
+                          top: `${(idx - 1) * hourHeight}px`, 
+                          height: `${hourHeight}px`,
+                          borderColor: 'var(--border-subtle)'
+                        }"
+                      ></div>
+
+                      <!-- Absolute Course Cards -->
+                      <div
+                        v-for="item in getPositionedSchedulesForDay(day.value)"
+                        :key="item.id"
+                        class="absolute transition-all duration-200 group cursor-pointer hover:z-20 p-[3px]"
+                        :style="{
+                          top: `${item.top}%`,
+                          height: `${item.height}%`,
+                          left: `${item.left}%`,
+                          width: `${item.width}%`,
+                        }"
+                        @click="openEditScheduleModal(item)"
+                      >
+                        <div 
+                          class="course-card-inner w-full h-full rounded-xl p-3 flex flex-col justify-between border select-none transition-all duration-200"
+                          :style="{
+                            background: 'color-mix(in srgb, ' + courseTint(item.course_name) + ' 10%, transparent)',
+                            borderColor: 'color-mix(in srgb, ' + courseTint(item.course_name) + ' 25%, transparent)',
+                            '--hover-bg': 'color-mix(in srgb, ' + courseTint(item.course_name) + ' 16%, transparent)',
+                            '--hover-border': 'color-mix(in srgb, ' + courseTint(item.course_name) + ' 45%, transparent)',
+                          }"
+                        >
+                          <div>
+                            <p class="text-[12.5px] font-bold leading-tight" :style="{ color: courseInk(item.course_name) }">
+                              {{ item.course_name }}
+                            </p>
+                            <p v-if="item.location" class="num text-[10px] mt-1.5 font-semibold" :style="{ color: courseInk(item.course_name), opacity: 0.8 }">
+                              {{ item.location }}
+                            </p>
+                          </div>
+                          <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 num text-[9px] font-semibold self-end" :style="{ color: courseInk(item.course_name), opacity: 0.6 }">
+                            {{ formatTimeRange(item.start_time, item.end_time) }}
+                          </span>
+                        </div>
+                      </div>
+
+                    </div>
+
+                  </div>
+                </div>
+
+              </div>
             </div>
           </div>
         </section>
@@ -627,6 +692,19 @@ const todayWeekday = computed(() => {
   const day = currentTime.value.getDay()
   return day === 0 ? 7 : day
 })
+
+const selectedMobileDay = ref<number>(todayWeekday.value)
+
+const getDayLabelAbbr = (dayValue: number) => {
+  const abbrMap: Record<number, string> = {
+    1: 'จ.', 2: 'อ.', 3: 'พ.', 4: 'พฤ.', 5: 'ศ.', 6: 'ส.', 7: 'อา.'
+  }
+  return abbrMap[dayValue] || ''
+}
+
+const getSchedulesForDay = (dayValue: number) => {
+  return sortedSchedules.value.filter(item => item.day_of_week === dayValue)
+}
 
 const sortedSchedules = computed(() => [...schedules.value].sort((a, b) => {
   if (a.day_of_week !== b.day_of_week) return a.day_of_week - b.day_of_week
