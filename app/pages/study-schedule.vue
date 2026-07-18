@@ -12,8 +12,7 @@
           <button
             type="button"
             @click="openCreateScheduleModal"
-            class="text-sm inline-flex items-center gap-2 tap-scale touch-target px-4 py-2.5 rounded-xl font-semibold text-white shadow-lg transition-all"
-            style="background: linear-gradient(135deg, #6366f1, #8b5cf6); box-shadow: 0 4px 14px rgba(99, 102, 241, 0.5); border: 1px solid rgba(255,255,255,0.1);"
+            class="btn-primary text-sm inline-flex items-center gap-2 tap-scale touch-target"
           >
             <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
             เพิ่มคาบเรียน
@@ -50,25 +49,25 @@
 
           <!-- Timeline Grid -->
           <div v-else class="overflow-x-auto">
-            <div class="min-w-[850px] w-full flex flex-col" style="background: #111322;">
+            <div class="min-w-[850px] w-full flex flex-col" style="background: var(--bg-card);">
               
               <!-- Grid Header Row -->
               <div 
                 class="grid border-b" 
                 :style="{ 
                   gridTemplateColumns: `80px repeat(${gridDays.length}, 1fr)`,
-                  borderColor: '#1d2033',
-                  background: '#151726'
+                  borderColor: 'var(--border-subtle)',
+                  background: 'var(--bg-elevated)'
                 }"
               >
-                <div class="py-3 px-3 text-center text-xs font-semibold select-none border-r text-gray-400" style="border-color: #1d2033;">เวลา</div>
+                <div class="py-3 px-3 text-center text-xs font-semibold select-none border-r" style="border-color: var(--border-subtle); color: var(--text-secondary);">เวลา</div>
                 <div 
                   v-for="day in gridDays" 
                   :key="day.value" 
                   class="py-3 px-3 text-center text-xs font-semibold select-none border-r last:border-r-0"
                   :style="{ 
                     color: day.value === todayWeekday ? 'var(--brand-ink)' : 'var(--text-secondary)',
-                    borderColor: '#1d2033'
+                    borderColor: 'var(--border-subtle)'
                   }"
                 >
                   {{ day.value === 4 ? 'พฤหัส' : day.label }}
@@ -80,7 +79,7 @@
                 <div class="grid h-full" :style="{ gridTemplateColumns: `80px repeat(${gridDays.length}, 1fr)` }">
                   
                   <!-- Time Column -->
-                  <div class="relative h-full border-r" style="border-color: #1d2033;">
+                  <div class="relative h-full border-r" style="border-color: var(--border-subtle);">
                     <div 
                       v-for="(hour, idx) in timelineHours" 
                       :key="hour" 
@@ -88,8 +87,9 @@
                       :style="{ 
                         top: `${idx * hourHeight}px`, 
                         height: `${hourHeight}px`,
-                        borderColor: '#1d2033',
-                        background: '#151726'
+                        borderColor: 'var(--border-subtle)',
+                        background: 'var(--bg-elevated)',
+                        color: 'var(--text-muted)'
                       }"
                     >
                       {{ formatHour(hour) }}
@@ -102,8 +102,8 @@
                     :key="day.value" 
                     class="relative h-full border-r last:border-r-0" 
                     :style="{ 
-                      borderColor: '#1d2033',
-                      background: day.value === todayWeekday ? 'rgba(99, 102, 241, 0.03)' : 'transparent'
+                      borderColor: 'var(--border-subtle)',
+                      background: day.value === todayWeekday ? 'var(--brand-soft)' : 'transparent'
                     }"
                   >
                     <!-- Background slots -->
@@ -114,7 +114,7 @@
                       :style="{ 
                         top: `${(idx - 1) * hourHeight}px`, 
                         height: `${hourHeight}px`,
-                        borderColor: '#1d2033'
+                        borderColor: 'var(--border-subtle)'
                       }"
                     ></div>
 
@@ -378,7 +378,7 @@
               <button
                 type="submit"
                 :disabled="isSubmitting"
-                class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-semibold text-white shadow-md shadow-violet-500/20 transition-all flex items-center justify-center gap-2 tap-scale touch-target"
+                class="flex-1 btn-primary py-2.5 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed text-sm font-semibold flex items-center justify-center gap-2 tap-scale touch-target"
               >
                 <span v-if="isSubmitting" class="inline-block w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
                 {{ submitButtonText }}
