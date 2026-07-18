@@ -58,6 +58,27 @@
                 </div>
               </div>
 
+              <!-- Time Range Selector -->
+              <div class="flex items-center justify-end gap-1.5 mt-4 pt-1.5 border-t" style="border-color: var(--border-subtle);">
+                <span class="text-[11px] font-medium mr-auto" style="color: var(--text-muted);">ช่วงเวลา:</span>
+                <button
+                  v-for="range in [
+                    { value: '7d', label: '7 วัน' },
+                    { value: '30d', label: '30 วัน' },
+                    { value: 'this_month', label: 'เดือนนี้' },
+                    { value: 'all', label: 'ทั้งหมด' }
+                  ]"
+                  :key="range.value"
+                  @click="selectedChartRange = range.value as any"
+                  class="text-[11px] font-bold px-2.5 py-1 rounded-lg transition-all tap-scale touch-target"
+                  :style="selectedChartRange === range.value
+                    ? 'background: var(--brand); color: white; box-shadow: var(--brand-glow);'
+                    : 'background: var(--bg-hover); color: var(--text-secondary);'"
+                >
+                  {{ range.label }}
+                </button>
+              </div>
+
               <!-- Cumulative balance trend chart -->
               <div class="mt-5 -mx-1.5 relative">
                 <!-- Y-Axis Labels inside the container -->
@@ -581,74 +602,131 @@ const latestTransactionSubtitle = computed(() => {
 
 const recentTransactions = computed(() => transactions.value.slice(0, 5))
 
-// Cumulative balance series (chronological) used for the dashboard trend chart
-const balanceSeries = computed<number[]>(() => {
-  const sorted = [...transactions.value].sort((a, b) => {
-    if (a.entry_date !== b.entry_date) return a.entry_date.localeCompare(b.entry_date)
-    return (a.created_at || '').localeCompare(b.created_at || '')
-  })
-  let running = 0
-  const points: number[] = []
-  for (const item of sorted) {
-    running += item.type === 'income' ? item.amount : -item.amount
-    points.push(running)
-  }
-  return points
-})
+const selectedChartRange = ref<'7d' | '30d' | 'this_month' | 'all'>('30d')
 
 const chartGeom = computed(() => {
   const w = 600
   const h = 150
   const pad = 12
-  let points = balanceSeries.value
-  if (points.length === 1) points = [0, points[0]!]
-  if (points.length < 2) return { line: '', area: '', dotX: 0, dotY: 0, empty: true, min: 0, max: 0, minFormatted: '฿0.00', maxFormatted: '฿0.00', lastFormatted: '฿0.00', startDate: '', endDate: '' }
-  
-  const sorted = [...transactions.value].sort((a, b) => {
+
+  if (!transactions.value.length) {
+    return { line: '', area: '', dotX: 0, dotY: 0, empty: true, min: 0, max: 0, minFormatted: '฿0.00', maxFormatted: '฿0.00', lastFormatted: '฿0.00', startDate: '', endDate: '' }
+  }
+
+  // 1. Sort all transactions chronologically
+  const sortedAll = [...transactions.value].sort((a, b) => {
     if (a.entry_date !== b.entry_date) return a.entry_date.localeCompare(b.entry_date)
     return (a.created_at || '').localeCompare(b.created_at || '')
   })
-  
+
+  // 2. Determine date thresholds
+  const today = getTodayTH()
+  let limitStr: string | null = null
+  const now = nowTH()
+
+  // Helper to format YYYY-MM-DD
+  function formatYYYYMMDD(d: Date): string {
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, '0')
+    const date = String(d.getDate()).padStart(2, '0')
+    return `${y}-${m}-${date}`
+  }
+
+  if (selectedChartRange.value === '7d') {
+    const d = new Date(now.getTime())
+    d.setDate(d.getDate() - 6) // Last 7 days including today
+    limitStr = formatYYYYMMDD(d)
+  } else if (selectedChartRange.value === '30d') {
+    const d = new Date(now.getTime())
+    d.setDate(d.getDate() - 29) // Last 30 days including today
+    limitStr = formatYYYYMMDD(d)
+  } else if (selectedChartRange.value === 'this_month') {
+    limitStr = `${formatYYYYMMDD(now).slice(0, 8)}01` // First day of this month
+  }
+
+  // 3. Compute cumulative series and filter
+  let running = 0
+  let balanceBeforeLimit = 0
+  const rangePoints: { date: string; balance: number }[] = []
+
+  for (const tx of sortedAll) {
+    running += tx.type === 'income' ? tx.amount : -tx.amount
+    if (limitStr && tx.entry_date < limitStr) {
+      balanceBeforeLimit = running
+    } else {
+      rangePoints.push({ date: tx.entry_date, balance: running })
+    }
+  }
+
+  // 4. Construct final chart series points
+  let finalPoints: { date: string; balance: number }[] = []
+  if (limitStr) {
+    // Prepend starting point at the limit date with the balance just before it
+    finalPoints.push({ date: limitStr, balance: balanceBeforeLimit })
+    finalPoints.push(...rangePoints)
+
+    // If only the starting point exists, add today as the end point
+    if (finalPoints.length === 1) {
+      finalPoints.push({ date: today, balance: balanceBeforeLimit })
+    }
+  } else {
+    finalPoints = rangePoints
+  }
+
+  if (finalPoints.length === 1) {
+    finalPoints = [{ date: finalPoints[0]!.date, balance: 0 }, { date: finalPoints[0]!.date, balance: finalPoints[0]!.balance }]
+  }
+
+  if (finalPoints.length < 2) {
+    return { line: '', area: '', dotX: 0, dotY: 0, empty: true, min: 0, max: 0, minFormatted: '฿0.00', maxFormatted: '฿0.00', lastFormatted: '฿0.00', startDate: '', endDate: '' }
+  }
+
+  // 5. Convert to coordinates and path
+  let values = finalPoints.map(p => p.balance)
+  const min = Math.min(...values)
+  const max = Math.max(...values)
+  const span = (max - min) || 1
+
   const formatDateShort = (dateStr?: string) => {
     if (!dateStr) return ''
     const d = new Date(dateStr)
     return d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })
   }
-  
-  const startDate = formatDateShort(sorted[0]?.entry_date)
-  const endDate = formatDateShort(sorted[sorted.length - 1]?.entry_date)
 
-  if (points.length > 48) {
-    const step = points.length / 48
-    const sampled: number[] = []
-    for (let i = 0; i < 48; i += 1) sampled.push(points[Math.floor(i * step)]!)
-    sampled.push(points[points.length - 1]!)
-    points = sampled
+  const startDate = formatDateShort(finalPoints[0]!.date)
+  const endDate = formatDateShort(finalPoints[finalPoints.length - 1]!.date)
+
+  // Sample points if too dense (similar to original logic)
+  if (values.length > 48) {
+    const step = values.length / 48
+    const sampledPoints: typeof finalPoints = []
+    for (let i = 0; i < 48; i += 1) {
+      sampledPoints.push(finalPoints[Math.floor(i * step)]!)
+    }
+    sampledPoints.push(finalPoints[finalPoints.length - 1]!)
+    finalPoints = sampledPoints
+    values = finalPoints.map(p => p.balance)
   }
-  
-  const min = Math.min(...points)
-  const max = Math.max(...points)
-  const span = (max - min) || 1
-  
-  const xAt = (i: number) => pad + (i * (w - pad * 2)) / (points.length - 1)
+
+  const xAt = (i: number) => pad + (i * (w - pad * 2)) / (values.length - 1)
   const yAt = (v: number) => pad + (h - pad * 2) * (1 - (v - min) / span)
-  const coords = points.map((v, i) => [xAt(i), yAt(v)] as [number, number])
+
+  const coords = values.map((v, i) => [xAt(i), yAt(v)] as [number, number])
   const line = coords.map((p, i) => `${i ? 'L' : 'M'}${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(' ')
   const area = `M${coords[0]![0].toFixed(1)} ${h - pad} ${coords.map((p) => `L${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(' ')} L${coords[coords.length - 1]![0].toFixed(1)} ${h - pad} Z`
   const last = coords[coords.length - 1]!
-  
-  const lastValue = points[points.length - 1] || 0
-  
-  return { 
-    line, 
-    area, 
-    dotX: last[0], 
-    dotY: last[1], 
-    empty: false, 
-    min, 
-    max, 
-    minFormatted: formatCurrency(min), 
-    maxFormatted: formatCurrency(max), 
+  const lastValue = values[values.length - 1] || 0
+
+  return {
+    line,
+    area,
+    dotX: last[0],
+    dotY: last[1],
+    empty: false,
+    min,
+    max,
+    minFormatted: formatCurrency(min),
+    maxFormatted: formatCurrency(max),
     lastFormatted: formatCurrency(lastValue),
     startDate,
     endDate
