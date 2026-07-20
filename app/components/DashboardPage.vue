@@ -215,18 +215,61 @@
             </div>
             <template v-else>
               <div v-if="todaysStudyClasses.length" >
+                <!-- Countdown Banner for Active or Next Class -->
+                <div v-if="currentStudyClass || nextStudyClassToday" class="mx-5 mt-4 p-4 rounded-xl border flex flex-col gap-1.5 transition-all duration-300"
+                  :style="currentStudyClass 
+                    ? 'background: rgba(10,138,92,0.05); border-color: rgba(10,138,92,0.25); color: var(--ink-emerald);'
+                    : 'background: rgba(59,78,240,0.05); border-color: rgba(59,78,240,0.25); color: var(--brand-ink);'">
+                  <div class="flex items-center justify-between">
+                    <span class="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider"
+                      :style="{ background: currentStudyClass ? 'var(--ink-emerald)' : 'var(--brand)', color: '#ffffff' }">
+                      {{ currentStudyClass ? '🔴 กำลังเรียน' : '⏳ คาบเรียนถัดไป' }}
+                    </span>
+                    <span class="num text-[11px] font-bold">
+                      {{ formatTime(currentStudyClass ? currentStudyClass.start_time : (nextStudyClassToday?.start_time || '')) }} - 
+                      {{ formatTime(currentStudyClass ? currentStudyClass.end_time : (nextStudyClassToday?.end_time || '')) }} น.
+                    </span>
+                  </div>
+                  <h3 class="text-sm font-bold leading-tight" style="color: var(--text-primary);">
+                    {{ currentStudyClass ? currentStudyClass.course_name : (nextStudyClassToday?.course_name || '') }}
+                  </h3>
+                  <p class="text-xs font-semibold mt-0.5 flex items-center gap-1">
+                    <span>🕒</span>
+                    <span class="font-bold">{{ studyCountdownText }}</span>
+                  </p>
+                  <p v-if="currentStudyClass?.location || nextStudyClassToday?.location" class="text-[11px]" style="color: var(--text-secondary);">
+                    📍 {{ currentStudyClass ? currentStudyClass.location : (nextStudyClassToday?.location || '') }}
+                  </p>
+                </div>
+
+                <!-- Classes List -->
                 <div
                   v-for="(item, i) in todaysStudyClasses"
                   :key="item.id"
-                  class="grid grid-cols-[58px_1fr] gap-3.5 px-5 py-3"
+                  class="grid grid-cols-[58px_1fr_auto] gap-3.5 px-5 py-3 transition-all duration-200"
+                  :class="{ 'opacity-55': getClassStatus(item) === 'finished' }"
                   style="border-bottom: 1px solid var(--border-subtle);"
                 >
                   <div class="num text-[11px] pt-0.5" style="color: var(--text-muted);">
                     {{ formatTime(item.start_time) }}<span class="block font-semibold" style="color: var(--text-primary);">{{ formatTime(item.end_time) }}</span>
                   </div>
-                  <div class="pl-3.5" :style="{ borderLeft: '3px solid ' + courseTint(item.course_name) }">
-                    <strong class="text-[13.5px] font-semibold" style="color: var(--text-primary);">{{ item.course_name }}</strong>
+                  <div class="pl-3.5" :style="{ borderLeft: '3px solid ' + (getClassStatus(item) === 'finished' ? 'var(--text-muted)' : courseTint(item.course_name)) }">
+                    <strong class="text-[13.5px] font-semibold" 
+                      :style="{ 
+                        color: getClassStatus(item) === 'finished' ? 'var(--text-muted)' : 'var(--text-primary)',
+                        textDecoration: getClassStatus(item) === 'finished' ? 'line-through' : 'none'
+                      }">
+                      {{ item.course_name }}
+                    </strong>
                     <span v-if="item.location" class="num block text-[11px] mt-0.5" style="color: var(--text-muted);">{{ item.location }}</span>
+                  </div>
+                  <div class="flex items-center shrink-0">
+                    <span v-if="getClassStatus(item) === 'finished'" class="text-[11px] font-bold text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded-full flex items-center gap-0.5">
+                      ✓ เสร็จสิ้น
+                    </span>
+                    <span v-else-if="getClassStatus(item) === 'active'" class="text-[11px] font-bold bg-emerald-600 px-2 py-0.5 rounded-full animate-pulse flex items-center gap-1" style="color: #ffffff;">
+                      <span class="w-1.5 h-1.5 rounded-full bg-white block"></span> กำลังเรียน
+                    </span>
                   </div>
                 </div>
               </div>
@@ -747,6 +790,68 @@ const totalStudyClasses = computed(() => studySchedules.value.length)
 const todaysStudyClasses = computed(() => sortedStudySchedules.value.filter((item) => item.day_of_week === todayWeekday.value))
 const todaysStudyPreview = computed(() => todaysStudyClasses.value.slice(0, 4))
 
+const timeStringToDate = (timeStr: string) => {
+  const parts = timeStr.split(':')
+  const hours = Number(parts[0] || '0')
+  const minutes = Number(parts[1] || '0')
+  const seconds = Number(parts[2] || '0')
+  const d = new Date(currentTime.value)
+  d.setHours(hours, minutes, seconds, 0)
+  return d
+}
+
+const formatCountdown = (ms: number) => {
+  if (ms <= 0) return '00:00'
+  const totalSeconds = Math.floor(ms / 1000)
+  const hours = Math.floor(totalSeconds / 3600)
+  const minutes = Math.floor((totalSeconds % 3600) / 60)
+  const seconds = totalSeconds % 60
+  
+  if (hours > 0) {
+    return `${hours} ชม. ${minutes} นาที ${seconds} วินาที`
+  }
+  if (minutes > 0) {
+    return `${minutes} นาที ${seconds} วินาที`
+  }
+  return `${seconds} วินาที`
+}
+
+const getClassStatus = (item: StudyScheduleRow) => {
+  const now = currentTime.value
+  const startD = timeStringToDate(item.start_time)
+  const endD = timeStringToDate(item.end_time)
+  
+  if (now >= endD) return 'finished'
+  if (now >= startD && now < endD) return 'active'
+  return 'upcoming'
+}
+
+const currentStudyClass = computed(() => {
+  return todaysStudyClasses.value.find(item => getClassStatus(item) === 'active') || null
+})
+
+const nextStudyClassToday = computed(() => {
+  const now = currentTime.value
+  const currentMinutes = (now.getHours() * 60) + now.getMinutes()
+  return todaysStudyClasses.value.find(item => {
+    const startM = toMinutes(item.start_time)
+    return startM > currentMinutes
+  }) || null
+})
+
+const studyCountdownText = computed(() => {
+  if (currentStudyClass.value) {
+    const endD = timeStringToDate(currentStudyClass.value.end_time)
+    const diff = endD.getTime() - currentTime.value.getTime()
+    return `เหลืออีก ${formatCountdown(diff)}`
+  } else if (nextStudyClassToday.value) {
+    const startD = timeStringToDate(nextStudyClassToday.value.start_time)
+    const diff = startD.getTime() - currentTime.value.getTime()
+    return `เริ่มในอีก ${formatCountdown(diff)}`
+  }
+  return ''
+})
+
 const dashboardTodos = computed(() => {
   const today = getTodayTH()
   return todos.value
@@ -1192,7 +1297,7 @@ onMounted(() => {
   refreshOverview()
   clockTimer = setInterval(() => {
     currentTime.value = nowTH()
-  }, 60_000)
+  }, 1000)
 })
 
 onUnmounted(() => {

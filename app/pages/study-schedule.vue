@@ -37,6 +37,83 @@
           <span>⚠️</span><span>{{ errorMessage }}</span>
         </div>
 
+        <!-- Today's Schedule Countdown Live Box -->
+        <section v-if="schedules.length" class="section-card p-5 animate-slide-up">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h2 class="text-base font-bold text-white flex items-center gap-2">
+                📅 คาบเรียนวันนี้
+                <span class="text-xs px-2.5 py-0.5 rounded-full font-bold bg-violet-500/20 text-violet-300 border border-violet-500/30">
+                  {{ todaysClasses.length }} คาบ
+                </span>
+              </h2>
+              <p class="text-xs text-gray-500 mt-1">สถานะการเรียนและเวลานับถอยหลังแบบเรียลไทม์</p>
+            </div>
+            <!-- Live Indicator -->
+            <div class="flex items-center gap-1.5 text-xs text-emerald-600 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20 font-medium">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
+              สด
+            </div>
+          </div>
+
+          <div v-if="!todaysClasses.length" class="flex flex-col items-center justify-center py-8 text-center rounded-2xl border border-dashed border-gray-800" style="background: var(--bg-elevated);">
+            <span class="text-2xl mb-1">🌴</span>
+            <p class="text-sm font-semibold text-gray-400">วันนี้ไม่มีคาบเรียน</p>
+            <p class="text-xs text-gray-500 mt-0.5">พักผ่อนให้เต็มที่ หรือทบทวนบทเรียน!</p>
+          </div>
+
+          <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div 
+              v-for="item in todaysClasses" 
+              :key="item.id"
+              class="relative rounded-2xl p-4 border transition-all duration-300 flex flex-col justify-between"
+              :style="getClassCardStyle(item)"
+            >
+              <div>
+                <!-- Header of the card -->
+                <div class="flex items-start justify-between gap-2 mb-2.5">
+                  <span class="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider"
+                    :style="{ ...getStatusBadgeStyle(item), color: '#ffffff' }">
+                    {{ getStatusLabel(item) }}
+                  </span>
+                  <span class="num text-[11px] font-semibold" style="color: var(--text-muted);">
+                    🕒 {{ formatTimeRange(item.start_time, item.end_time) }}
+                  </span>
+                </div>
+
+                <!-- Course Title -->
+                <h3 class="text-sm font-bold leading-tight" 
+                  :style="{ 
+                    color: getClassStatus(item) === 'finished' ? 'var(--text-muted)' : 'var(--text-primary)',
+                    textDecoration: getClassStatus(item) === 'finished' ? 'line-through' : 'none'
+                  }">
+                  {{ item.course_name }}
+                </h3>
+
+                <!-- Location -->
+                <p v-if="item.location" class="text-xs mt-1.5 flex items-center gap-1" style="color: var(--text-secondary);">
+                  <span>📍</span> <span>{{ item.location }}</span>
+                </p>
+
+                <!-- Note (if any) -->
+                <p v-if="item.note" class="text-[11px] mt-2 p-2 rounded border border-dashed" style="color: var(--text-muted); background: var(--bg-hover); border-color: var(--border-subtle);">
+                  📝 {{ item.note }}
+                </p>
+              </div>
+
+              <!-- Footer with Countdown -->
+              <div class="mt-4 pt-3 flex items-center justify-between border-t" style="border-color: var(--border-subtle);">
+                <span class="text-xs font-semibold" :style="getCountdownTextStyle(item)">
+                  {{ getCountdownLabel(item) }}
+                </span>
+                <span class="text-[10px] text-gray-500 font-bold">
+                  {{ getClassStatus(item) === 'finished' ? '✓ เสร็จแล้ว' : '...' }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <!-- Schedule Grid Table -->
         <section class="section-card">
           <!-- Empty State -->
@@ -713,6 +790,102 @@ const sortedSchedules = computed(() => [...schedules.value].sort((a, b) => {
 
 const todaysClasses = computed(() => sortedSchedules.value.filter(item => item.day_of_week === todayWeekday.value))
 
+const timeStringToDate = (timeStr: string) => {
+  const parts = timeStr.split(':')
+  const hours = Number(parts[0] || '0')
+  const minutes = Number(parts[1] || '0')
+  const seconds = Number(parts[2] || '0')
+  const d = new Date(currentTime.value)
+  d.setHours(hours, minutes, seconds, 0)
+  return d
+}
+
+const formatCountdown = (ms: number) => {
+  if (ms <= 0) return '00:00'
+  const totalSeconds = Math.floor(ms / 1000)
+  const hours = Math.floor(totalSeconds / 3600)
+  const minutes = Math.floor((totalSeconds % 3600) / 60)
+  const seconds = totalSeconds % 60
+  
+  if (hours > 0) {
+    return `${hours} ชม. ${minutes} นาที ${seconds} วินาที`
+  }
+  if (minutes > 0) {
+    return `${minutes} นาที ${seconds} วินาที`
+  }
+  return `${seconds} วินาที`
+}
+
+const getClassStatus = (item: ScheduleRow) => {
+  const now = currentTime.value
+  const startD = timeStringToDate(item.start_time)
+  const endD = timeStringToDate(item.end_time)
+  
+  if (now >= endD) return 'finished'
+  if (now >= startD && now < endD) return 'active'
+  return 'upcoming'
+}
+
+const getClassCardStyle = (item: ScheduleRow) => {
+  const status = getClassStatus(item)
+  if (status === 'finished') {
+    return {
+      background: 'rgba(123, 131, 152, 0.03)',
+      borderColor: 'var(--border-subtle)',
+      opacity: '0.65',
+    }
+  }
+  if (status === 'active') {
+    return {
+      background: 'rgba(10, 138, 92, 0.05)',
+      borderColor: 'rgba(10, 138, 92, 0.3)',
+      boxShadow: '0 0 12px rgba(10, 138, 92, 0.08)',
+    }
+  }
+  return {
+    background: 'var(--bg-card)',
+    borderColor: 'var(--border-subtle)',
+  }
+}
+
+const getStatusBadgeStyle = (item: ScheduleRow) => {
+  const status = getClassStatus(item)
+  if (status === 'finished') return { background: 'var(--text-muted)' }
+  if (status === 'active') return { background: 'var(--ink-emerald)' }
+  return { background: 'var(--brand)' }
+}
+
+const getStatusLabel = (item: ScheduleRow) => {
+  const status = getClassStatus(item)
+  if (status === 'finished') return 'เรียนเสร็จแล้ว'
+  if (status === 'active') return '🔴 กำลังเรียน'
+  return '⏳ ก่อนเรียน'
+}
+
+const getCountdownLabel = (item: ScheduleRow) => {
+  const status = getClassStatus(item)
+  if (status === 'finished') return 'เรียนเสร็จสิ้นแล้ว'
+  
+  const now = currentTime.value
+  if (status === 'active') {
+    const endD = timeStringToDate(item.end_time)
+    const diff = endD.getTime() - now.getTime()
+    return `เหลืออีก ${formatCountdown(diff)}`
+  }
+  
+  // upcoming
+  const startD = timeStringToDate(item.start_time)
+  const diff = startD.getTime() - now.getTime()
+  return `เริ่มในอีก ${formatCountdown(diff)}`
+}
+
+const getCountdownTextStyle = (item: ScheduleRow) => {
+  const status = getClassStatus(item)
+  if (status === 'finished') return { color: 'var(--text-muted)' }
+  if (status === 'active') return { color: 'var(--ink-emerald)', fontWeight: 'bold' }
+  return { color: 'var(--brand-ink)' }
+}
+
 const weeklyBoard = computed(() => dayOptions.map(day => ({
   ...day,
   items: sortedSchedules.value.filter(item => item.day_of_week === day.value),
@@ -890,7 +1063,7 @@ onMounted(() => {
   loadSchedules()
   clockTimer = setInterval(() => {
     currentTime.value = nowTH()
-  }, 60_000)
+  }, 1000)
 })
 
 onUnmounted(() => {
