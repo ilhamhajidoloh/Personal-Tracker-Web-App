@@ -20,6 +20,29 @@ export default defineNuxtConfig({
       },
     },
   },
+  routeRules: {
+    '/**': {
+      headers: {
+        'X-Content-Type-Options': 'nosniff',
+        'X-Frame-Options': 'SAMEORIGIN',
+        'Referrer-Policy': 'strict-origin-when-cross-origin',
+        'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+        // ระยะทดสอบ: ใช้ Report-Only ก่อน ถ้าไม่มีอะไรพังใน console
+        // ค่อยเปลี่ยนชื่อ header เป็น 'Content-Security-Policy' เพื่อบังคับใช้จริง
+        'Content-Security-Policy-Report-Only': [
+          "default-src 'self'",
+          "script-src 'self' 'unsafe-inline'",
+          "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+          "font-src 'self' https://fonts.gstatic.com data:",
+          "img-src 'self' data: blob: https://xeazapbonyjcfufpgmpl.supabase.co",
+          "connect-src 'self' https://xeazapbonyjcfufpgmpl.supabase.co wss://xeazapbonyjcfufpgmpl.supabase.co",
+          "frame-ancestors 'self'",
+          "base-uri 'self'",
+          "form-action 'self' https://accounts.google.com",
+        ].join('; '),
+      },
+    },
+  },
   modules: ['@nuxtjs/tailwindcss', '@nuxtjs/supabase', '@vite-pwa/nuxt'],
   pwa: {
     registerType: 'autoUpdate',
