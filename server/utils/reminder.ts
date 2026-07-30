@@ -30,21 +30,20 @@ const formatThaiTime = (timeString: string | null) =>
 
 export type ReminderEvent = {
   id: string
-  user_id: string
+  userId: string
   title: string
-  event_type: string
-  start_date: string
-  start_time: string | null
-  end_date: string | null
-  end_time: string | null
-  reminder_minutes: number
+  startTime: string | null
+  endTime: string | null
+  isAllDay: boolean
+  isMultiDay: boolean
+  reminderMinutes: number | null
 }
 
 export type ReminderTodo = {
   id: string
-  user_id: string
+  userId: string
   title: string
-  due_date: string
+  targetDate: string
   priority: 'low' | 'medium' | 'high'
   status: string
 }
@@ -69,41 +68,46 @@ export const getNowTH = (): Date => {
 }
 
 export const getEventReminderTime = (event: ReminderEvent): Date | null => {
-  if (event.event_type === 'same_day_all_day') {
-    const dayBefore = new Date(`${event.start_date}T08:00:00`)
+  if (event.reminderMinutes == null || !event.startTime) return null
+
+  if (event.isAllDay) {
+    const dayBefore = new Date(`${event.startTime.slice(0, 10)}T08:00:00`)
     dayBefore.setDate(dayBefore.getDate() - 1)
     return dayBefore
   }
 
-  if (!event.start_time) return null
-
-  const startMs = new Date(`${event.start_date}T${event.start_time}`).getTime()
-  return new Date(startMs - event.reminder_minutes * 60_000)
+  const startMs = new Date(event.startTime).getTime()
+  return new Date(startMs - event.reminderMinutes * 60_000)
 }
 
 export const getTodoReminderTime = (todo: ReminderTodo): Date | null => {
-  if (!todo.due_date) return null
+  if (!todo.targetDate) return null
+  const dateOnly = todo.targetDate.slice(0, 10)
 
   if (todo.priority === 'high') {
-    const dayBefore = new Date(`${todo.due_date}T08:00:00`)
+    const dayBefore = new Date(`${dateOnly}T08:00:00`)
     dayBefore.setDate(dayBefore.getDate() - 1)
     return dayBefore
   }
 
   const hour = todo.priority === 'low' ? '09:00:00' : '08:00:00'
-  return new Date(`${todo.due_date}T${hour}`)
+  return new Date(`${dateOnly}T${hour}`)
 }
 
 export const buildEventReminderText = (event: ReminderEvent): string => {
-  const label = getReminderLabel(event.reminder_minutes)
+  const label = getReminderLabel(event.reminderMinutes || 0)
+  const startDate = event.startTime ? event.startTime.slice(0, 10) : ''
+  const startTimeStr = event.startTime ? event.startTime.slice(11, 16) : null
+  const endDate = event.endTime ? event.endTime.slice(0, 10) : startDate
+  const endTimeStr = event.endTime ? event.endTime.slice(11, 16) : null
 
   let timeInfo: string
-  if (event.event_type === 'same_day_all_day') {
-    timeInfo = `${formatThaiDate(event.start_date)} (ตลอดวัน)`
-  } else if (event.event_type === 'same_day_time') {
-    timeInfo = `${formatThaiDate(event.start_date)} ${formatThaiTime(event.start_time)} - ${formatThaiTime(event.end_time)}`
+  if (event.isAllDay) {
+    timeInfo = `${formatThaiDate(startDate)} (ตลอดวัน)`
+  } else if (event.isMultiDay) {
+    timeInfo = `${formatThaiDate(startDate)} ${formatThaiTime(startTimeStr)} ถึง ${formatThaiDate(endDate)} ${formatThaiTime(endTimeStr)}`
   } else {
-    timeInfo = `${formatThaiDate(event.start_date)} ${formatThaiTime(event.start_time)} ถึง ${formatThaiDate(event.end_date || event.start_date)} ${formatThaiTime(event.end_time)}`
+    timeInfo = `${formatThaiDate(startDate)} ${formatThaiTime(startTimeStr)} - ${formatThaiTime(endTimeStr)}`
   }
 
   return [
@@ -123,6 +127,6 @@ export const buildTodoReminderText = (todo: ReminderTodo): string => {
     `งาน: ${todo.title}`,
     `สถานะ: ${deadlineText}`,
     `ความสำคัญ: ${priorityLabelMap[todo.priority] || todo.priority}`,
-    `กำหนดส่ง: ${formatThaiDate(todo.due_date)}`,
+    `กำหนดส่ง: ${formatThaiDate(todo.targetDate.slice(0, 10))}`,
   ].join('\n')
 }

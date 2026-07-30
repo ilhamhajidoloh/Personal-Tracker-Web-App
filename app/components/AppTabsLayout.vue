@@ -155,8 +155,7 @@ type NavItem = {
 
 const route = useRoute()
 const router = useRouter()
-const supabase = useSupabaseClient()
-const user = useSupabaseUser()
+const { currentUser: user, signOut } = useAuth()
 const { isLightTheme, initializeTheme, toggleTheme } = useAppTheme()
 
 const userMenuOpen = ref(false)
@@ -176,17 +175,10 @@ const navItems: NavItem[] = [
 
 const secondaryNav: NavItem[] = [
   { label: 'โปรไฟล์', to: '/profile', svg: '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>' },
-  { label: 'ทดสอบฐานข้อมูล', to: '/supabase-test', svg: '<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/>' },
 ]
 
 const userDisplayName = computed(() => {
-  const metadata = (user.value?.user_metadata || {}) as Record<string, unknown>
-  const fullName = typeof metadata.full_name === 'string'
-    ? metadata.full_name
-    : typeof metadata.name === 'string'
-      ? metadata.name
-      : ''
-  return fullName.trim() || user.value?.email?.split('@')[0] || 'MyLife User'
+  return user.value?.fullName?.trim() || user.value?.email?.split('@')[0] || 'MyLife User'
 })
 
 const userInitial = computed(() => userDisplayName.value.trim().charAt(0).toUpperCase() || 'U')
@@ -201,8 +193,7 @@ const isRouteActive = (to?: RouteLocationRaw) => {
 const handleLogout = async () => {
   try {
     isLoggingOut.value = true
-    const { error } = await supabase.auth.signOut()
-    if (error) throw error
+    signOut()
     userMenuOpen.value = false
     useAlert().toastSuccess('ออกจากระบบสำเร็จ')
     await router.push('/login')

@@ -43,7 +43,7 @@
         <p class="text-lg font-bold" style="color: var(--text-primary);">
           {{ isRedirecting ? 'กำลังพาไปที่ Dashboard...' : 'กำลังตรวจสอบเซสชัน...' }}
         </p>
-        <p class="text-sm" style="color: var(--text-muted);">กรุณารอสักครู่</p>
+        <p class="text-sm font-medium transition-all" style="color: var(--text-muted);">{{ sessionCheckHint }}</p>
       </div>
     </div>
 
@@ -82,6 +82,16 @@
           >
             <span class="shrink-0 mt-0.5">✓</span>
             <span>{{ successMessage }}</span>
+          </div>
+        </Transition>
+        <Transition name="slide-down">
+          <div
+            v-if="isLoading && loadingHint"
+            class="flex items-center gap-2 rounded-xl p-3 text-xs font-semibold animate-pulse"
+            style="background: rgba(182, 133, 42, 0.1); border: 1px solid rgba(182, 133, 42, 0.25); color: var(--ink-amber);"
+          >
+            <span class="shrink-0">⚡</span>
+            <span>{{ loadingHint }}</span>
           </div>
         </Transition>
 
@@ -140,6 +150,16 @@
         <!-- Sign Up Form -->
         <form v-else @submit.prevent="handleSignUp" class="space-y-4">
           <div>
+            <label class="block text-xs font-medium mb-1.5" style="color: var(--text-secondary);">ชื่อที่แสดง</label>
+            <input
+              v-model="fullName"
+              type="text"
+              placeholder="ชื่อของคุณ"
+              autocomplete="name"
+              class="w-full input-glass text-sm"
+            />
+          </div>
+          <div>
             <label class="block text-xs font-medium mb-1.5" style="color: var(--text-secondary);">อีเมล</label>
             <input
               v-model="email"
@@ -192,20 +212,24 @@
           <div class="flex-1 h-px" style="background: var(--border-default);"></div>
         </div>
 
-        <!-- Google Sign In -->
-        <button
-          @click="handleGoogleSignIn"
-          :disabled="isLoading"
-          class="w-full btn-secondary text-sm font-medium flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed tap-scale touch-target"
-        >
-          <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24">
-            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-          </svg>
-          ลงชื่อเข้าใช้ผ่าน Google
-        </button>
+        <!-- Google Sign In Button Container -->
+        <div class="w-full flex flex-col items-center gap-2">
+          <div ref="googleBtnRef" class="w-full flex justify-center min-h-[44px]"></div>
+          <button
+            v-if="!isGoogleBtnRendered"
+            @click="handleGoogleSignIn"
+            :disabled="isLoading"
+            class="w-full btn-secondary text-sm font-medium flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed tap-scale touch-target"
+          >
+            <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+            </svg>
+            ลงชื่อเข้าใช้ผ่าน Google
+          </button>
+        </div>
 
         <p class="text-xs text-center leading-relaxed" style="color: var(--text-muted);">
           เมื่อลงชื่อเข้าใช้สำเร็จ ระบบจะพาไปที่ Dashboard อัตโนมัติ
@@ -217,12 +241,11 @@
 </template>
 
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { onMounted, ref } from 'vue'
 
-const route = useRoute()
 const router = useRouter()
 const config = useRuntimeConfig()
-const supabase = useSupabaseClient()
+const { login, register, loginWithGoogleIdToken, isSessionValid } = useAuth()
 
 const features = ['💸 การเงิน', '📅 ตารางเรียน', '✅ งาน & To-do', '🎉 กิจกรรม', '🔔 เตือนผ่าน LINE']
 
@@ -233,48 +256,51 @@ const isRedirecting = ref(false)
 const email = ref('')
 const password = ref('')
 const confirmPassword = ref('')
+const fullName = ref('')
 const errorMessage = ref('')
 const successMessage = ref('')
+const loadingHint = ref('')
+const sessionCheckHint = ref('กรุณารอสักครู่')
 
-const getAppOrigin = () => {
-  const configuredAppUrl = config.public.appUrl?.trim().replace(/\/$/, '')
-  if (configuredAppUrl) return configuredAppUrl
-  if (import.meta.client) return window.location.origin
-  return ''
-}
+let loadingTimer: ReturnType<typeof setTimeout> | null = null
+let sessionTimer: ReturnType<typeof setTimeout> | null = null
+
+watch(isLoading, (val) => {
+  if (val) {
+    loadingHint.value = ''
+    loadingTimer = setTimeout(() => {
+      if (isLoading.value) {
+        loadingHint.value = '⚡ กำลังเชื่อมต่อเซิร์ฟเวอร์ (หากพึ่งเปิดระบบครั้งแรก อาจใช้เวลา 20-30 วินาที)'
+      }
+    }, 2500)
+  } else {
+    loadingHint.value = ''
+    if (loadingTimer) clearTimeout(loadingTimer)
+  }
+})
+
+watch(isCheckingSession, (val) => {
+  if (val) {
+    sessionCheckHint.value = 'กรุณารอสักครู่'
+    sessionTimer = setTimeout(() => {
+      if (isCheckingSession.value) {
+        sessionCheckHint.value = '⚡ กำลังปลุกเซิร์ฟเวอร์ระบบ (อาจใช้เวลาสักครู่ในครั้งแรก)...'
+      }
+    }, 2500)
+  } else {
+    if (sessionTimer) clearTimeout(sessionTimer)
+  }
+}, { immediate: true })
+
+let googleClientInitialized = false
+
+const googleBtnRef = ref<HTMLElement | null>(null)
+const isGoogleBtnRendered = ref(false)
 
 const redirectToDashboard = async () => {
   if (import.meta.server || isRedirecting.value) return
   isRedirecting.value = true
   await router.push('/dashboard')
-}
-
-const finishSessionCheck = () => {
-  if (!isRedirecting.value) isCheckingSession.value = false
-}
-
-let stopAuthListener: (() => void) | undefined
-
-if (import.meta.client) {
-  const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
-    if (!session) {
-      if (event === 'SIGNED_OUT') {
-        isRedirecting.value = false
-        finishSessionCheck()
-        localStorage.removeItem('auth_token')
-        localStorage.removeItem('auth_session')
-      }
-      return
-    }
-    if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-      if (session.access_token) {
-        localStorage.setItem('auth_token', session.access_token)
-        localStorage.setItem('auth_session', JSON.stringify(session))
-      }
-      await redirectToDashboard()
-    }
-  })
-  stopAuthListener = () => { data.subscription.unsubscribe() }
 }
 
 const showMessage = (message: string, type: 'error' | 'success') => {
@@ -294,59 +320,127 @@ const showMessage = (message: string, type: 'error' | 'success') => {
   }, 5000)
 }
 
-const getSignUpErrorMessage = (error: unknown) => {
-  if (typeof error !== 'object' || error === null) return 'สมัครสมาชิกไม่สำเร็จ'
-  const authError = error as { code?: string; message?: string; status?: number }
-  if (authError.code === 'over_email_send_rate_limit' || authError.status === 429) {
-    return 'ส่งอีเมลยืนยันบ่อยเกินไป กรุณารอสักครู่แล้วลองใหม่'
+const getBackendErrorMessage = (error: unknown, fallback: string) => {
+  if (typeof error !== 'object' || error === null) return fallback
+  const fetchError = error as { data?: { message?: string }; message?: string }
+  return fetchError.data?.message || fetchError.message || fallback
+}
+
+type GoogleCredentialResponse = { credential?: string }
+
+type GooglePromptNotification = {
+  isNotDisplayed?: () => boolean
+  isSkippedMoment?: () => boolean
+  getNotDisplayedReason?: () => string
+  getSkippedReason?: () => string
+}
+
+type GoogleRenderButtonOptions = {
+  type?: 'standard' | 'icon'
+  theme?: 'outline' | 'filled_blue' | 'filled_black'
+  size?: 'large' | 'medium' | 'small'
+  text?: 'signin_with' | 'signup_with' | 'continue_with' | 'signin'
+  shape?: 'rectangular' | 'pill' | 'circle' | 'square'
+  logo_alignment?: 'left' | 'center'
+  width?: number | string
+}
+
+type GoogleIdentity = {
+  accounts: {
+    id: {
+      initialize: (config: {
+        client_id: string
+        callback: (response: GoogleCredentialResponse) => void
+      }) => void
+      prompt: (momentListener?: (notification: GooglePromptNotification) => void) => void
+      renderButton: (parent: HTMLElement, options: GoogleRenderButtonOptions) => void
+    }
   }
-  return authError.message || 'สมัครสมาชิกไม่สำเร็จ'
 }
 
-const hasOAuthCallbackParams = () => {
-  return Boolean(route.query.code || route.query.access_token || route.hash.includes('access_token'))
-}
+const getGoogleWindow = (): { google?: GoogleIdentity } => globalThis as { google?: GoogleIdentity }
 
-const waitForSession = async (attempts = 8) => {
-  for (let attempt = 0; attempt < attempts; attempt += 1) {
-    const { data } = await supabase.auth.getSession()
-    if (data.session) return true
-    await new Promise((resolve) => setTimeout(resolve, 250))
+const loadGoogleIdentityScript = () => new Promise<void>((resolve, reject) => {
+  if (getGoogleWindow().google?.accounts?.id) { resolve(); return }
+  const script = document.createElement('script')
+  script.src = 'https://accounts.google.com/gsi/client'
+  script.async = true
+  script.defer = true
+  script.onload = () => resolve()
+  script.onerror = () => reject(new Error('โหลดสคริปต์ Google ไม่สำเร็จ'))
+  document.head.appendChild(script)
+})
+
+const handleGoogleCredential = async (response: GoogleCredentialResponse) => {
+  try {
+    isLoading.value = true
+    errorMessage.value = ''
+    if (!response.credential) throw new Error('ไม่พบข้อมูลยืนยันตัวตนจาก Google')
+    await loginWithGoogleIdToken(response.credential)
+    await redirectToDashboard()
+  } catch (error: unknown) {
+    console.error('Google sign in error:', error)
+    showMessage(getBackendErrorMessage(error, 'ลงชื่อเข้าใช้ผ่าน Google ไม่สำเร็จ'), 'error')
+  } finally {
+    isLoading.value = false
   }
-  return false
 }
 
-onBeforeUnmount(() => { stopAuthListener?.() })
+const ensureGoogleClientInitialized = async () => {
+  if (googleClientInitialized) return
+  if (!config.public.googleClientId) throw new Error('ยังไม่ได้ตั้งค่า Google Client ID')
+  await loadGoogleIdentityScript()
+  getGoogleWindow().google!.accounts.id.initialize({
+    client_id: config.public.googleClientId,
+    callback: handleGoogleCredential,
+  })
+  googleClientInitialized = true
+}
+
+const renderGoogleOfficialButton = async () => {
+  try {
+    await ensureGoogleClientInitialized()
+    if (googleBtnRef.value && getGoogleWindow().google?.accounts?.id?.renderButton) {
+      googleBtnRef.value.innerHTML = ''
+      const isDark = typeof document !== 'undefined' && document.documentElement.classList.contains('theme-night')
+      getGoogleWindow().google!.accounts.id.renderButton(googleBtnRef.value, {
+        type: 'standard',
+        theme: isDark ? 'filled_black' : 'outline',
+        size: 'large',
+        text: 'signin_with',
+        shape: 'rectangular',
+        width: 320,
+      })
+      isGoogleBtnRendered.value = true
+    }
+  } catch (err) {
+    console.warn('Failed to render official Google button:', err)
+  }
+}
 
 onMounted(async () => {
-  const isOAuthCallback = hasOAuthCallbackParams()
-  if (typeof route.query.error_description === 'string') {
-    showMessage(decodeURIComponent(route.query.error_description), 'error')
-    finishSessionCheck()
+  if (isSessionValid()) {
+    redirectToDashboard()
     return
   }
-  if (isOAuthCallback) showMessage('กำลังยืนยันการเข้าสู่ระบบด้วย Google...', 'success')
-  const { data } = await supabase.auth.getSession()
-  if (data.session) { redirectToDashboard(); return }
-  if (isOAuthCallback && await waitForSession()) { redirectToDashboard(); return }
-  finishSessionCheck()
+  isCheckingSession.value = false
+
+  try {
+    await renderGoogleOfficialButton()
+  } catch (err) {
+    console.warn('Google Client pre-init warning:', err)
+  }
 })
 
 const handleSignIn = async () => {
   try {
     isLoading.value = true
     errorMessage.value = ''
-    const { data, error } = await supabase.auth.signInWithPassword({ email: email.value, password: password.value })
-    if (error) throw error
-    if (!data.session) throw new Error('ไม่พบเซสชันหลังจากเข้าสู่ระบบ')
-    if (data.session.access_token) {
-      localStorage.setItem('auth_token', data.session.access_token)
-      localStorage.setItem('auth_session', JSON.stringify(data.session))
-    }
+    await login(email.value, password.value)
     await redirectToDashboard()
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Sign in error:', error)
-    showMessage(error.message || 'เข้าสู่ระบบไม่สำเร็จ', 'error')
+    showMessage(getBackendErrorMessage(error, 'เข้าสู่ระบบไม่สำเร็จ'), 'error')
   } finally {
     isLoading.value = false
   }
@@ -361,24 +455,12 @@ const handleSignUp = async () => {
       isLoading.value = false
       return
     }
-    const { data, error } = await supabase.auth.signUp({ email: email.value, password: password.value })
-    if (error) throw error
-    if (data.session) {
-      if (data.session.access_token) {
-        localStorage.setItem('auth_token', data.session.access_token)
-        localStorage.setItem('auth_session', JSON.stringify(data.session))
-      }
-      showMessage('สมัครสมาชิกสำเร็จ กำลังพาไปที่ Dashboard...', 'success')
-      await redirectToDashboard()
-      return
-    }
-    showMessage('สมัครสมาชิกสำเร็จ แต่โปรเจ็กต์ยังเปิดการยืนยันอีเมลอยู่', 'success')
-    email.value = ''
-    password.value = ''
-    confirmPassword.value = ''
-  } catch (error: any) {
+    await register(email.value, password.value, fullName.value || email.value.split('@')[0] || '')
+    showMessage('สมัครสมาชิกสำเร็จ กำลังพาไปที่ Dashboard...', 'success')
+    await redirectToDashboard()
+  } catch (error: unknown) {
     console.error('Sign up error:', error)
-    showMessage(getSignUpErrorMessage(error), 'error')
+    showMessage(getBackendErrorMessage(error, 'สมัครสมาชิกไม่สำเร็จ'), 'error')
   } finally {
     isLoading.value = false
   }
@@ -388,17 +470,18 @@ const handleGoogleSignIn = async () => {
   try {
     isLoading.value = true
     errorMessage.value = ''
-    const appOrigin = getAppOrigin()
-    if (!appOrigin) throw new Error('ไม่พบ app URL สำหรับ redirect หลัง Google login')
-    const redirectUrl = `${appOrigin}/auth/callback`
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: redirectUrl },
+    await ensureGoogleClientInitialized()
+    getGoogleWindow().google!.accounts.id.prompt((notification: GooglePromptNotification) => {
+      if (notification.isNotDisplayed?.() || notification.isSkippedMoment?.()) {
+        isLoading.value = false
+        const reason = notification.getNotDisplayedReason?.() || notification.getSkippedReason?.() || ''
+        console.warn('Google prompt not displayed/skipped reason:', reason)
+        showMessage('ไม่สามารถแสดงหน้าต่างเข้าสู่ระบบ Google ได้ (โปรดลองใหม่หรือรอ Google อัปเดตสิทธิ์)', 'error')
+      }
     })
-    if (error) throw error
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Google sign in error:', error)
-    showMessage(error.message || 'ลงชื่อเข้าใช้ผ่าน Google ไม่สำเร็จ', 'error')
+    showMessage(getBackendErrorMessage(error, 'ลงชื่อเข้าใช้ผ่าน Google ไม่สำเร็จ'), 'error')
     isLoading.value = false
   }
 }

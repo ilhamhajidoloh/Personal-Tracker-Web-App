@@ -320,6 +320,12 @@
 	.to-fuchsia-600 { --tw-gradient-to: var(--brand-2) var(--tw-gradient-to-position) !important; }
 
 	/* --- data accent text: darken for contrast on the cool canvas (bright only) --- */
+	:root.theme-light .text-violet-100,
+	:root.theme-light .text-violet-200,
+	:root.theme-light .text-violet-300 { color: var(--brand-ink) !important; }
+	:root.theme-light .text-purple-100,
+	:root.theme-light .text-purple-200,
+	:root.theme-light .text-purple-300 { color: var(--brand-ink) !important; }
 	:root.theme-light .text-emerald-100,
 	:root.theme-light .text-emerald-300,
 	:root.theme-light .text-emerald-400 { color: var(--ink-emerald) !important; }

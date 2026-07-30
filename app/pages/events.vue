@@ -31,7 +31,8 @@
         <!-- Error -->
         <div
           v-if="errorMessage"
-          class="rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-amber-200 text-sm flex items-center gap-2"
+          class="rounded-2xl px-4 py-3 text-sm flex items-center gap-2 font-medium"
+          style="background: rgba(182, 133, 42, 0.1); border: 1px solid rgba(182, 133, 42, 0.3); color: var(--ink-amber);"
         >
           <span>⚠️</span><span>{{ errorMessage }}</span>
         </div>
@@ -365,23 +366,27 @@ type EventRow = {
   created_at: string
 }
 
-type EventPayload = {
+type BackendActivity = {
+  id: string
+  userId: string
   title: string
   description: string | null
-  event_type: EventTypeType
-  start_date: string
-  start_time: string | null
-  end_date: string | null
-  end_time: string | null
-  reminder_minutes: number | null
-  reminder_sent_at: null
+  startTime: string | null
+  endTime: string | null
+  isAllDay: boolean
+  isMultiDay: boolean
+  isIndefinite: boolean
+  recurrence: string
+  location: string | null
+  reminderMinutes: number | null
+  reminderSentAt: string | null
+  googleEventId: string | null
 }
 
 definePageMeta({ middleware: 'auth' })
 useHead({ title: 'กิจกรรม' })
 
-const router = useRouter()
-const supabase = useSupabaseClient()
+const { apiFetch, userId } = useBackendApi()
 const { toastSuccess, toastError, confirmDelete } = useAlert()
 const { notify, buildEventSavedMessage } = useLineMessaging()
 const { syncEventToGoogle, deleteEventFromGoogle } = useGoogleCalendarSync()
@@ -397,8 +402,29 @@ const events = ref<EventRow[]>([])
 const currentTime = ref(new Date())
 const eventItemsPerPage = ref(20)
 const eventCurrentPage = ref(1)
-const tableMissingCodes = new Set(['42P01', 'PGRST205'])
 const soonThresholdMinutes = 7 * 24 * 60
+
+const getApiErrorMessage = (error: any, fallback: string) => error?.data?.message || error?.message || fallback
+
+const toEventRow = (a: BackendActivity): EventRow => {
+  const eventType: EventTypeType = a.isAllDay ? 'same_day_all_day' : a.isMultiDay ? 'multi_day' : 'same_day_time'
+  const startDate = a.startTime ? a.startTime.slice(0, 10) : getTodayTH()
+  const endDate = a.endTime ? a.endTime.slice(0, 10) : null
+  return {
+    id: a.id,
+    user_id: a.userId,
+    title: a.title,
+    description: a.description,
+    event_type: eventType,
+    start_date: startDate,
+    start_time: eventType === 'same_day_all_day' ? null : (a.startTime ? a.startTime.slice(11, 19) : null),
+    end_date: eventType === 'same_day_time' ? null : endDate,
+    end_time: eventType === 'same_day_all_day' ? null : (a.endTime ? a.endTime.slice(11, 19) : null),
+    reminder_minutes: a.reminderMinutes,
+    google_event_id: a.googleEventId,
+    created_at: a.startTime || '',
+  }
+}
 
 const eventTypeOptions = [
   { value: 'same_day_time' as EventTypeType, label: 'วันเดียวมีเวลา', icon: '🕐' },
@@ -608,18 +634,12 @@ const loadEvents = async () => {
   isLoading.value = true
   errorMessage.value = ''
   try {
-    const { data: userData, error: userError } = await supabase.auth.getUser()
-    if (userError) throw userError
-    if (!userData.user) { await router.push('/login'); return }
-    const { data, error } = await supabase.from('events').select('*').eq('user_id', userData.user.id).order('start_date', { ascending: true })
-    if (error) {
-      if (tableMissingCodes.has(error.code || '')) { errorMessage.value = 'ยังไม่พบตาราง events ใน Supabase'; events.value = []; return }
-      throw error
-    }
-    events.value = data || []
+    if (!userId.value) return
+    const data = await apiFetch<BackendActivity[]>(`/api/Activity/${userId.value}`)
+    events.value = data.map(toEventRow).sort((a, b) => a.start_date.localeCompare(b.start_date))
   } catch (error: any) {
     console.error('Load events error:', error)
-    errorMessage.value = error?.message || 'โหลดข้อมูลกิจกรรมไม่สำเร็จ'
+    errorMessage.value = getApiErrorMessage(error, 'โหลดข้อมูลกิจกรรมไม่สำเร็จ')
   } finally {
     isLoading.value = false
   }
@@ -630,52 +650,60 @@ const submitEvent = async () => {
   isSubmitting.value = true
   errorMessage.value = ''
   try {
-    const { data: userData } = await supabase.auth.getUser()
-    if (!userData.user) { await router.push('/login'); return }
+    if (!userId.value) return
 
-    let payloadDateStart = form.startDate
-    let payloadTimeStart: string | null = null
-    let payloadDateEnd: string | null = null
-    let payloadTimeEnd: string | null = null
-
-    if (form.eventType === 'same_day_time') {
-      payloadTimeStart = form.startTime; payloadDateEnd = form.startDate; payloadTimeEnd = form.endTime
-    } else if (form.eventType === 'same_day_all_day') {
-      payloadDateEnd = form.startDate
+    let startTime: string
+    let endTime: string
+    if (form.eventType === 'same_day_all_day') {
+      startTime = `${form.startDate}T00:00:00`
+      endTime = `${form.startDate}T23:59:59`
     } else if (form.eventType === 'multi_day') {
-      payloadTimeStart = form.startTime; payloadDateEnd = form.endDate; payloadTimeEnd = form.endTime
+      startTime = `${form.startDate}T${form.startTime}:00`
+      endTime = `${form.endDate}T${form.endTime}:00`
+    } else {
+      startTime = `${form.startDate}T${form.startTime}:00`
+      endTime = `${form.startDate}T${form.endTime}:00`
     }
 
-    const payload: EventPayload = {
-      title: form.title.trim(), description: form.description.trim() || null,
-      event_type: form.eventType, start_date: payloadDateStart, start_time: payloadTimeStart,
-      end_date: payloadDateEnd, end_time: payloadTimeEnd,
-      reminder_minutes: form.reminderMinutes, reminder_sent_at: null,
+    const body = {
+      userId: userId.value,
+      title: form.title.trim(),
+      description: form.description.trim() || null,
+      startTime, endTime,
+      isAllDay: form.eventType === 'same_day_all_day',
+      isMultiDay: form.eventType === 'multi_day',
+      isIndefinite: false,
+      recurrence: 'none',
+      location: null,
+      reminderMinutes: form.reminderMinutes,
     }
 
-    const query = supabase.from('events') as any
-    const { data: savedRow, error } = isEditing.value
-      ? await query.update(payload).eq('id', editingId.value).eq('user_id', userData.user.id).select('id').single()
-      : await query.insert({ user_id: userData.user.id, ...payload }).select('id').single()
-
-    if (error) {
-      if (tableMissingCodes.has(error.code || '')) { errorMessage.value = 'ยังไม่พบตาราง events ใน Supabase'; return }
-      throw error
+    let savedId = editingId.value
+    if (isEditing.value) {
+      await apiFetch(`/api/Activity/${editingId.value}`, { method: 'PUT', body })
+    } else {
+      const created = await apiFetch<BackendActivity>('/api/Activity', { method: 'POST', body })
+      savedId = created.id
     }
 
     const lineMessage = buildEventSavedMessage({
-      title: payload.title, eventType: payload.event_type, startDate: payload.start_date,
-      startTime: payload.start_time, endDate: payload.end_date, endTime: payload.end_time, isEditing: isEditing.value,
+      title: body.title,
+      eventType: form.eventType,
+      startDate: form.startDate,
+      startTime: form.eventType === 'same_day_all_day' ? null : form.startTime,
+      endDate: form.eventType === 'multi_day' ? form.endDate : null,
+      endTime: form.eventType === 'same_day_all_day' ? null : form.endTime,
+      isEditing: isEditing.value,
     })
     toastSuccess(isEditing.value ? 'แก้ไขกิจกรรมสำเร็จ' : 'เพิ่มกิจกรรมสำเร็จ')
     isEntryModalOpen.value = false
     resetForm()
-    if (savedRow?.id) await syncEventToGoogle(savedRow.id)
+    if (savedId) await syncEventToGoogle(savedId)
     await loadEvents()
     void notify(lineMessage)
   } catch (error: any) {
     console.error('Save event error:', error)
-    errorMessage.value = error?.message || 'บันทึกกิจกรรมไม่สำเร็จ'
+    errorMessage.value = getApiErrorMessage(error, 'บันทึกกิจกรรมไม่สำเร็จ')
   } finally {
     isSubmitting.value = false
   }
@@ -687,11 +715,8 @@ const deleteEvent = async (id: string) => {
   if (!shouldDelete) return
   isDeletingId.value = id
   try {
-    const { data: userData } = await supabase.auth.getUser()
-    if (!userData.user) return
     const deletedItem = events.value.find(t => t.id === id)
-    const { error } = await supabase.from('events').delete().eq('id', id).eq('user_id', userData.user.id)
-    if (error) throw error
+    await apiFetch(`/api/Activity/${id}`, { method: 'DELETE' })
     events.value = events.value.filter(t => t.id !== id)
     toastSuccess('ลบกิจกรรมสำเร็จ')
     if (deletedItem?.google_event_id) void deleteEventFromGoogle(deletedItem.google_event_id)

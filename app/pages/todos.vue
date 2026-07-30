@@ -31,7 +31,8 @@
         <!-- Error -->
         <div
           v-if="errorMessage"
-          class="rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-amber-200 text-sm flex items-center gap-2"
+          class="rounded-2xl px-4 py-3 text-sm flex items-center gap-2 font-medium"
+          style="background: rgba(182, 133, 42, 0.1); border: 1px solid rgba(182, 133, 42, 0.3); color: var(--ink-amber);"
         >
           <span>⚠️</span><span>{{ errorMessage }}</span>
         </div>
@@ -357,19 +358,27 @@ type TodoRow = {
   created_at: string
 }
 
-type TodoPayload = {
+type BackendTodo = {
+  id: string
+  userId: string
   title: string
   description: string | null
-  due_date: string | null
-  status: TodoStatus
-  priority: TodoPriority
+  targetDate: string
+  tag: string
+  recurrence: string
+  status: string
+  priority: string
+  isCompleted: boolean
+  reminderSentAt: string | null
 }
+
+const statusToBackend: Record<TodoStatus, string> = { pending: 'pending', in_progress: 'inProgress', completed: 'completed' }
+const statusFromBackend: Record<string, TodoStatus> = { pending: 'pending', inProgress: 'in_progress', completed: 'completed' }
 
 definePageMeta({ middleware: 'auth' })
 useHead({ title: 'งานและ To-do' })
 
-const router = useRouter()
-const supabase = useSupabaseClient()
+const { apiFetch, userId } = useBackendApi()
 const { toastSuccess, toastError, confirmDelete } = useAlert()
 const { notify, buildTodoSavedMessage } = useLineMessaging()
 
@@ -393,7 +402,18 @@ const form = reactive({
   status: 'pending' as TodoStatus,
 })
 
-const tableMissingCodes = new Set(['42P01', 'PGRST205'])
+const getApiErrorMessage = (error: any, fallback: string) => error?.data?.message || error?.message || fallback
+
+const normalizeRows = (rows: BackendTodo[]): TodoRow[] => rows.map(row => ({
+  id: row.id,
+  user_id: row.userId,
+  title: row.title,
+  description: row.description,
+  due_date: row.targetDate ? row.targetDate.slice(0, 10) : null,
+  status: (statusFromBackend[row.status] || 'pending') as TodoStatus,
+  priority: (row.priority === 'low' || row.priority === 'high' ? row.priority : 'medium') as TodoPriority,
+  created_at: row.targetDate,
+}))
 
 const isEditing = computed(() => Boolean(editingId.value))
 
@@ -473,13 +493,21 @@ const openEditModal = (item: TodoRow) => {
 }
 
 const toggleStatus = async (item: TodoRow) => {
-  const newStatus = item.status === 'completed' ? 'pending' : 'completed'
+  const newStatus: TodoStatus = item.status === 'completed' ? 'pending' : 'completed'
   try {
-    const { data: userData } = await supabase.auth.getUser()
-    if (!userData.user) return
-    const query = supabase.from('todos') as any
-    const { error } = await query.update({ status: newStatus }).eq('id', item.id).eq('user_id', userData.user.id)
-    if (error) throw error
+    await apiFetch(`/api/Todo/${item.id}`, {
+      method: 'PUT',
+      body: {
+        title: item.title,
+        description: item.description,
+        targetDate: `${item.due_date || getTodayTH()}T00:00:00`,
+        tag: 'ทั่วไป',
+        recurrence: 'none',
+        status: statusToBackend[newStatus],
+        priority: item.priority,
+        isCompleted: newStatus === 'completed',
+      },
+    })
     const index = todos.value.findIndex(t => t.id === item.id)
     if (index !== -1 && todos.value[index]) todos.value[index].status = newStatus
   } catch (err: any) {
@@ -492,18 +520,12 @@ const loadTodos = async () => {
   isLoading.value = true
   errorMessage.value = ''
   try {
-    const { data: userData, error: userError } = await supabase.auth.getUser()
-    if (userError) throw userError
-    if (!userData.user) { await router.push('/login'); return }
-    const { data, error } = await supabase.from('todos').select('*').eq('user_id', userData.user.id).order('created_at', { ascending: false })
-    if (error) {
-      if (tableMissingCodes.has(error.code || '')) { errorMessage.value = 'ยังไม่พบตาราง todos ใน Supabase กรุณาสร้างตารางก่อนใช้งาน'; todos.value = []; return }
-      throw error
-    }
-    todos.value = data || []
+    if (!userId.value) return
+    const data = await apiFetch<BackendTodo[]>(`/api/Todo/${userId.value}`)
+    todos.value = normalizeRows(data)
   } catch (error: any) {
     console.error('Load todos error:', error)
-    errorMessage.value = error?.message || 'โหลดข้อมูลงานไม่สำเร็จ'
+    errorMessage.value = getApiErrorMessage(error, 'โหลดข้อมูลงานไม่สำเร็จ')
   } finally {
     isLoading.value = false
   }
@@ -515,24 +537,25 @@ const submitTodo = async () => {
   isSubmitting.value = true
   errorMessage.value = ''
   try {
-    const { data: userData } = await supabase.auth.getUser()
-    if (!userData.user) { await router.push('/login'); return }
-    const payload: TodoPayload = {
+    if (!userId.value) return
+    const status: TodoStatus = isEditing.value ? form.status : 'pending'
+    const body = {
+      userId: userId.value,
       title: form.title.trim(),
       description: form.description.trim() || null,
-      due_date: form.dueDate || null,
+      targetDate: `${form.dueDate || getTodayTH()}T00:00:00`,
+      tag: 'ทั่วไป',
+      recurrence: 'none',
+      status: statusToBackend[status],
       priority: form.priority,
-      status: isEditing.value ? form.status : 'pending',
+      isCompleted: status === 'completed',
     }
-    const query = supabase.from('todos') as any
-    const { error } = isEditing.value
-      ? await query.update(payload).eq('id', editingId.value).eq('user_id', userData.user.id)
-      : await query.insert({ user_id: userData.user.id, ...payload })
-    if (error) {
-      if (tableMissingCodes.has(error.code || '')) { errorMessage.value = 'ยังไม่พบตาราง todos ใน Supabase'; return }
-      throw error
+    if (isEditing.value) {
+      await apiFetch(`/api/Todo/${editingId.value}`, { method: 'PUT', body })
+    } else {
+      await apiFetch('/api/Todo', { method: 'POST', body })
     }
-    const lineMessage = buildTodoSavedMessage({ title: payload.title, dueDate: payload.due_date, priority: payload.priority, isEditing: isEditing.value })
+    const lineMessage = buildTodoSavedMessage({ title: body.title, dueDate: form.dueDate || null, priority: form.priority, isEditing: isEditing.value })
     toastSuccess(isEditing.value ? 'แก้ไขงานสำเร็จ' : 'เพิ่มงานสำเร็จ')
     isEntryModalOpen.value = false
     resetForm()
@@ -540,7 +563,7 @@ const submitTodo = async () => {
     void notify(lineMessage)
   } catch (error: any) {
     console.error('Save todo error:', error)
-    errorMessage.value = error?.message || 'บันทึกงานไม่สำเร็จ'
+    errorMessage.value = getApiErrorMessage(error, 'บันทึกงานไม่สำเร็จ')
   } finally {
     isSubmitting.value = false
   }
@@ -552,10 +575,7 @@ const deleteTodo = async (id: string) => {
   if (!shouldDelete) return
   isDeletingId.value = id
   try {
-    const { data: userData } = await supabase.auth.getUser()
-    if (!userData.user) return
-    const { error } = await supabase.from('todos').delete().eq('id', id).eq('user_id', userData.user.id)
-    if (error) throw error
+    await apiFetch(`/api/Todo/${id}`, { method: 'DELETE' })
     todos.value = todos.value.filter(t => t.id !== id)
     toastSuccess('ลบงานสำเร็จ')
   } catch (error: any) {

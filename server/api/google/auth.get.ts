@@ -1,31 +1,8 @@
-import { serverSupabaseUser } from '#supabase/server'
-
-import { getAuthUserId } from '../../utils/line'
+import { requireBackendUserId } from '../../utils/auth'
 import { buildGoogleAuthUrl, signGoogleState } from '../../utils/googleCalendar'
 
-type GoogleAuthUser = {
-  id?: string
-  sub?: string
-}
-
 export default defineEventHandler(async (event) => {
-  const user = await serverSupabaseUser(event) as GoogleAuthUser | null
-
-  if (!user) {
-    throw createError({
-      statusCode: 401,
-      statusMessage: 'กรุณาเข้าสู่ระบบก่อนเชื่อมต่อ Google Calendar',
-    })
-  }
-
-  const authUserId = getAuthUserId(user)
-
-  if (!authUserId) {
-    throw createError({
-      statusCode: 500,
-      statusMessage: 'ไม่พบรหัสผู้ใช้สำหรับเชื่อมต่อ Google Calendar',
-    })
-  }
+  const authUserId = await requireBackendUserId(event)
 
   const config = useRuntimeConfig(event)
 

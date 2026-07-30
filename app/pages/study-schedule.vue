@@ -6,13 +6,27 @@
         <div>
           <p class="eyebrow text-gray-500 uppercase tracking-widest text-[11px]">ตารางเรียน · TIMETABLE</p>
           <h1 class="text-4xl md:text-5xl font-normal mt-1.5 font-itim text-white">ตารางเรียน</h1>
-          <p class="text-xs mt-2 text-gray-400 font-medium">ภาคเรียนที่ 1 / 2569 &bull; {{ uniqueSubjectsCount }} รายวิชา</p>
+          <p class="text-xs mt-2 text-gray-400 font-medium">{{ selectedTermName }} &bull; {{ uniqueSubjectsCount }} รายวิชา</p>
         </div>
-        <div class="flex items-center gap-2 shrink-0">
+        <div class="flex items-center gap-2 shrink-0 flex-wrap">
+          <select
+            v-if="terms.length"
+            v-model="selectedTermId"
+            class="text-sm px-3 py-2 rounded-xl focus:outline-none transition-all"
+            style="background: var(--bg-elevated); border: 1px solid var(--border-default); color: var(--text-primary);"
+          >
+            <option v-for="t in terms" :key="t.id" :value="t.id">{{ t.termName }}</option>
+          </select>
+          <button
+            type="button"
+            @click="openCreateTermModal"
+            class="btn-secondary text-sm inline-flex items-center gap-2 tap-scale touch-target"
+          >+ ภาคเรียน</button>
           <button
             type="button"
             @click="openCreateScheduleModal"
-            class="btn-primary text-sm inline-flex items-center gap-2 tap-scale touch-target"
+            :disabled="!selectedTermId"
+            class="btn-primary text-sm inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed tap-scale touch-target"
           >
             <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
             เพิ่มคาบเรียน
@@ -32,9 +46,24 @@
         <!-- Error -->
         <div
           v-if="errorMessage"
-          class="rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-amber-200 text-sm flex items-center gap-2"
+          class="rounded-2xl px-4 py-3 text-sm flex items-center gap-2 font-medium"
+          style="background: rgba(182, 133, 42, 0.1); border: 1px solid rgba(182, 133, 42, 0.3); color: var(--ink-amber);"
         >
           <span>⚠️</span><span>{{ errorMessage }}</span>
+        </div>
+
+        <!-- No term yet -->
+        <div
+          v-if="!isLoading && !terms.length"
+          class="rounded-2xl px-4 py-3.5 text-sm flex items-center justify-between gap-3 flex-wrap"
+          style="background: var(--brand-soft); border: 1px solid var(--brand-border); color: var(--brand-ink);"
+        >
+          <span class="font-semibold">📚 ยังไม่มีภาคเรียน กรุณาสร้างภาคเรียนก่อนเพิ่มคาบเรียน</span>
+          <button
+            type="button"
+            @click="openCreateTermModal"
+            class="btn-primary text-xs py-1.5 px-3.5 rounded-xl flex items-center gap-1.5 tap-scale touch-target"
+          >+ สร้างภาคเรียนแรก</button>
         </div>
 
         <!-- Today's Schedule Countdown Live Box -->
@@ -93,11 +122,6 @@
                 <!-- Location -->
                 <p v-if="item.location" class="text-xs mt-1.5 flex items-center gap-1" style="color: var(--text-secondary);">
                   <span>📍</span> <span>{{ item.location }}</span>
-                </p>
-
-                <!-- Note (if any) -->
-                <p v-if="item.note" class="text-[11px] mt-2 p-2 rounded border border-dashed" style="color: var(--text-muted); background: var(--bg-hover); border-color: var(--border-subtle);">
-                  📝 {{ item.note }}
                 </p>
               </div>
 
@@ -181,9 +205,6 @@
                       แก้ไข
                     </span>
                   </div>
-                  <p v-if="item.note" class="text-[11.5px] mt-2.5 pt-2 border-t border-dashed" :style="{ color: 'var(--text-muted)', borderColor: 'color-mix(in srgb, ' + courseTint(item.course_name) + ' 20%, transparent)' }">
-                    📝 {{ item.note }}
-                  </p>
                 </div>
               </div>
             </div>
@@ -500,17 +521,6 @@
               >
             </div>
 
-            <div>
-              <label class="block text-xs font-medium text-gray-400 mb-1.5">หมายเหตุ (ไม่บังคับ)</label>
-              <textarea
-                v-model="form.note"
-                rows="2"
-                maxlength="300"
-                placeholder="บันทึกเพิ่มเติม..."
-                class="w-full bg-gray-800/80 border border-gray-700/60 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-600 outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 transition-all resize-none"
-              ></textarea>
-            </div>
-
             <div class="flex gap-3 pt-2">
               <button
                 type="button"
@@ -533,6 +543,84 @@
         </div>
       </Transition>
     </Teleport>
+
+    <!-- Term Modal -->
+    <Teleport to="body">
+      <Transition name="backdrop">
+        <div
+          v-if="isTermModalOpen"
+          class="fixed inset-0 z-[90] flex items-center justify-center p-4"
+          style="background: rgba(3,5,12,0.62); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);"
+          @click.self="closeTermModal"
+        >
+          <Transition name="modal">
+            <div v-if="isTermModalOpen" class="relative z-10 w-full max-w-md bg-gray-900 border border-gray-700/80 rounded-2xl shadow-2xl overflow-hidden">
+              <div class="flex items-center justify-between px-6 py-4 border-b border-gray-800/80">
+                <div class="flex items-center gap-3">
+                  <div class="w-9 h-9 rounded-xl bg-violet-500/20 flex items-center justify-center text-base">📚</div>
+                  <div>
+                    <h2 class="text-base font-semibold text-white">สร้างภาคเรียนใหม่</h2>
+                    <p class="text-xs text-gray-500">ใส่ชื่อและช่วงเวลาของภาคเรียน</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  @click="closeTermModal"
+                  class="w-8 h-8 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white flex items-center justify-center transition-all tap-scale touch-target"
+                >✕</button>
+              </div>
+
+              <form class="p-6 space-y-4" @submit.prevent="submitTerm">
+                <div>
+                  <label class="block text-xs font-medium text-gray-400 mb-1.5">ชื่อภาคเรียน <span class="text-rose-400">*</span></label>
+                  <input
+                    v-model="termForm.termName"
+                    type="text"
+                    maxlength="120"
+                    placeholder="เช่น ภาคเรียนที่ 1/2569"
+                    class="w-full bg-gray-800/80 border border-gray-700/60 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-600 outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 transition-all"
+                  >
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-xs font-medium text-gray-400 mb-1.5">วันเริ่ม <span class="text-rose-400">*</span></label>
+                    <input
+                      v-model="termForm.startDate"
+                      type="date"
+                      class="w-full bg-gray-800/80 border border-gray-700/60 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 transition-all"
+                    >
+                  </div>
+                  <div>
+                    <label class="block text-xs font-medium text-gray-400 mb-1.5">วันสิ้นสุด <span class="text-rose-400">*</span></label>
+                    <input
+                      v-model="termForm.endDate"
+                      type="date"
+                      class="w-full bg-gray-800/80 border border-gray-700/60 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 transition-all"
+                    >
+                  </div>
+                </div>
+                <div class="flex gap-3 pt-2">
+                  <button
+                    type="button"
+                    @click="closeTermModal"
+                    class="flex-1 py-2.5 rounded-xl bg-gray-800/80 hover:bg-gray-800 border border-gray-700/60 text-sm font-medium text-gray-300 hover:text-white transition-all tap-scale touch-target"
+                  >ยกเลิก</button>
+                  <button
+                    type="submit"
+                    :disabled="isSubmittingTerm"
+                    class="flex-1 btn-primary py-2.5 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed text-sm font-semibold flex items-center justify-center gap-2 tap-scale touch-target"
+                  >
+                    <span v-if="isSubmittingTerm" class="inline-block w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
+                    {{ isSubmittingTerm ? 'กำลังบันทึก...' : 'สร้างภาคเรียน' }}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </Transition>
+          <div class="absolute inset-0 z-0 bg-black/70 backdrop-blur-sm" @click="closeTermModal"></div>
+        </div>
+      </Transition>
+    </Teleport>
   </AppTabsLayout>
 </template>
 
@@ -542,14 +630,33 @@ import { nowTH } from '~/utils/date'
 
 type ScheduleRow = {
   id: string
-  user_id: string
   course_name: string
   day_of_week: number
   start_time: string
   end_time: string
   location: string | null
-  note: string | null
-  created_at: string
+}
+
+type BackendCourse = {
+  id: string
+  termId: string
+  courseCode: string
+  courseName: string
+  room: string | null
+  instructor: string | null
+  dayOfWeek: string
+  startTime: string
+  endTime: string
+  colorHex: string | null
+}
+
+type BackendTerm = {
+  id: string
+  userId: string
+  termName: string
+  startDate: string
+  endDate: string
+  courses: BackendCourse[]
 }
 
 type DayOption = {
@@ -568,8 +675,14 @@ type TimeSlot = {
 definePageMeta({ middleware: 'auth' })
 useHead({ title: 'ตารางเรียน' })
 
-const router = useRouter()
-const supabase = useSupabaseClient()
+const { apiFetch, userId } = useBackendApi()
+
+const dayNameToNumber: Record<string, number> = {
+  monday: 1, tuesday: 2, wednesday: 3, thursday: 4, friday: 5, saturday: 6, sunday: 7,
+}
+const dayNumberToName: Record<number, string> = {
+  1: 'monday', 2: 'tuesday', 3: 'wednesday', 4: 'thursday', 5: 'friday', 6: 'saturday', 7: 'sunday',
+}
 
 const dayOptions: DayOption[] = [
   { value: 1, label: 'จันทร์' }, { value: 2, label: 'อังคาร' },
@@ -613,7 +726,20 @@ const courseColorIndex = (name: string) => {
 const courseTint = (name: string) => ['var(--brand)', 'var(--ink-emerald)', 'var(--ink-amber)', 'var(--brand-2)', 'var(--ink-rose)'][courseColorIndex(name)]
 const courseInk = (name: string) => ['var(--brand-ink)', 'var(--ink-emerald)', 'var(--ink-amber)', 'var(--brand-2)', 'var(--ink-rose)'][courseColorIndex(name)]
 
-const schedules = ref<ScheduleRow[]>([])
+const terms = ref<BackendTerm[]>([])
+const selectedTermId = ref('')
+const schedules = computed<ScheduleRow[]>(() => {
+  const term = terms.value.find(t => t.id === selectedTermId.value)
+  if (!term) return []
+  return term.courses.map(c => ({
+    id: c.id,
+    course_name: c.courseName,
+    day_of_week: dayNameToNumber[c.dayOfWeek] || 1,
+    start_time: c.startTime,
+    end_time: c.endTime,
+    location: c.room,
+  }))
+})
 const currentTime = ref(nowTH())
 const isLoading = ref(true)
 const isSubmitting = ref(false)
@@ -624,11 +750,15 @@ const errorMessage = ref('')
 const scheduleItemsPerPage = ref(20)
 const scheduleCurrentPage = ref(1)
 
+const isTermModalOpen = ref(false)
+const isSubmittingTerm = ref(false)
+const termForm = reactive({ termName: '', startDate: '', endDate: '' })
+
 const form = reactive({
-  courseName: '', dayOfWeek: 1, startTime: '08:00', endTime: '09:00', location: '', note: '',
+  courseName: '', dayOfWeek: 1, startTime: '08:00', endTime: '09:00', location: '',
 })
 
-const tableMissingCodes = new Set(['42P01', 'PGRST205'])
+const getApiErrorMessage = (error: any, fallback: string) => error?.data?.message || error?.message || fallback
 
 const getDayLabel = (day: number) => dayLabelMap.get(day) || 'ไม่ระบุ'
 const formatTimeRange = (start: string, end: string) => `${start.slice(0, 5)} - ${end.slice(0, 5)}`
@@ -638,6 +768,8 @@ const toMinutes = (time: string) => {
 }
 
 const hourHeight = 70 // pixels per hour row
+
+const selectedTermName = computed(() => terms.value.find(t => t.id === selectedTermId.value)?.termName || 'ยังไม่มีภาคเรียน')
 
 const uniqueSubjectsCount = computed(() => {
   const names = schedules.value.map(item => item.course_name.trim())
@@ -953,48 +1085,75 @@ const schedulePageInfo = computed(() => {
   return `แสดง ${start}-${end} จาก ${total} รายการ`
 })
 
-const normalizeRows = (rows: any[]): ScheduleRow[] => rows.map(row => ({
-  id: String(row.id), user_id: String(row.user_id), course_name: String(row.course_name || ''),
-  day_of_week: Number(row.day_of_week || 1), start_time: String(row.start_time || '00:00:00'),
-  end_time: String(row.end_time || '00:00:00'),
-  location: typeof row.location === 'string' ? row.location : null,
-  note: typeof row.note === 'string' ? row.note : null, created_at: String(row.created_at || ''),
-}))
-
 const resetForm = () => {
   form.courseName = ''; form.dayOfWeek = 1; form.startTime = '08:00'
-  form.endTime = '09:00'; form.location = ''; form.note = ''
+  form.endTime = '09:00'; form.location = ''
   editingScheduleId.value = ''
 }
 
-const openCreateScheduleModal = () => { resetForm(); errorMessage.value = ''; isScheduleModalOpen.value = true }
+const openCreateScheduleModal = () => {
+  const { toastWarning } = useAlert()
+  if (!selectedTermId.value) { toastWarning('กรุณาเลือกหรือสร้างภาคเรียนก่อน'); return }
+  resetForm(); errorMessage.value = ''; isScheduleModalOpen.value = true
+}
 
 const openEditScheduleModal = (item: ScheduleRow) => {
   editingScheduleId.value = item.id; form.courseName = item.course_name
   form.dayOfWeek = item.day_of_week; form.startTime = item.start_time.slice(0, 5)
-  form.endTime = item.end_time.slice(0, 5); form.location = item.location || ''; form.note = item.note || ''
+  form.endTime = item.end_time.slice(0, 5); form.location = item.location || ''
   errorMessage.value = ''; isScheduleModalOpen.value = true
 }
 
 const closeScheduleModal = () => { resetForm(); errorMessage.value = ''; isScheduleModalOpen.value = false }
 
+const openCreateTermModal = () => {
+  termForm.termName = ''; termForm.startDate = ''; termForm.endDate = ''
+  isTermModalOpen.value = true
+}
+
+const closeTermModal = () => { isTermModalOpen.value = false }
+
+const submitTerm = async () => {
+  if (isSubmittingTerm.value) return
+  const { toastSuccess, toastError, toastWarning } = useAlert()
+  if (!termForm.termName.trim()) { toastWarning('กรุณาระบุชื่อภาคเรียน'); return }
+  if (!termForm.startDate || !termForm.endDate) { toastWarning('กรุณาระบุวันเริ่มและวันสิ้นสุดภาคเรียน'); return }
+  isSubmittingTerm.value = true
+  try {
+    if (!userId.value) return
+    const created = await apiFetch<BackendTerm>('/api/Schedule/terms', {
+      method: 'POST',
+      body: {
+        userId: userId.value,
+        termName: termForm.termName.trim(),
+        startDate: `${termForm.startDate}T00:00:00`,
+        endDate: `${termForm.endDate}T00:00:00`,
+      },
+    })
+    toastSuccess('สร้างภาคเรียนสำเร็จ')
+    closeTermModal()
+    await loadSchedules()
+    selectedTermId.value = created.id
+  } catch (error: any) {
+    console.error('Create term error:', error)
+    toastError(getApiErrorMessage(error, 'สร้างภาคเรียนไม่สำเร็จ'))
+  } finally {
+    isSubmittingTerm.value = false
+  }
+}
+
 const loadSchedules = async () => {
   isLoading.value = true; errorMessage.value = ''
   try {
-    const { data: userData, error: userError } = await supabase.auth.getUser()
-    if (userError) throw userError
-    if (!userData.user) { await router.push('/login'); return }
-    const { data, error } = await supabase
-      .from('study_schedules').select('id, user_id, course_name, day_of_week, start_time, end_time, location, note, created_at')
-      .eq('user_id', userData.user.id).order('day_of_week', { ascending: true }).order('start_time', { ascending: true })
-    if (error) {
-      if (tableMissingCodes.has(error.code || '')) { errorMessage.value = 'ยังไม่พบตาราง study_schedules ใน Supabase'; schedules.value = []; return }
-      throw error
+    if (!userId.value) return
+    const data = await apiFetch<BackendTerm[]>(`/api/Schedule/terms/${userId.value}`)
+    terms.value = data
+    if (!selectedTermId.value || !data.some(t => t.id === selectedTermId.value)) {
+      selectedTermId.value = data[0]?.id || ''
     }
-    schedules.value = normalizeRows(data || [])
   } catch (error: any) {
     console.error('Load study schedules error:', error)
-    errorMessage.value = error?.message || 'โหลดข้อมูลตารางเรียนไม่สำเร็จ'
+    errorMessage.value = getApiErrorMessage(error, 'โหลดข้อมูลตารางเรียนไม่สำเร็จ')
   } finally {
     isLoading.value = false
   }
@@ -1003,32 +1162,33 @@ const loadSchedules = async () => {
 const submitSchedule = async () => {
   if (isSubmitting.value) return
   const { toastSuccess, toastError, toastWarning } = useAlert()
+  if (!selectedTermId.value) { toastWarning('กรุณาเลือกหรือสร้างภาคเรียนก่อน'); return }
   if (!form.courseName.trim()) { toastWarning('กรุณาระบุชื่อวิชา'); return }
   if (!form.startTime || !form.endTime) { toastWarning('กรุณาระบุเวลาเริ่มและสิ้นสุด'); return }
   if (toMinutes(form.endTime) <= toMinutes(form.startTime)) { toastWarning('เวลาสิ้นสุดต้องมากกว่าเวลาเริ่ม'); return }
   isSubmitting.value = true; errorMessage.value = ''
   try {
-    const { data: userData, error: userError } = await supabase.auth.getUser()
-    if (userError) throw userError
-    if (!userData.user) { await router.push('/login'); return }
-    const payload = {
-      course_name: form.courseName.trim(), day_of_week: form.dayOfWeek,
-      start_time: `${form.startTime}:00`, end_time: `${form.endTime}:00`,
-      location: form.location.trim() || null, note: form.note.trim() || null,
+    const body = {
+      termId: selectedTermId.value,
+      courseCode: '',
+      courseName: form.courseName.trim(),
+      room: form.location.trim() || null,
+      instructor: null,
+      dayOfWeek: dayNumberToName[form.dayOfWeek] || 'monday',
+      startTime: `${form.startTime}:00`,
+      endTime: `${form.endTime}:00`,
+      colorHex: null,
     }
-    const q = supabase.from('study_schedules') as any
-    const { error } = isEditing.value
-      ? await q.update(payload).eq('id', editingScheduleId.value).eq('user_id', userData.user.id)
-      : await q.insert({ user_id: userData.user.id, ...payload })
-    if (error) {
-      if (tableMissingCodes.has(error.code || '')) { const msg = 'ยังไม่พบตาราง study_schedules'; errorMessage.value = msg; toastError(msg); return }
-      throw error
+    if (isEditing.value) {
+      await apiFetch(`/api/Schedule/courses/${editingScheduleId.value}`, { method: 'PUT', body })
+    } else {
+      await apiFetch('/api/Schedule/courses', { method: 'POST', body })
     }
     toastSuccess(isEditing.value ? 'แก้ไขคาบเรียนสำเร็จ' : 'เพิ่มคาบเรียนสำเร็จ')
     resetForm(); isScheduleModalOpen.value = false; await loadSchedules()
   } catch (error: any) {
     console.error('Save study schedule error:', error)
-    const msg = error?.message || 'บันทึกคาบเรียนไม่สำเร็จ'; errorMessage.value = msg; toastError(msg)
+    const msg = getApiErrorMessage(error, 'บันทึกคาบเรียนไม่สำเร็จ'); errorMessage.value = msg; toastError(msg)
   } finally {
     isSubmitting.value = false
   }
@@ -1041,17 +1201,13 @@ const deleteSchedule = async (scheduleId: string) => {
   if (!shouldDelete) return
   isDeletingId.value = scheduleId; errorMessage.value = ''
   try {
-    const { data: userData, error: userError } = await supabase.auth.getUser()
-    if (userError) throw userError
-    if (!userData.user) { await router.push('/login'); return }
-    const { error } = await supabase.from('study_schedules').delete().eq('id', scheduleId).eq('user_id', userData.user.id)
-    if (error) throw error
-    schedules.value = schedules.value.filter(item => item.id !== scheduleId)
+    await apiFetch(`/api/Schedule/courses/${scheduleId}`, { method: 'DELETE' })
     if (editingScheduleId.value === scheduleId) closeScheduleModal()
     toastSuccess('ลบคาบเรียนสำเร็จ')
+    await loadSchedules()
   } catch (error: any) {
     console.error('Delete study schedule error:', error)
-    const msg = error?.message || 'ลบคาบเรียนไม่สำเร็จ'; errorMessage.value = msg; toastError(msg)
+    const msg = getApiErrorMessage(error, 'ลบคาบเรียนไม่สำเร็จ'); errorMessage.value = msg; toastError(msg)
   } finally {
     isDeletingId.value = ''
   }

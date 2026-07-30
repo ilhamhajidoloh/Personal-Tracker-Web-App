@@ -1,25 +1,11 @@
-import { serverSupabaseUser } from '#supabase/server'
-
-import { getAuthUserId, getLineConnectionStatus, pushLineTextMessage } from '../../utils/line'
-
-type LineAuthUser = {
-  id?: string
-  sub?: string
-  user_metadata?: Record<string, unknown>
-}
+import { requireBackendUserId } from '../../utils/auth'
+import { getLineConnectionStatus, pushLineTextMessage } from '../../utils/line'
 
 export default defineEventHandler(async (event) => {
-  const user = await serverSupabaseUser(event) as LineAuthUser | null
+  const authUserId = await requireBackendUserId(event)
 
-  if (!user) {
-    throw createError({
-      statusCode: 401,
-      statusMessage: 'กรุณาเข้าสู่ระบบก่อนส่งข้อความทดสอบ',
-    })
-  }
-
-  const lineUser = { user_metadata: user.user_metadata || {} }
-  const connection = getLineConnectionStatus(lineUser)
+  const config = useRuntimeConfig(event)
+  const connection = await getLineConnectionStatus(config.public.apiBase, authUserId)
 
   if (!connection.connected) {
     throw createError({
@@ -27,8 +13,6 @@ export default defineEventHandler(async (event) => {
       statusMessage: 'ยังไม่ได้เชื่อมต่อ LINE - กรุณาไปที่หน้า Profile แล้วทำการเชื่อมต่อ LINE ก่อน',
     })
   }
-
-  const config = useRuntimeConfig(event)
 
   if (!config.line.channelAccessToken) {
     throw createError({

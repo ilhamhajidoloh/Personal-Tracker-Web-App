@@ -58,62 +58,68 @@ export const newSession = (
   ...extra,
 })
 
-export const getLineSession = (metadata: Record<string, unknown>): LineSession | null => {
-  const raw = metadata.line_session
-  if (!raw || typeof raw !== 'object') return null
-  const s = raw as Partial<LineSession>
-  if (typeof s.state !== 'string' || typeof s.expires_at !== 'number') return null
-  if (Date.now() > s.expires_at) return null
-  return s as LineSession
+export const getLineSession = (sessionStateJson: string | null | undefined): LineSession | null => {
+  if (!sessionStateJson) return null
+  try {
+    const s = JSON.parse(sessionStateJson) as Partial<LineSession>
+    if (typeof s.state !== 'string' || typeof s.expires_at !== 'number') return null
+    if (Date.now() > s.expires_at) return null
+    return s as LineSession
+  } catch {
+    return null
+  }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const setLineSession = async (supabase: any, userId: string, currentMetadata: Record<string, unknown>, session: LineSession | null) => {
-  const { error } = await supabase.auth.admin.updateUserById(userId, {
-    user_metadata: { ...currentMetadata, line_session: session ?? null },
+export const setLineSession = async (apiBase: string, userId: string, session: LineSession | null) => {
+  await $fetch(`${apiBase}/api/Line/${userId}/session`, {
+    method: 'PUT',
+    body: {
+      sessionStateJson: session ? JSON.stringify(session) : null,
+      sessionExpiresAt: session ? new Date(session.expires_at).toISOString() : null,
+    },
   })
-  if (error) throw error
 }
 
 // ─── User lookup ──────────────────────────────────────────────────────────────
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const findUserByLineId = async (supabase: any, lineUserId: string): Promise<{ userId: string; metadata: Record<string, unknown> } | null> => {
-  const { data, error } = await supabase.auth.admin.listUsers({ perPage: 1000 })
-  if (error || !data?.users?.length) return null
-  const user = (data.users as Array<{ id: string; user_metadata?: Record<string, unknown> }>)
-    .find(u => u.user_metadata?.line_user_id === lineUserId)
-  if (!user) return null
-  return { userId: user.id, metadata: (user.user_metadata ?? {}) as Record<string, unknown> }
+type BackendLineConnection = {
+  userId: string
+  sessionStateJson: string | null
+}
+
+export const findUserByLineId = async (apiBase: string, lineUserId: string): Promise<{ userId: string; sessionStateJson: string | null } | null> => {
+  const connection = await $fetch<BackendLineConnection>(`${apiBase}/api/Line/by-line-user/${lineUserId}`).catch(() => null)
+  if (!connection) return null
+  return { userId: connection.userId, sessionStateJson: connection.sessionStateJson }
 }
 
 // ─── Transaction operations ───────────────────────────────────────────────────
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const saveTransaction = async (supabase: any, userId: string, type: 'income' | 'expense', amount: number, category?: string) => {
+export const saveTransaction = async (apiBase: string, userId: string, type: 'income' | 'expense', amount: number, category?: string) => {
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' })
-  const { error } = await supabase.from('transactions').insert({
-    user_id: userId,
-    entry_date: today,
-    type,
-    category: category?.trim() || null,
-    description: 'บันทึกผ่าน LINE Bot',
-    amount,
+  await $fetch(`${apiBase}/api/Finance`, {
+    method: 'POST',
+    body: {
+      userId,
+      transactionDate: `${today}T00:00:00`,
+      type,
+      category: category?.trim() || null,
+      note: 'บันทึกผ่าน LINE Bot',
+      amount,
+    },
   })
-  if (error) throw error
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const getBalance = async (supabase: any, userId: string): Promise<{ income: number; expense: number; balance: number }> => {
-  const { data, error } = await supabase
-    .from('transactions')
-    .select('type, amount')
-    .eq('user_id', userId)
-  if (error || !data) return { income: 0, expense: 0, balance: 0 }
-  const rows = data as Array<{ type: string; amount: unknown }>
-  const income = rows.filter(r => r.type === 'income').reduce((s, r) => s + Number(r.amount), 0)
-  const expense = rows.filter(r => r.type === 'expense').reduce((s, r) => s + Number(r.amount), 0)
-  return { income, expense, balance: income - expense }
+type BackendFinanceSummary = {
+  totalIncome: number
+  totalExpense: number
+  netBalance: number
+}
+
+export const getBalance = async (apiBase: string, userId: string): Promise<{ income: number; expense: number; balance: number }> => {
+  const summary = await $fetch<BackendFinanceSummary>(`${apiBase}/api/Finance/summary/${userId}`).catch(() => null)
+  if (!summary) return { income: 0, expense: 0, balance: 0 }
+  return { income: summary.totalIncome, expense: summary.totalExpense, balance: summary.netBalance }
 }
 
 // ─── Message builders ─────────────────────────────────────────────────────────
@@ -158,20 +164,19 @@ export const makeTypeSelectMsg = () => ({
   },
 })
 
+type BackendFinanceRow = { type: string; category: string | null }
+
 export const getExistingCategories = async (
-  supabase: any,
+  apiBase: string,
   userId: string,
   type: 'income' | 'expense',
 ): Promise<string[]> => {
-  const { data, error } = await supabase
-    .from('transactions')
-    .select('category')
-    .eq('user_id', userId)
-    .eq('type', type)
-    .not('category', 'is', null)
-  if (error || !data) return []
-  const cats = data.map((r: any) => String(r.category).trim()).filter(Boolean) as string[]
-  return [...new Set(cats)].sort((a: string, b: string) => a.localeCompare(b, 'th'))
+  const rows = await $fetch<BackendFinanceRow[]>(`${apiBase}/api/Finance/${userId}`).catch(() => [])
+  const cats = rows
+    .filter(r => r.type === type && r.category)
+    .map(r => String(r.category).trim())
+    .filter(Boolean)
+  return [...new Set(cats)].sort((a, b) => a.localeCompare(b, 'th'))
 }
 
 export const makeAmountMsg = (type: 'income' | 'expense', category: string) => ({

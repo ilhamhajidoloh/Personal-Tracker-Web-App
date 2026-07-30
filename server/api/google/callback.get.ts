@@ -1,5 +1,3 @@
-import { serverSupabaseServiceRole } from '#supabase/server'
-
 import { buildGoogleTokenExpiry, exchangeGoogleCode, verifyGoogleState } from '../../utils/googleCalendar'
 
 export default defineEventHandler(async (event) => {
@@ -34,18 +32,14 @@ export default defineEventHandler(async (event) => {
       return sendRedirect(event, '/profile?google=error')
     }
 
-    const supabaseAdmin = serverSupabaseServiceRole(event)
-    const { error } = await supabaseAdmin.from('google_calendar_connections').upsert({
-      user_id: verifiedState.userId,
-      access_token: tokens.access_token,
-      refresh_token: tokens.refresh_token,
-      token_expires_at: buildGoogleTokenExpiry(tokens.expires_in),
-      updated_at: new Date().toISOString(),
+    await $fetch(`${config.public.apiBase}/api/GoogleCalendar/${verifiedState.userId}`, {
+      method: 'PUT',
+      body: {
+        accessToken: tokens.access_token,
+        refreshToken: tokens.refresh_token,
+        tokenExpiresAt: buildGoogleTokenExpiry(tokens.expires_in),
+      },
     })
-
-    if (error) {
-      throw error
-    }
 
     return sendRedirect(event, '/profile?google=success')
   } catch (err) {

@@ -31,7 +31,8 @@
         <!-- Error -->
         <div
           v-if="errorMessage"
-          class="rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-amber-200 text-sm flex items-center gap-2"
+          class="rounded-2xl px-4 py-3 text-sm flex items-center gap-2 font-medium"
+          style="background: rgba(182, 133, 42, 0.1); border: 1px solid rgba(182, 133, 42, 0.3); color: var(--ink-amber);"
         >
           <span>⚠️</span><span>{{ errorMessage }}</span>
         </div>
@@ -651,19 +652,10 @@ type DailySummary = {
   balance: number
 }
 
-type TransactionPayload = {
-  entry_date: string
-  type: TransactionType
-  category: string | null
-  description: string | null
-  amount: number
-}
-
 definePageMeta({ middleware: 'auth' })
 useHead({ title: 'รายรับรายจ่าย' })
 
-const router = useRouter()
-const supabase = useSupabaseClient()
+const { apiFetch, userId } = useBackendApi()
 
 const isLoading = ref(true)
 const isSubmitting = ref(false)
@@ -689,8 +681,6 @@ const form = reactive({
   description: '',
   amount: '',
 })
-
-const tableMissingCodes = new Set(['42P01', 'PGRST205'])
 
 const formatCurrency = (amount: number) => new Intl.NumberFormat('th-TH', {
   style: 'currency', currency: 'THB', minimumFractionDigits: 2, maximumFractionDigits: 2,
@@ -908,12 +898,22 @@ const resetForm = () => {
   isCategoryDropdownOpen.value = false
 }
 
-const normalizeRows = (rows: any[]): TransactionRow[] => rows.map(row => ({
-  id: String(row.id), user_id: String(row.user_id), entry_date: String(row.entry_date),
+type BackendTransaction = {
+  id: string
+  userId: string
+  type: string
+  amount: number
+  category: string | null
+  transactionDate: string
+  note: string | null
+}
+
+const normalizeRows = (rows: BackendTransaction[]): TransactionRow[] => rows.map(row => ({
+  id: String(row.id), user_id: String(row.userId), entry_date: String(row.transactionDate).slice(0, 10),
   type: row.type === 'income' ? 'income' : 'expense',
   category: typeof row.category === 'string' ? row.category : null,
-  description: typeof row.description === 'string' ? row.description : null,
-  amount: Number(row.amount || 0), created_at: String(row.created_at || ''),
+  description: typeof row.note === 'string' ? row.note : null,
+  amount: Number(row.amount || 0), created_at: String(row.transactionDate || ''),
 }))
 
 const openEditTransactionModal = (item: TransactionRow) => {
@@ -929,27 +929,19 @@ const openEditTransactionModal = (item: TransactionRow) => {
   isEntryModalOpen.value = true
 }
 
+const getApiErrorMessage = (error: any, fallback: string) => error?.data?.message || error?.message || fallback
+
 const loadTransactions = async () => {
   isLoading.value = true
   errorMessage.value = ''
   try {
-    const { data: userData, error: userError } = await supabase.auth.getUser()
-    if (userError) throw userError
-    if (!userData.user) { await router.push('/login'); return }
-    const { data, error } = await supabase
-      .from('transactions')
-      .select('id, user_id, entry_date, type, category, description, amount, created_at')
-      .eq('user_id', userData.user.id)
-      .order('entry_date', { ascending: false })
-      .order('created_at', { ascending: false })
-    if (error) {
-      if (tableMissingCodes.has(error.code || '')) { errorMessage.value = 'ยังไม่พบตาราง transactions ใน Supabase'; transactions.value = []; return }
-      throw error
-    }
-    transactions.value = normalizeRows(data || [])
+    if (!userId.value) return
+    const data = await apiFetch<BackendTransaction[]>(`/api/Finance/${userId.value}`)
+    const sorted = [...data].sort((a, b) => b.transactionDate.localeCompare(a.transactionDate))
+    transactions.value = normalizeRows(sorted)
   } catch (error: any) {
     console.error('Load transactions error:', error)
-    errorMessage.value = error?.message || 'โหลดข้อมูลไม่สำเร็จ'
+    errorMessage.value = getApiErrorMessage(error, 'โหลดข้อมูลไม่สำเร็จ')
   } finally {
     isLoading.value = false
   }
@@ -964,21 +956,19 @@ const submitTransaction = async () => {
   isSubmitting.value = true
   errorMessage.value = ''
   try {
-    const { data: userData, error: userError } = await supabase.auth.getUser()
-    if (userError) throw userError
-    if (!userData.user) { await router.push('/login'); return }
-    const payload: TransactionPayload = {
-      entry_date: form.entryDate, type: form.type,
-      category: form.category.trim() || null,
-      description: form.description.trim() || null, amount,
+    if (!userId.value) return
+    const body = {
+      userId: userId.value,
+      type: form.type,
+      amount,
+      category: form.category.trim() || 'ทั่วไป',
+      transactionDate: `${form.entryDate}T00:00:00`,
+      note: form.description.trim() || null,
     }
-    const q = supabase.from('transactions') as any
-    const { error } = isEditing.value
-      ? await q.update(payload).eq('id', editingTransactionId.value).eq('user_id', userData.user.id)
-      : await q.insert({ user_id: userData.user.id, ...payload })
-    if (error) {
-      if (tableMissingCodes.has(error.code || '')) { const msg = 'ยังไม่พบตาราง transactions ใน Supabase'; errorMessage.value = msg; toastError(msg); return }
-      throw error
+    if (isEditing.value) {
+      await apiFetch(`/api/Finance/${editingTransactionId.value}`, { method: 'PUT', body })
+    } else {
+      await apiFetch('/api/Finance', { method: 'POST', body })
     }
     toastSuccess(isEditing.value ? 'แก้ไขรายการสำเร็จ' : 'เพิ่มรายการสำเร็จ')
     isEntryModalOpen.value = false
@@ -986,7 +976,7 @@ const submitTransaction = async () => {
     await loadTransactions()
   } catch (error: any) {
     console.error('Save transaction error:', error)
-    const msg = error?.message || 'บันทึกรายการไม่สำเร็จ'
+    const msg = getApiErrorMessage(error, 'บันทึกรายการไม่สำเร็จ')
     errorMessage.value = msg
     toastError(msg)
   } finally {
@@ -1002,17 +992,13 @@ const deleteTransaction = async (transactionId: string) => {
   isDeletingId.value = transactionId
   errorMessage.value = ''
   try {
-    const { data: userData, error: userError } = await supabase.auth.getUser()
-    if (userError) throw userError
-    if (!userData.user) { await router.push('/login'); return }
-    const { error } = await supabase.from('transactions').delete().eq('id', transactionId).eq('user_id', userData.user.id)
-    if (error) throw error
+    await apiFetch(`/api/Finance/${transactionId}`, { method: 'DELETE' })
     transactions.value = transactions.value.filter(i => i.id !== transactionId)
     if (editingTransactionId.value === transactionId) { isEntryModalOpen.value = false; resetForm() }
     toastSuccess('ลบรายการสำเร็จ')
   } catch (error: any) {
     console.error('Delete transaction error:', error)
-    const msg = error?.message || 'ลบรายการไม่สำเร็จ'
+    const msg = getApiErrorMessage(error, 'ลบรายการไม่สำเร็จ')
     errorMessage.value = msg
     toastError(msg)
   } finally {

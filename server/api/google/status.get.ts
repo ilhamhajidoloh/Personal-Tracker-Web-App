@@ -1,34 +1,26 @@
-import { serverSupabaseServiceRole, serverSupabaseUser } from '#supabase/server'
-
-import { getAuthUserId } from '../../utils/line'
-
-type GoogleAuthUser = {
-  id?: string
-  sub?: string
-}
+import { getBackendUserId } from '../../utils/auth'
 
 export type GoogleCalendarStatus = {
   connected: boolean
   connectedAt: string | null
 }
 
+type BackendGoogleConnection = {
+  createdAt: string
+}
+
 export default defineEventHandler(async (event): Promise<GoogleCalendarStatus> => {
-  const user = await serverSupabaseUser(event) as GoogleAuthUser | null
-  const authUserId = getAuthUserId(user)
+  const authUserId = await getBackendUserId(event)
 
   if (!authUserId) {
     return { connected: false, connectedAt: null }
   }
 
-  const supabaseAdmin = serverSupabaseServiceRole(event)
-  const { data } = await supabaseAdmin
-    .from('google_calendar_connections')
-    .select('created_at')
-    .eq('user_id', authUserId)
-    .maybeSingle()
+  const config = useRuntimeConfig(event)
+  const connection = await $fetch<BackendGoogleConnection>(`${config.public.apiBase}/api/GoogleCalendar/${authUserId}`).catch(() => null)
 
   return {
-    connected: Boolean(data),
-    connectedAt: (data as { created_at?: string } | null)?.created_at || null,
+    connected: Boolean(connection),
+    connectedAt: connection?.createdAt || null,
   }
 })

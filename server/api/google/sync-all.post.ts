@@ -1,12 +1,5 @@
-import { serverSupabaseServiceRole, serverSupabaseUser } from '#supabase/server'
-
-import { getAuthUserId } from '../../utils/line'
-import { getValidGoogleAccessToken, upsertGoogleCalendarEvent, type GoogleEventRow } from '../../utils/googleCalendar'
-
-type GoogleAuthUser = {
-  id?: string
-  sub?: string
-}
+import { requireBackendUserId } from '../../utils/auth'
+import { activityToGoogleEventRow, getValidGoogleAccessToken, upsertGoogleCalendarEvent, type BackendActivityForSync } from '../../utils/googleCalendar'
 
 type SyncAllResponse = {
   success: boolean
@@ -16,17 +9,11 @@ type SyncAllResponse = {
 }
 
 export default defineEventHandler(async (event): Promise<SyncAllResponse> => {
-  const user = await serverSupabaseUser(event) as GoogleAuthUser | null
-  const authUserId = getAuthUserId(user)
-
-  if (!authUserId) {
-    throw createError({ statusCode: 401, statusMessage: 'กรุณาเข้าสู่ระบบก่อน' })
-  }
+  const authUserId = await requireBackendUserId(event)
 
   const config = useRuntimeConfig(event)
-  const supabaseAdmin = serverSupabaseServiceRole(event) as any
 
-  const accessToken = await getValidGoogleAccessToken(supabaseAdmin, authUserId, {
+  const accessToken = await getValidGoogleAccessToken(config.public.apiBase, authUserId, {
     clientId: config.google.clientId,
     clientSecret: config.google.clientSecret,
     redirectUri: `${config.public.appUrl}/api/google/callback`,
@@ -36,51 +23,46 @@ export default defineEventHandler(async (event): Promise<SyncAllResponse> => {
     return { success: false, processedCount: 0, failedCount: 0, reason: 'not_connected' }
   }
 
-  // Fetch all events for the user where google_event_id is null
-  const { data: events, error: dbError } = await supabaseAdmin
-    .from('events')
-    .select('id, user_id, title, description, event_type, start_date, start_time, end_date, end_time, reminder_minutes, google_event_id')
-    .eq('user_id', authUserId)
-    .is('google_event_id', null)
-
-  if (dbError) {
-    console.error('Google Calendar sync-all DB error:', dbError)
+  // Fetch all activities for the user that have never been synced to Google
+  const allActivities = await $fetch<BackendActivityForSync[]>(`${config.public.apiBase}/api/Activity/${authUserId}`).catch((err) => {
+    console.error('Google Calendar sync-all fetch error:', err)
     throw createError({ statusCode: 500, statusMessage: 'ไม่สามารถดึงข้อมูลกิจกรรมได้' })
-  }
+  })
 
-  if (!events || events.length === 0) {
+  const pendingActivities = allActivities.filter(a => !a.googleEventId)
+
+  if (pendingActivities.length === 0) {
     return { success: true, processedCount: 0, failedCount: 0 }
   }
 
   let processedCount = 0
   let failedCount = 0
 
-  for (const eventRow of events) {
+  for (const activity of pendingActivities) {
     try {
       const googleEventId = await upsertGoogleCalendarEvent(
         accessToken,
         null,
-        eventRow as GoogleEventRow
+        activityToGoogleEventRow(activity),
       )
 
       if (googleEventId) {
-        const { error: updateError } = await supabaseAdmin
-          .from('events')
-          .update({ google_event_id: googleEventId })
-          .eq('id', eventRow.id)
-
-        if (updateError) {
-          console.error(`Failed to update google_event_id for event ${eventRow.id}:`, updateError)
+        try {
+          await $fetch(`${config.public.apiBase}/api/Activity/${activity.id}/google-sync`, {
+            method: 'PUT',
+            body: { googleEventId },
+          })
+          processedCount++
+        } catch (updateErr) {
+          console.error(`Failed to update googleEventId for activity ${activity.id}:`, updateErr)
           // We still count it as failed because DB sync didn't persist
           failedCount++
-        } else {
-          processedCount++
         }
       } else {
         failedCount++
       }
     } catch (err) {
-      console.error(`Failed to sync event ${eventRow.id} to Google Calendar:`, err)
+      console.error(`Failed to sync activity ${activity.id} to Google Calendar:`, err)
       failedCount++
     }
   }

@@ -4,6 +4,11 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   runtimeConfig: {
     cronSecret: '',
+    jwt: {
+      key: '',
+      issuer: '',
+      audience: '',
+    },
     line: {
       channelAccessToken: '',
       channelSecret: '',
@@ -14,6 +19,8 @@ export default defineNuxtConfig({
     },
     public: {
       appUrl: '',
+      apiBase: '',
+      googleClientId: '',
       line: {
         botAddFriendUrl: '',
         botDisplayName: 'MyLife Bot',
@@ -31,11 +38,12 @@ export default defineNuxtConfig({
         // ค่อยเปลี่ยนชื่อ header เป็น 'Content-Security-Policy' เพื่อบังคับใช้จริง
         'Content-Security-Policy-Report-Only': [
           "default-src 'self'",
-          "script-src 'self' 'unsafe-inline'",
-          "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+          "script-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/client",
+          "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com/gsi/style",
           "font-src 'self' https://fonts.gstatic.com data:",
-          "img-src 'self' data: blob: https://xeazapbonyjcfufpgmpl.supabase.co",
-          "connect-src 'self' https://xeazapbonyjcfufpgmpl.supabase.co wss://xeazapbonyjcfufpgmpl.supabase.co",
+          "img-src 'self' data: blob:",
+          `connect-src 'self' https://accounts.google.com/gsi/ ${process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:5147'}`,
+          "frame-src https://accounts.google.com/gsi/",
           "frame-ancestors 'self'",
           "base-uri 'self'",
           "form-action 'self' https://accounts.google.com",
@@ -43,7 +51,7 @@ export default defineNuxtConfig({
       },
     },
   },
-  modules: ['@nuxtjs/tailwindcss', '@nuxtjs/supabase', '@vite-pwa/nuxt'],
+  modules: ['@nuxtjs/tailwindcss', '@vite-pwa/nuxt'],
   pwa: {
     registerType: 'autoUpdate',
     manifest: {
@@ -98,13 +106,6 @@ export default defineNuxtConfig({
       suppressWarnings: true,
       navigateFallbackAllowlist: [/^\/$/],
       type: 'module',
-    }
-  },
-  supabase: {
-    redirect: false,
-    redirectOptions: {
-      login: '/login',
-      callback: '/auth/callback',
     }
   },
   tailwindcss: {

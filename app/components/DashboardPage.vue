@@ -418,6 +418,8 @@ type TodoPriority = 'low' | 'medium' | 'high'
 type TodoRow = {
   id: string
   title: string
+  description: string | null
+  tag: string
   due_date: string | null
   status: TodoStatus
   priority: TodoPriority
@@ -435,19 +437,10 @@ type DashboardEventRow = {
   end_time: string | null
 }
 
-const router = useRouter()
-const supabase = useSupabaseClient()
-const user = useSupabaseUser()
+const { apiFetch, userId } = useBackendApi()
+const { currentUser } = useAuth()
 
-const userDisplayName = computed(() => {
-  const metadata = (user.value?.user_metadata || {}) as Record<string, unknown>
-  const fullName = typeof metadata.full_name === 'string'
-    ? metadata.full_name
-    : typeof metadata.name === 'string'
-      ? metadata.name
-      : ''
-  return fullName.trim() || user.value?.email?.split('@')[0] || 'MyLife User'
-})
+const userDisplayName = computed(() => currentUser.value?.fullName?.trim() || currentUser.value?.email?.split('@')[0] || 'MyLife User')
 
 const lastUpdateTime = ref(nowTH().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) + ' น.')
 
@@ -540,7 +533,13 @@ const courseChipPalette = [
   'border-cyan-400/40 bg-cyan-500/15 text-cyan-100',
 ]
 
-const tableMissingCodes = new Set(['42P01', 'PGRST205'])
+const getApiErrorMessage = (error: any, fallback: string) => error?.data?.message || error?.message || fallback
+
+const statusFromBackend: Record<string, TodoStatus> = { pending: 'pending', inProgress: 'in_progress', completed: 'completed' }
+
+const dayNameToNumber: Record<string, number> = {
+  monday: 1, tuesday: 2, wednesday: 3, thursday: 4, friday: 5, saturday: 6, sunday: 7,
+}
 
 const formatCurrency = (amount: number) => new Intl.NumberFormat('th-TH', {
   style: 'currency',
@@ -1134,48 +1133,97 @@ const nextStudyAlertBoxClass = computed(() => {
   return 'border-sky-400/35 bg-sky-500/10'
 })
 
-const normalizeTransactionRows = (rows: any[]): TransactionRow[] => rows.map((row) => ({
+type BackendTransaction = {
+  id: string
+  userId: string
+  type: string
+  amount: number
+  category: string | null
+  transactionDate: string
+}
+
+type BackendCourse = {
+  id: string
+  termId: string
+  courseName: string
+  room: string | null
+  dayOfWeek: string
+  startTime: string
+  endTime: string
+}
+
+type BackendTerm = {
+  id: string
+  userId: string
+  termName: string
+  startDate: string
+  endDate: string
+  courses: BackendCourse[]
+}
+
+type BackendTodo = {
+  id: string
+  title: string
+  description: string | null
+  tag: string
+  targetDate: string
+  status: string
+  priority: string
+}
+
+type BackendActivity = {
+  id: string
+  title: string
+  startTime: string | null
+  endTime: string | null
+  isAllDay: boolean
+  isMultiDay: boolean
+}
+
+const normalizeTransactionRows = (rows: BackendTransaction[]): TransactionRow[] => rows.map((row) => ({
   id: String(row.id),
-  user_id: String(row.user_id),
-  entry_date: String(row.entry_date),
+  user_id: String(row.userId),
+  entry_date: String(row.transactionDate).slice(0, 10),
   type: row.type === 'income' ? 'income' : 'expense',
   category: typeof row.category === 'string' ? row.category : null,
   amount: Number(row.amount || 0),
-  created_at: String(row.created_at || ''),
+  created_at: String(row.transactionDate || ''),
 }))
 
-const normalizeStudyRows = (rows: any[]): StudyScheduleRow[] => rows.map((row) => ({
-  id: String(row.id),
-  user_id: String(row.user_id),
-  course_name: String(row.course_name || ''),
-  day_of_week: Number(row.day_of_week || 1),
-  start_time: String(row.start_time || '00:00:00'),
-  end_time: String(row.end_time || '00:00:00'),
-  location: typeof row.location === 'string' ? row.location : null,
-  created_at: String(row.created_at || ''),
-}))
+const pickActiveTerm = (terms: BackendTerm[]): BackendTerm | null => {
+  if (!terms.length) return null
+  const todayStr = getTodayTH()
+  const active = terms.find(t => t.startDate.slice(0, 10) <= todayStr && t.endDate.slice(0, 10) >= todayStr)
+  if (active) return active
+  return [...terms].sort((a, b) => b.startDate.localeCompare(a.startDate))[0] || null
+}
+
+const normalizeStudyRows = (terms: BackendTerm[]): StudyScheduleRow[] => {
+  const term = pickActiveTerm(terms)
+  if (!term) return []
+  return term.courses.map((c) => ({
+    id: String(c.id),
+    user_id: term.userId,
+    course_name: String(c.courseName || ''),
+    day_of_week: dayNameToNumber[c.dayOfWeek] || 1,
+    start_time: String(c.startTime || '00:00:00'),
+    end_time: String(c.endTime || '00:00:00'),
+    location: typeof c.room === 'string' ? c.room : null,
+    created_at: '',
+  }))
+}
 
 const loadTransactions = async () => {
   isLoading.value = true
   errorMessage.value = ''
   try {
-    const { data: userData, error: userError } = await supabase.auth.getUser()
-    if (userError) throw userError
-    if (!userData.user) { await router.push('/login'); return }
-    const { data, error } = await supabase
-      .from('transactions')
-      .select('id, user_id, entry_date, type, category, amount, created_at')
-      .eq('user_id', userData.user.id)
-      .order('entry_date', { ascending: false })
-      .order('created_at', { ascending: false })
-    if (error) {
-      if (tableMissingCodes.has(error.code || '')) { errorMessage.value = 'ยังไม่พบตาราง transactions ใน Supabase'; transactions.value = []; return }
-      throw error
-    }
-    transactions.value = normalizeTransactionRows(data || [])
+    if (!userId.value) return
+    const data = await apiFetch<BackendTransaction[]>(`/api/Finance/${userId.value}`)
+    const sorted = [...data].sort((a, b) => b.transactionDate.localeCompare(a.transactionDate))
+    transactions.value = normalizeTransactionRows(sorted)
   } catch (error: any) {
     console.error('Load dashboard finance error:', error)
-    errorMessage.value = error?.message || 'โหลดข้อมูล Dashboard ไม่สำเร็จ'
+    errorMessage.value = getApiErrorMessage(error, 'โหลดข้อมูล Dashboard ไม่สำเร็จ')
   } finally {
     isLoading.value = false
   }
@@ -1185,102 +1233,90 @@ const loadStudySchedules = async () => {
   isScheduleLoading.value = true
   scheduleErrorMessage.value = ''
   try {
-    const { data: userData, error: userError } = await supabase.auth.getUser()
-    if (userError) throw userError
-    if (!userData.user) { await router.push('/login'); return }
-    const { data, error } = await supabase
-      .from('study_schedules')
-      .select('id, user_id, course_name, day_of_week, start_time, end_time, location, created_at')
-      .eq('user_id', userData.user.id)
-      .order('day_of_week', { ascending: true })
-      .order('start_time', { ascending: true })
-    if (error) {
-      if (tableMissingCodes.has(error.code || '')) { scheduleErrorMessage.value = 'ยังไม่พบตาราง study_schedules ใน Supabase'; studySchedules.value = []; return }
-      throw error
-    }
-    studySchedules.value = normalizeStudyRows(data || [])
+    if (!userId.value) return
+    const data = await apiFetch<BackendTerm[]>(`/api/Schedule/terms/${userId.value}`)
+    studySchedules.value = normalizeStudyRows(data)
   } catch (error: any) {
     console.error('Load study schedules summary error:', error)
-    scheduleErrorMessage.value = error?.message || 'โหลดข้อมูลตารางเรียนไม่สำเร็จ'
+    scheduleErrorMessage.value = getApiErrorMessage(error, 'โหลดข้อมูลตารางเรียนไม่สำเร็จ')
   } finally {
     isScheduleLoading.value = false
   }
 }
 
-const normalizeTodoRows = (rows: any[]): TodoRow[] => rows.map((row) => ({
+const normalizeTodoRows = (rows: BackendTodo[]): TodoRow[] => rows.map((row) => ({
   id: String(row.id),
   title: String(row.title),
-  due_date: row.due_date ? String(row.due_date) : null,
-  status: row.status as TodoStatus,
-  priority: row.priority as TodoPriority,
+  description: row.description,
+  tag: row.tag || 'ทั่วไป',
+  due_date: row.targetDate ? String(row.targetDate).slice(0, 10) : null,
+  status: (statusFromBackend[row.status] || 'pending') as TodoStatus,
+  priority: (row.priority === 'low' || row.priority === 'high' ? row.priority : 'medium') as TodoPriority,
 }))
 
 const loadTodos = async () => {
   isTodosLoading.value = true
   todosErrorMessage.value = ''
   try {
-    const { data: userData, error: userError } = await supabase.auth.getUser()
-    if (userError) throw userError
-    if (!userData.user) return
-    const { data, error } = await supabase
-      .from('todos')
-      .select('id, title, due_date, status, priority')
-      .eq('user_id', userData.user.id)
-    if (error) {
-      if (tableMissingCodes.has(error.code || '')) { todosErrorMessage.value = 'ยังไม่พบตาราง todos ใน Supabase'; todos.value = []; return }
-      throw error
-    }
-    todos.value = normalizeTodoRows(data || [])
+    if (!userId.value) return
+    const data = await apiFetch<BackendTodo[]>(`/api/Todo/${userId.value}`)
+    todos.value = normalizeTodoRows(data)
   } catch (error: any) {
     console.error('Load todos error:', error)
-    todosErrorMessage.value = error?.message || 'โหลดข้อมูลงานไม่สำเร็จ'
+    todosErrorMessage.value = getApiErrorMessage(error, 'โหลดข้อมูลงานไม่สำเร็จ')
   } finally {
     isTodosLoading.value = false
   }
 }
 
 const markTodoDone = async (id: string) => {
+  const item = todos.value.find(t => t.id === id)
+  if (!item) return
   try {
-    const { data: userData } = await supabase.auth.getUser()
-    if (!userData.user) return
-    const query = supabase.from('todos') as any
-    const { error } = await query.update({ status: 'completed' }).eq('id', id).eq('user_id', userData.user.id)
-    if (error) throw error
+    await apiFetch(`/api/Todo/${id}`, {
+      method: 'PUT',
+      body: {
+        title: item.title,
+        description: item.description,
+        targetDate: `${item.due_date || getTodayTH()}T00:00:00`,
+        tag: item.tag,
+        recurrence: 'none',
+        status: 'completed',
+        priority: item.priority,
+        isCompleted: true,
+      },
+    })
     todos.value = todos.value.map(t => t.id === id ? { ...t, status: 'completed' } : t)
   } catch (err: any) {
     console.error('Mark done error:', err)
   }
 }
 
-const normalizeEventRows = (rows: any[]): DashboardEventRow[] => rows.map((row) => ({
-  id: String(row.id),
-  title: String(row.title),
-  event_type: row.event_type as EventTypeType,
-  start_date: String(row.start_date),
-  start_time: row.start_time ? String(row.start_time) : null,
-  end_date: row.end_date ? String(row.end_date) : null,
-  end_time: row.end_time ? String(row.end_time) : null,
-}))
+const normalizeEventRows = (rows: BackendActivity[]): DashboardEventRow[] => rows.map((row) => {
+  const eventType: EventTypeType = row.isAllDay ? 'same_day_all_day' : row.isMultiDay ? 'multi_day' : 'same_day_time'
+  const startDate = row.startTime ? row.startTime.slice(0, 10) : getTodayTH()
+  const endDate = row.endTime ? row.endTime.slice(0, 10) : null
+  return {
+    id: String(row.id),
+    title: String(row.title),
+    event_type: eventType,
+    start_date: startDate,
+    start_time: eventType === 'same_day_all_day' ? null : (row.startTime ? row.startTime.slice(11, 19) : null),
+    end_date: eventType === 'same_day_time' ? null : endDate,
+    end_time: eventType === 'same_day_all_day' ? null : (row.endTime ? row.endTime.slice(11, 19) : null),
+  }
+})
 
 const loadEvents = async () => {
   isEventsLoading.value = true
   eventsErrorMessage.value = ''
   try {
-    const { data: userData, error: userError } = await supabase.auth.getUser()
-    if (userError) throw userError
-    if (!userData.user) return
-    const { data, error } = await supabase
-      .from('events')
-      .select('id, title, event_type, start_date, start_time, end_date, end_time')
-      .eq('user_id', userData.user.id)
-    if (error) {
-      if (tableMissingCodes.has(error.code || '')) { eventsErrorMessage.value = 'ยังไม่พบตาราง events ใน Supabase'; events.value = []; return }
-      throw error
-    }
-    events.value = normalizeEventRows(data || [])
+    if (!userId.value) return
+    const data = await apiFetch<BackendActivity[]>(`/api/Activity/${userId.value}`)
+    events.value = normalizeEventRows(data)
   } catch (error: any) {
     console.error('Load events error:', error)
-    eventsErrorMessage.value = error?.message || 'โหลดข้อมูลกิจกรรมไม่สำเร็จ'
+    eventsErrorMessage.value = getApiErrorMessage(error, 'โหลดข้อมูลกิจกรรมไม่สำเร็จ')
   } finally {
     isEventsLoading.value = false
   }

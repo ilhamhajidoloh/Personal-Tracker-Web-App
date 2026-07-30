@@ -30,10 +30,39 @@ type GoogleStatePayload = {
 }
 
 type GoogleConnectionRow = {
-  user_id: string
-  access_token: string
-  refresh_token: string
-  token_expires_at: string
+  userId: string
+  accessToken: string
+  refreshToken: string
+  tokenExpiresAt: string
+}
+
+export type BackendActivityForSync = {
+  id: string
+  title: string
+  description: string | null
+  startTime: string | null
+  endTime: string | null
+  isAllDay: boolean
+  isMultiDay: boolean
+  reminderMinutes: number | null
+  googleEventId: string | null
+}
+
+export const activityToGoogleEventRow = (a: BackendActivityForSync): GoogleEventRow => {
+  const eventType: GoogleEventType = a.isAllDay ? 'same_day_all_day' : a.isMultiDay ? 'multi_day' : 'same_day_time'
+  const startDate = a.startTime ? a.startTime.slice(0, 10) : ''
+  const endDate = a.endTime ? a.endTime.slice(0, 10) : null
+  return {
+    id: a.id,
+    title: a.title,
+    description: a.description,
+    event_type: eventType,
+    start_date: startDate,
+    start_time: eventType === 'same_day_all_day' ? null : (a.startTime ? a.startTime.slice(11, 19) : null),
+    end_date: eventType === 'same_day_time' ? null : endDate,
+    end_time: eventType === 'same_day_all_day' ? null : (a.endTime ? a.endTime.slice(11, 19) : null),
+    reminder_minutes: a.reminderMinutes,
+  }
 }
 
 type GoogleOAuthConfig = {
@@ -152,37 +181,35 @@ export const revokeGoogleToken = async (token: string) => {
 }
 
 export const getValidGoogleAccessToken = async (
-  supabaseAdmin: any,
+  apiBase: string,
   userId: string,
   config: GoogleOAuthConfig,
 ): Promise<string | null> => {
-  const { data, error } = await supabaseAdmin
-    .from('google_calendar_connections')
-    .select('user_id, access_token, refresh_token, token_expires_at')
-    .eq('user_id', userId)
-    .maybeSingle()
+  const connection = await $fetch<GoogleConnectionRow>(`${apiBase}/api/GoogleCalendar/${userId}`).catch(() => null)
+  if (!connection) return null
 
-  if (error || !data) return null
-
-  const connection = data as GoogleConnectionRow
-  const expiresAt = new Date(connection.token_expires_at).getTime()
+  const expiresAt = new Date(connection.tokenExpiresAt).getTime()
 
   if (expiresAt - TOKEN_REFRESH_BUFFER_MS > Date.now()) {
-    return connection.access_token
+    return connection.accessToken
   }
 
-  const refreshed = await refreshGoogleAccessToken(connection.refresh_token, config)
+  const refreshed = await refreshGoogleAccessToken(connection.refreshToken, config)
 
   if (!refreshed) {
-    await supabaseAdmin.from('google_calendar_connections').delete().eq('user_id', userId)
+    await $fetch(`${apiBase}/api/GoogleCalendar/${userId}`, { method: 'DELETE' }).catch(() => {})
     return null
   }
 
   const newExpiresAt = new Date(Date.now() + refreshed.expires_in * 1000).toISOString()
-  await supabaseAdmin
-    .from('google_calendar_connections')
-    .update({ access_token: refreshed.access_token, token_expires_at: newExpiresAt, updated_at: new Date().toISOString() })
-    .eq('user_id', userId)
+  await $fetch(`${apiBase}/api/GoogleCalendar/${userId}`, {
+    method: 'PUT',
+    body: {
+      accessToken: refreshed.access_token,
+      refreshToken: connection.refreshToken,
+      tokenExpiresAt: newExpiresAt,
+    },
+  }).catch(() => {})
 
   return refreshed.access_token
 }

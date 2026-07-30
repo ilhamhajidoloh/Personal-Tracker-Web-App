@@ -1,12 +1,5 @@
-import { serverSupabaseServiceRole, serverSupabaseUser } from '#supabase/server'
-
-import { getAuthUserId } from '../../utils/line'
+import { requireBackendUserId } from '../../utils/auth'
 import { deleteGoogleCalendarEvent, getValidGoogleAccessToken } from '../../utils/googleCalendar'
-
-type GoogleAuthUser = {
-  id?: string
-  sub?: string
-}
 
 type DeleteEventBody = {
   googleEventId?: string
@@ -18,12 +11,7 @@ type DeleteEventResponse = {
 }
 
 export default defineEventHandler(async (event): Promise<DeleteEventResponse> => {
-  const user = await serverSupabaseUser(event) as GoogleAuthUser | null
-  const authUserId = getAuthUserId(user)
-
-  if (!authUserId) {
-    throw createError({ statusCode: 401, statusMessage: 'กรุณาเข้าสู่ระบบก่อน' })
-  }
+  const authUserId = await requireBackendUserId(event)
 
   const body = await readBody<DeleteEventBody>(event)
   const googleEventId = typeof body?.googleEventId === 'string' ? body.googleEventId.trim() : ''
@@ -33,11 +21,10 @@ export default defineEventHandler(async (event): Promise<DeleteEventResponse> =>
   }
 
   const config = useRuntimeConfig(event)
-  const supabaseAdmin = serverSupabaseServiceRole(event) as any
 
   console.log('[delete-event] Request to delete Google Event ID:', googleEventId)
 
-  const accessToken = await getValidGoogleAccessToken(supabaseAdmin, authUserId, {
+  const accessToken = await getValidGoogleAccessToken(config.public.apiBase, authUserId, {
     clientId: config.google.clientId,
     clientSecret: config.google.clientSecret,
     redirectUri: `${config.public.appUrl}/api/google/callback`,

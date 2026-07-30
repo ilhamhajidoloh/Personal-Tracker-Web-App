@@ -1,25 +1,12 @@
-import { serverSupabaseUser } from '#supabase/server'
-
+import { requireBackendUserId } from '../../utils/auth'
 import { getLineConnectionStatus, pushLineTextMessage } from '../../utils/line'
 
 type NotifyBody = {
   text?: string
 }
 
-type LineAuthUser = {
-  id: string
-  user_metadata?: Record<string, unknown>
-}
-
 export default defineEventHandler(async (event) => {
-  const user = await serverSupabaseUser(event) as LineAuthUser | null
-
-  if (!user) {
-    throw createError({
-      statusCode: 401,
-      statusMessage: 'กรุณาเข้าสู่ระบบก่อนส่งแจ้งเตือน LINE',
-    })
-  }
+  const authUserId = await requireBackendUserId(event)
 
   const body = await readBody<NotifyBody>(event)
   const text = typeof body?.text === 'string' ? body.text.trim() : ''
@@ -38,8 +25,8 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const lineUser = { user_metadata: user.user_metadata || {} }
-  const connection = getLineConnectionStatus(lineUser)
+  const config = useRuntimeConfig(event)
+  const connection = await getLineConnectionStatus(config.public.apiBase, authUserId)
 
   if (!connection.connected) {
     return {
@@ -56,8 +43,6 @@ export default defineEventHandler(async (event) => {
       reason: 'disabled',
     }
   }
-
-  const config = useRuntimeConfig(event)
 
   if (!config.line.channelAccessToken) {
     throw createError({

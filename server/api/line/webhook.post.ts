@@ -1,12 +1,9 @@
-import { serverSupabaseServiceRole } from '#supabase/server'
-
 import {
   extractLineLinkToken,
   replyLineMessages,
   replyLineTextMessage,
   verifyLineLinkToken,
   verifyLineWebhookSignature,
-  withLineConnectionMetadata,
 } from '../../utils/line'
 
 import {
@@ -65,7 +62,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const payload = JSON.parse(rawBody) as LineWebhookPayload
-  const supabaseAdmin = serverSupabaseServiceRole(event)
+  const apiBase = config.public.apiBase
   const accessToken = config.line.channelAccessToken
 
   // ── Helpers ────────────────────────────────────────────────────────────────
@@ -112,40 +109,35 @@ export default defineEventHandler(async (event) => {
       const linkPayload = await verifyLineLinkToken(linkToken, config.line.channelSecret)
       if (!linkPayload) { await reply(replyToken, invalidCodeMessage); continue }
 
-      const { data: userData, error: userErr } = await supabaseAdmin.auth.admin.getUserById(linkPayload.userId)
-      if (userErr || !userData.user) {
+      try {
+        await $fetch(`${apiBase}/api/Line/${linkPayload.userId}/connect`, {
+          method: 'POST',
+          body: { lineUserId, notificationsEnabled: linkPayload.notificationsEnabled },
+        })
+        await reply(replyToken, successMessage)
+      } catch (err) {
+        console.error('LINE link connect error:', err)
         await reply(replyToken, 'ไม่พบบัญชี MyLife ที่ต้องการเชื่อม กรุณากลับไปสร้างโค้ดใหม่')
-        continue
       }
-
-      const metadata = withLineConnectionMetadata(
-        { user_metadata: userData.user.user_metadata || {} },
-        lineUserId,
-        linkPayload.notificationsEnabled,
-      )
-      const { error: updateErr } = await supabaseAdmin.auth.admin.updateUserById(linkPayload.userId, { user_metadata: metadata })
-      if (updateErr) { await reply(replyToken, 'เชื่อมต่อไม่สำเร็จ กรุณาลองใหม่อีกครั้ง'); continue }
-
-      await reply(replyToken, successMessage)
       continue
     }
 
-    // ── 2. Find linked Supabase user ────────────────────────────────────────
+    // ── 2. Find linked MyLife user ───────────────────────────────────────────
 
-    const userInfo = await findUserByLineId(supabaseAdmin, lineUserId)
+    const userInfo = await findUserByLineId(apiBase, lineUserId)
     if (!userInfo) {
       await reply(replyToken, 'ยังไม่ได้เชื่อมต่อ LINE กับ MyLife\nกรุณาเปิดแอปแล้วไปที่ Profile → สร้างโค้ดเชื่อมต่อ')
       continue
     }
 
-    const { userId, metadata } = userInfo
-    const session = getLineSession(metadata)
+    const { userId } = userInfo
+    const session = getLineSession(userInfo.sessionStateJson)
 
     // ── 3. Cancel (any state) ───────────────────────────────────────────────
 
     if (isCancelText(text)) {
       if (session) {
-        await setLineSession(supabaseAdmin, userId, metadata, null)
+        await setLineSession(apiBase, userId, null)
         await reply(replyToken, '❌ ยกเลิกแล้ว\nพิมพ์ "บันทึก" เพื่อเริ่มใหม่')
       } else {
         await reply(replyToken, 'ไม่มีรายการที่กำลังบันทึกอยู่\nพิมพ์ "บันทึก" เพื่อเริ่มต้น')
@@ -157,20 +149,20 @@ export default defineEventHandler(async (event) => {
 
     if (!session) {
       if (isIncomeText(text)) {
-        const categories = await getExistingCategories(supabaseAdmin, userId, 'income')
-        await setLineSession(supabaseAdmin, userId, metadata, newSession('awaiting_category', { type: 'income' }))
+        const categories = await getExistingCategories(apiBase, userId, 'income')
+        await setLineSession(apiBase, userId, newSession('awaiting_category', { type: 'income' }))
         await replyMsgs(replyToken, [makeCategorySelectMsg('income', categories)])
         continue
       }
       if (isExpenseText(text)) {
-        const categories = await getExistingCategories(supabaseAdmin, userId, 'expense')
-        await setLineSession(supabaseAdmin, userId, metadata, newSession('awaiting_category', { type: 'expense' }))
+        const categories = await getExistingCategories(apiBase, userId, 'expense')
+        await setLineSession(apiBase, userId, newSession('awaiting_category', { type: 'expense' }))
         await replyMsgs(replyToken, [makeCategorySelectMsg('expense', categories)])
         continue
       }
       // Trigger word or any unknown text → show menu
       if (isCashflowTrigger(text)) {
-        await setLineSession(supabaseAdmin, userId, metadata, newSession('awaiting_type'))
+        await setLineSession(apiBase, userId, newSession('awaiting_type'))
       }
       await replyMsgs(replyToken, [makeTypeSelectMsg()])
       continue
@@ -180,14 +172,14 @@ export default defineEventHandler(async (event) => {
 
     if (session.state === 'awaiting_type') {
       if (isIncomeText(text)) {
-        const categories = await getExistingCategories(supabaseAdmin, userId, 'income')
-        await setLineSession(supabaseAdmin, userId, metadata, newSession('awaiting_category', { type: 'income' }))
+        const categories = await getExistingCategories(apiBase, userId, 'income')
+        await setLineSession(apiBase, userId, newSession('awaiting_category', { type: 'income' }))
         await replyMsgs(replyToken, [makeCategorySelectMsg('income', categories)])
         continue
       }
       if (isExpenseText(text)) {
-        const categories = await getExistingCategories(supabaseAdmin, userId, 'expense')
-        await setLineSession(supabaseAdmin, userId, metadata, newSession('awaiting_category', { type: 'expense' }))
+        const categories = await getExistingCategories(apiBase, userId, 'expense')
+        await setLineSession(apiBase, userId, newSession('awaiting_category', { type: 'expense' }))
         await replyMsgs(replyToken, [makeCategorySelectMsg('expense', categories)])
         continue
       }
@@ -200,7 +192,7 @@ export default defineEventHandler(async (event) => {
     if (session.state === 'awaiting_category') {
       const type = session.type!
       const category = text
-      await setLineSession(supabaseAdmin, userId, metadata, newSession('awaiting_amount', { type, category }))
+      await setLineSession(apiBase, userId, newSession('awaiting_amount', { type, category }))
       await replyMsgs(replyToken, [makeAmountMsg(type, category)])
       continue
     }
@@ -217,14 +209,14 @@ export default defineEventHandler(async (event) => {
       const category = session.category
 
       try {
-        await saveTransaction(supabaseAdmin, userId, type, amount, category)
-        const balance = await getBalance(supabaseAdmin, userId)
+        await saveTransaction(apiBase, userId, type, amount, category)
+        const balance = await getBalance(apiBase, userId)
         const summary = buildSummaryMessage(type, amount, category, balance)
-        await setLineSession(supabaseAdmin, userId, metadata, null)
+        await setLineSession(apiBase, userId, null)
         await reply(replyToken, summary)
       } catch (err) {
         console.error('LINE cashflow save error:', err)
-        await setLineSession(supabaseAdmin, userId, metadata, null)
+        await setLineSession(apiBase, userId, null)
         await reply(replyToken, '❌ บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง\nพิมพ์ "บันทึก" เพื่อเริ่มใหม่')
       }
       continue

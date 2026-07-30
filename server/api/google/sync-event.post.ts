@@ -1,12 +1,5 @@
-import { serverSupabaseServiceRole, serverSupabaseUser } from '#supabase/server'
-
-import { getAuthUserId } from '../../utils/line'
-import { getValidGoogleAccessToken, upsertGoogleCalendarEvent, type GoogleEventRow } from '../../utils/googleCalendar'
-
-type GoogleAuthUser = {
-  id?: string
-  sub?: string
-}
+import { requireBackendUserId } from '../../utils/auth'
+import { activityToGoogleEventRow, getValidGoogleAccessToken, upsertGoogleCalendarEvent, type BackendActivityForSync } from '../../utils/googleCalendar'
 
 type SyncEventBody = {
   eventId?: string
@@ -18,12 +11,7 @@ type SyncEventResponse = {
 }
 
 export default defineEventHandler(async (event): Promise<SyncEventResponse> => {
-  const user = await serverSupabaseUser(event) as GoogleAuthUser | null
-  const authUserId = getAuthUserId(user)
-
-  if (!authUserId) {
-    throw createError({ statusCode: 401, statusMessage: 'กรุณาเข้าสู่ระบบก่อน' })
-  }
+  const authUserId = await requireBackendUserId(event)
 
   const body = await readBody<SyncEventBody>(event)
   const eventId = typeof body?.eventId === 'string' ? body.eventId.trim() : ''
@@ -33,9 +21,8 @@ export default defineEventHandler(async (event): Promise<SyncEventResponse> => {
   }
 
   const config = useRuntimeConfig(event)
-  const supabaseAdmin = serverSupabaseServiceRole(event)
 
-  const accessToken = await getValidGoogleAccessToken(supabaseAdmin, authUserId, {
+  const accessToken = await getValidGoogleAccessToken(config.public.apiBase, authUserId, {
     clientId: config.google.clientId,
     clientSecret: config.google.clientSecret,
     redirectUri: `${config.public.appUrl}/api/google/callback`,
@@ -45,27 +32,23 @@ export default defineEventHandler(async (event): Promise<SyncEventResponse> => {
     return { synced: false, reason: 'not_connected' }
   }
 
-  const { data: eventRowData, error: eventError } = await supabaseAdmin
-    .from('events')
-    .select('id, user_id, title, description, event_type, start_date, start_time, end_date, end_time, reminder_minutes, google_event_id')
-    .eq('id', eventId)
-    .eq('user_id', authUserId)
-    .maybeSingle()
+  const activity = await $fetch<BackendActivityForSync & { userId: string }>(`${config.public.apiBase}/api/Activity/single/${eventId}`).catch(() => null)
 
-  if (eventError || !eventRowData) {
+  if (!activity || activity.userId !== authUserId) {
     throw createError({ statusCode: 404, statusMessage: 'ไม่พบกิจกรรมนี้' })
   }
 
-  const eventRow = eventRowData as GoogleEventRow & { user_id: string; google_event_id: string | null }
-
   try {
-    console.log('[sync-event] Syncing event:', eventId, 'existing google_event_id:', eventRow.google_event_id)
-    const googleEventId = await upsertGoogleCalendarEvent(accessToken, eventRow.google_event_id, eventRow)
+    console.log('[sync-event] Syncing event:', eventId, 'existing googleEventId:', activity.googleEventId)
+    const googleEventId = await upsertGoogleCalendarEvent(accessToken, activity.googleEventId, activityToGoogleEventRow(activity))
     console.log('[sync-event] Google returned event ID:', googleEventId)
 
-    if (googleEventId !== eventRow.google_event_id) {
-      await supabaseAdmin.from('events').update({ google_event_id: googleEventId }).eq('id', eventId)
-      console.log('[sync-event] Updated google_event_id in Supabase to:', googleEventId)
+    if (googleEventId !== activity.googleEventId) {
+      await $fetch(`${config.public.apiBase}/api/Activity/${eventId}/google-sync`, {
+        method: 'PUT',
+        body: { googleEventId },
+      })
+      console.log('[sync-event] Updated googleEventId in back_mylife to:', googleEventId)
     }
 
     return { synced: true }

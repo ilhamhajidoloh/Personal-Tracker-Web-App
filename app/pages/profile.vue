@@ -22,7 +22,8 @@
         <!-- Error -->
         <div
           v-if="errorMessage"
-          class="rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-amber-200 text-sm flex items-center gap-2"
+          class="rounded-2xl px-4 py-3 text-sm flex items-center gap-2 font-medium"
+          style="background: rgba(182, 133, 42, 0.1); border: 1px solid rgba(182, 133, 42, 0.3); color: var(--ink-amber);"
         >
           <span>⚠️</span><span>{{ errorMessage }}</span>
         </div>
@@ -46,11 +47,6 @@
                 <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-3xl font-bold shadow-xl shadow-violet-500/25">
                   {{ avatarFallback }}
                 </div>
-                <div
-                  class="absolute -bottom-1.5 -right-1.5 w-6 h-6 rounded-full border-2 border-gray-900 flex items-center justify-center text-xs"
-                  :class="emailConfirmed ? 'bg-emerald-500' : 'bg-amber-500'"
-                  :title="emailConfirmed ? 'อีเมลยืนยันแล้ว' : 'ยังไม่ยืนยันอีเมล'"
-                >{{ emailConfirmed ? '✓' : '!' }}</div>
               </div>
 
               <h2 class="text-lg font-bold text-white leading-tight">{{ displayName }}</h2>
@@ -61,15 +57,9 @@
                   <span class="text-xs text-gray-500">ชื่อ</span>
                   <span class="text-xs font-medium text-white">{{ firstName }}</span>
                 </div>
-                <div class="flex items-center justify-between py-1.5 border-b border-gray-800/60">
+                <div class="flex items-center justify-between py-1.5">
                   <span class="text-xs text-gray-500">นามสกุล</span>
                   <span class="text-xs font-medium text-white">{{ lastName }}</span>
-                </div>
-                <div class="flex items-center justify-between py-1.5">
-                  <span class="text-xs text-gray-500">สถานะอีเมล</span>
-                  <span class="text-xs font-semibold px-2 py-0.5 rounded-full" :class="emailConfirmed ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/25' : 'bg-amber-500/15 text-amber-400 border border-amber-500/25'">
-                    {{ emailConfirmed ? 'ยืนยันแล้ว' : 'ยังไม่ยืนยัน' }}
-                  </span>
                 </div>
               </div>
             </div>
@@ -138,10 +128,10 @@
                   <div class="rounded-xl border border-sky-500/20 bg-sky-500/8 p-4 space-y-3">
                     <div>
                       <p class="text-sm font-semibold text-white">เชื่อมต่อแบบง่าย</p>
-                      <p class="text-xs text-sky-200 mt-1 leading-relaxed">ไม่ต้องหา LINE User ID เอง ระบบจะสร้างข้อความให้ ส่งไปหา {{ lineBotDisplayName }} ได้เลย</p>
+                      <p class="text-xs mt-1 leading-relaxed" style="color: var(--ink-sky);">ไม่ต้องหา LINE User ID เอง ระบบจะสร้างข้อความให้ ส่งไปหา {{ lineBotDisplayName }} ได้เลย</p>
                     </div>
 
-                    <div class="bg-sky-500/8 border border-sky-500/15 rounded-lg p-3 space-y-1 text-xs text-sky-200">
+                    <div class="bg-sky-500/8 border border-sky-500/15 rounded-lg p-3 space-y-1 text-xs" style="color: var(--ink-sky);">
                       <p class="font-medium text-white">วิธีการเชื่อมต่อ</p>
                       <p>1. กดสร้างโค้ดเชื่อมต่อด้านล่าง</p>
                       <p>2. ส่งข้อความนั้นไปหา {{ lineBotDisplayName }}</p>
@@ -354,7 +344,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 
-type ProfileRow = Record<string, unknown>
 type LineConnectionStatus = {
   connected: boolean
   lineUserId: string
@@ -378,14 +367,12 @@ useHead({ title: 'Profile' })
 
 const router = useRouter()
 const route = useRoute()
-const supabase = useSupabaseClient()
-const user = useSupabaseUser()
+const { currentUser: user } = useAuth()
 const { toastSuccess, toastError } = useAlert()
 const config = useRuntimeConfig()
 
 const isLoading = ref(true)
 const errorMessage = ref('')
-const profileRow = ref<ProfileRow | null>(null)
 const isLineLoading = ref(true)
 const isSavingLine = ref(false)
 const isTestingLine = ref(false)
@@ -418,23 +405,16 @@ const getFallbackNamePart = (index: number) => {
   return index === 0 ? first : rest.join(' ')
 }
 
-const firstName = computed(() => getProfileValue(profileRow.value?.first_name, currentUser.value?.user_metadata?.first_name, currentUser.value?.user_metadata?.given_name, getFallbackNamePart(0)) || '-')
-const lastName = computed(() => getProfileValue(profileRow.value?.last_name, currentUser.value?.user_metadata?.last_name, currentUser.value?.user_metadata?.family_name, getFallbackNamePart(1)) || '-')
-const displayName = computed<string>(() => getProfileValue(profileRow.value?.display_name, profileRow.value?.full_name) || getProfileValue(currentUser.value?.user_metadata?.full_name, currentUser.value?.user_metadata?.name) || currentUser.value?.email?.split('@')[0] || '')
+const firstName = computed(() => getFallbackNamePart(0) || '-')
+const lastName = computed(() => getFallbackNamePart(1) || '-')
+const displayName = computed<string>(() => getProfileValue(currentUser.value?.fullName) || currentUser.value?.email?.split('@')[0] || '')
 const avatarFallback = computed(() => displayName.value.trim().charAt(0).toUpperCase() || 'U')
-const emailConfirmed = computed(() => Boolean(currentUser.value?.email_confirmed_at))
-
-const createdAtText = computed(() => currentUser.value?.created_at ? new Date(currentUser.value.created_at).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' }) : '-')
-const lastSignInText = computed(() => currentUser.value?.last_sign_in_at ? new Date(currentUser.value.last_sign_in_at).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' }) : '-')
 
 const importantProfileRows = computed(() => [
   { key: 'ชื่อ', value: firstName.value },
   { key: 'นามสกุล', value: lastName.value },
   { key: 'ชื่อที่แสดง', value: displayName.value || '-' },
   { key: 'อีเมล', value: currentUser.value?.email || '-' },
-  { key: 'สถานะอีเมล', value: emailConfirmed.value ? 'ยืนยันแล้ว ✓' : 'ยังไม่ยืนยัน' },
-  { key: 'สมัครเมื่อ', value: createdAtText.value },
-  { key: 'เข้าใช้ล่าสุด', value: lastSignInText.value },
 ])
 
 const lineStatusLabel = computed(() => {
@@ -502,7 +482,6 @@ const startLineStatusPolling = () => {
   lineStatusPollingTimer = window.setInterval(async () => {
     if (!lineLinkCode.value) { stopLineStatusPolling(); return }
     if (new Date(lineLinkCode.value.expiresAt).getTime() <= Date.now()) { lineLinkCode.value = null; stopLineStatusPolling(); return }
-    await supabase.auth.refreshSession()
     await loadLineStatus({ silent: true, notifyOnConnect: true })
   }, 4000)
 }
@@ -554,7 +533,6 @@ const openLineForConnection = async () => {
 }
 
 const refreshLineStatus = async () => {
-  await supabase.auth.refreshSession()
   await loadLineStatus({ notifyOnConnect: true })
   if (!lineStatus.value.connected) toastError('ยังไม่พบการเชื่อมต่อ LINE')
 }
@@ -666,18 +644,7 @@ const consumeGoogleRedirectStatus = () => {
 const loadProfile = async () => {
   isLoading.value = true; errorMessage.value = ''
   try {
-    const { data: userData, error: userError } = await supabase.auth.getUser()
-    if (userError) throw userError
-    if (!userData.user) { await router.push('/login'); return }
-    const { data, error } = await supabase.from('profiles').select('*').eq('id', userData.user.id).maybeSingle()
-    if (error) {
-      if (['42P01', 'PGRST205'].includes(error.code || '')) {
-        errorMessage.value = 'ยังไม่พบตาราง profiles ในโปรเจ็กต์นี้ จึงแสดงเฉพาะข้อมูลจาก Auth'
-        profileRow.value = null; return
-      }
-      throw error
-    }
-    profileRow.value = data as ProfileRow | null
+    if (!user.value) { await router.push('/login'); return }
   } catch (error: any) {
     console.error('Load profile error:', error)
     errorMessage.value = error?.message || 'โหลดข้อมูลโปรไฟล์ไม่สำเร็จ'

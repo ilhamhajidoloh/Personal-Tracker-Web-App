@@ -1,36 +1,21 @@
-import { serverSupabaseServiceRole, serverSupabaseUser } from '#supabase/server'
-
-import { getAuthUserId } from '../../utils/line'
+import { requireBackendUserId } from '../../utils/auth'
 import { revokeGoogleToken } from '../../utils/googleCalendar'
 import type { GoogleCalendarStatus } from './status.get'
 
-type GoogleAuthUser = {
-  id?: string
-  sub?: string
+type BackendGoogleConnection = {
+  accessToken: string
+  refreshToken: string
 }
 
 export default defineEventHandler(async (event): Promise<GoogleCalendarStatus> => {
-  const user = await serverSupabaseUser(event) as GoogleAuthUser | null
-  const authUserId = getAuthUserId(user)
+  const authUserId = await requireBackendUserId(event)
 
-  if (!authUserId) {
-    throw createError({
-      statusCode: 401,
-      statusMessage: 'กรุณาเข้าสู่ระบบก่อนยกเลิกการเชื่อมต่อ Google Calendar',
-    })
-  }
+  const config = useRuntimeConfig(event)
+  const connection = await $fetch<BackendGoogleConnection>(`${config.public.apiBase}/api/GoogleCalendar/${authUserId}`).catch(() => null)
 
-  const supabaseAdmin = serverSupabaseServiceRole(event)
-  const { data } = await supabaseAdmin
-    .from('google_calendar_connections')
-    .select('access_token, refresh_token')
-    .eq('user_id', authUserId)
-    .maybeSingle()
-
-  if (data) {
-    const connection = data as { access_token: string; refresh_token: string }
-    await revokeGoogleToken(connection.refresh_token || connection.access_token)
-    await supabaseAdmin.from('google_calendar_connections').delete().eq('user_id', authUserId)
+  if (connection) {
+    await revokeGoogleToken(connection.refreshToken || connection.accessToken)
+    await $fetch(`${config.public.apiBase}/api/GoogleCalendar/${authUserId}`, { method: 'DELETE' }).catch(() => {})
   }
 
   return { connected: false, connectedAt: null }

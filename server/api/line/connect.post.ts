@@ -1,41 +1,13 @@
-import { serverSupabaseServiceRole, serverSupabaseUser } from '#supabase/server'
-
-import {
-  getAuthUserId,
-  getLineConnectionStatus,
-  normalizeLineUserId,
-  withLineConnectionMetadata,
-} from '../../utils/line'
+import { requireBackendUserId } from '../../utils/auth'
+import { getLineConnectionStatus, normalizeLineUserId } from '../../utils/line'
 
 type ConnectLineBody = {
   lineUserId?: string
   notificationsEnabled?: boolean
 }
 
-type LineAuthUser = {
-  id?: string
-  sub?: string
-  user_metadata?: Record<string, unknown>
-}
-
 export default defineEventHandler(async (event) => {
-  const user = await serverSupabaseUser(event) as LineAuthUser | null
-
-  if (!user) {
-    throw createError({
-      statusCode: 401,
-      statusMessage: 'กรุณาเข้าสู่ระบบก่อนเชื่อมต่อ LINE',
-    })
-  }
-
-  const authUserId = getAuthUserId(user)
-
-  if (!authUserId) {
-    throw createError({
-      statusCode: 500,
-      statusMessage: 'ไม่พบรหัสผู้ใช้สำหรับเชื่อมต่อ LINE',
-    })
-  }
+  const authUserId = await requireBackendUserId(event)
 
   const body = await readBody<ConnectLineBody>(event)
   const lineUserId = normalizeLineUserId(body?.lineUserId)
@@ -47,19 +19,18 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const lineUser = { user_metadata: user.user_metadata || {} }
-  const metadata = withLineConnectionMetadata(lineUser, lineUserId, body?.notificationsEnabled !== false)
-  const supabaseAdmin = serverSupabaseServiceRole(event)
-  const { error } = await supabaseAdmin.auth.admin.updateUserById(authUserId, {
-    user_metadata: metadata,
+  const config = useRuntimeConfig(event)
+
+  await $fetch(`${config.public.apiBase}/api/Line/${authUserId}/connect`, {
+    method: 'POST',
+    body: {
+      lineUserId,
+      notificationsEnabled: body?.notificationsEnabled !== false,
+    },
+  }).catch((err) => {
+    console.error('LINE connect error:', err)
+    throw createError({ statusCode: 500, statusMessage: 'ไม่สามารถบันทึกข้อมูล LINE ได้' })
   })
 
-  if (error) {
-    throw createError({
-      statusCode: 500,
-      statusMessage: error.message || 'ไม่สามารถบันทึกข้อมูล LINE ได้',
-    })
-  }
-
-  return getLineConnectionStatus({ user_metadata: metadata })
+  return await getLineConnectionStatus(config.public.apiBase, authUserId)
 })

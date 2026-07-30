@@ -1,11 +1,5 @@
-import { serverSupabaseUser } from '#supabase/server'
-
-import { createLineLinkToken, getAuthUserId, getLineLinkMessage } from '../../utils/line'
-
-type LineAuthUser = {
-  id?: string
-  sub?: string
-}
+import { requireBackendUserId } from '../../utils/auth'
+import { createLineLinkToken, getLineLinkMessage } from '../../utils/line'
 
 type LinkCodeBody = {
   notificationsEnabled?: boolean
@@ -14,23 +8,7 @@ type LinkCodeBody = {
 const LINE_LINK_CODE_TTL_MS = 10 * 60 * 1000
 
 export default defineEventHandler(async (event) => {
-  const user = await serverSupabaseUser(event) as LineAuthUser | null
-
-  if (!user) {
-    throw createError({
-      statusCode: 401,
-      statusMessage: 'กรุณาเข้าสู่ระบบก่อนสร้างโค้ดเชื่อมต่อ LINE',
-    })
-  }
-
-  const authUserId = getAuthUserId(user)
-
-  if (!authUserId) {
-    throw createError({
-      statusCode: 500,
-      statusMessage: 'ไม่พบรหัสผู้ใช้สำหรับสร้างโค้ดเชื่อมต่อ LINE',
-    })
-  }
+  const authUserId = await requireBackendUserId(event)
 
   const config = useRuntimeConfig(event)
 

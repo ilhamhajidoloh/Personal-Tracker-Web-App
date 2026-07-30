@@ -3,15 +3,6 @@ const LINE_LINK_TOKEN_PREFIX = 'mylife-link'
 const LINE_LINK_MESSAGE_PREFIX = 'MYLIFE-LINK'
 const textEncoder = new TextEncoder()
 
-type LineMetadataCarrier = {
-  user_metadata?: Record<string, unknown>
-}
-
-type AuthUserIdCarrier = {
-  id?: unknown
-  sub?: unknown
-}
-
 export type LineConnectionStatus = {
   connected: boolean
   lineUserId: string
@@ -74,42 +65,22 @@ export const normalizeLineUserId = (value: unknown) => {
   return LINE_USER_ID_PATTERN.test(normalized) ? normalized : ''
 }
 
-export const getLineConnectionStatus = (user: LineMetadataCarrier | null | undefined): LineConnectionStatus => {
-  const metadata = (user?.user_metadata || {}) as Record<string, unknown>
-  const lineUserId = normalizeLineUserId(metadata.line_user_id)
+type BackendLineStatus = {
+  connected: boolean
+  lineUserId: string | null
+  notificationsEnabled: boolean
+  connectedAt: string | null
+}
 
+export const getLineConnectionStatus = async (apiBase: string, userId: string): Promise<LineConnectionStatus> => {
+  const data = await $fetch<BackendLineStatus>(`${apiBase}/api/Line/${userId}`).catch(() => null)
+  if (!data?.connected) return { connected: false, lineUserId: '', notificationsEnabled: false, connectedAt: null }
   return {
-    connected: Boolean(lineUserId),
-    lineUserId,
-    notificationsEnabled: lineUserId ? metadata.line_notifications_enabled !== false : false,
-    connectedAt: typeof metadata.line_connected_at === 'string' ? metadata.line_connected_at : null,
+    connected: true,
+    lineUserId: data.lineUserId || '',
+    notificationsEnabled: data.notificationsEnabled,
+    connectedAt: data.connectedAt,
   }
-}
-
-export const getAuthUserId = (user: AuthUserIdCarrier | null | undefined) => {
-  const authUserId = [user?.id, user?.sub].find((value) => typeof value === 'string' && value.trim())
-  return typeof authUserId === 'string' ? authUserId.trim() : ''
-}
-
-export const withLineConnectionMetadata = (
-  user: LineMetadataCarrier,
-  lineUserId: string,
-  notificationsEnabled = true,
-) => ({
-  ...(user.user_metadata || {}),
-  line_user_id: lineUserId,
-  line_notifications_enabled: notificationsEnabled,
-  line_connected_at: new Date().toISOString(),
-})
-
-export const withoutLineConnectionMetadata = (user: LineMetadataCarrier) => {
-  const metadata = { ...(user.user_metadata || {}) } as Record<string, unknown>
-
-  delete metadata.line_user_id
-  delete metadata.line_notifications_enabled
-  delete metadata.line_connected_at
-
-  return metadata
 }
 
 export const createLineLinkToken = async (

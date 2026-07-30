@@ -1,24 +1,7 @@
-export default defineNuxtRouteMiddleware(async (to) => {
-  const user = useSupabaseUser()
+export default defineNuxtRouteMiddleware(() => {
+  const { isSessionValid } = useAuth()
 
-  if (user.value) {
-    return navigateTo('/dashboard')
-  }
-
-  const isOAuthCallback = Boolean(
-    to.query.code ||
-    to.query.access_token ||
-    to.hash.includes('access_token')
-  )
-
-  if (isOAuthCallback) {
-    return
-  }
-
-  const supabase = useSupabaseClient()
-  const { data } = await supabase.auth.getUser()
-
-  if (data.user) {
+  if (isSessionValid()) {
     return navigateTo('/dashboard')
   }
 })
