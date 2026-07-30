@@ -1,339 +1,306 @@
 <template>
   <AppTabsLayout>
     <div class="mx-auto w-full max-w-[1240px] px-4 md:px-6 py-6 md:py-8">
-      <!-- Page head -->
+      <!-- Page Head -->
       <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
           <p class="eyebrow">To-do List · Checklist</p>
-          <h1 class="text-2xl md:text-[30px] font-extrabold tracking-tight mt-1.5" style="color: var(--text-primary);">To-do List</h1>
-          <p class="text-xs mt-2 text-gray-400 font-medium">เสร็จแล้ว {{ completedTodos.length }} จาก {{ totalTodosCount }} &bull; ค้าง {{ pendingTodos.length }} รายการ</p>
+          <h1 class="text-2xl md:text-[30px] font-extrabold tracking-tight mt-1.5" style="color: var(--text-primary);">Todolist</h1>
+          <p class="text-xs mt-2 font-medium" style="color: var(--text-muted);">จัดการรายการที่ต้องทำ</p>
         </div>
         <div class="flex items-center gap-2 shrink-0">
-          <button
-            @click="isEntryModalOpen = true"
-            class="btn-primary text-sm inline-flex items-center gap-2 tap-scale touch-target"
-          >
+          <button @click="openCreateModal" class="btn-primary text-sm inline-flex items-center gap-2 tap-scale touch-target">
             <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-            เพิ่ม To-do ใหม่
+            เพิ่ม Todolist
           </button>
-          <button
-            @click="loadTodos"
-            :disabled="isLoading"
-            class="btn-secondary text-sm inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed tap-scale touch-target"
-          >
+          <button @click="loadTodos" :disabled="isLoading" class="btn-secondary text-sm inline-flex items-center gap-2 disabled:opacity-50 tap-scale touch-target">
             <svg class="w-4 h-4" :class="isLoading ? 'animate-spin' : ''" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5M21 12a9 9 0 0 1-15 6.7L3 16M3 21v-5h5"/></svg>
             {{ isLoading ? 'กำลังโหลด...' : 'รีเฟรช' }}
           </button>
         </div>
       </div>
 
-      <div class="space-y-5 mt-6">
+      <div class="space-y-4 mt-6">
         <!-- Error -->
-        <div
-          v-if="errorMessage"
-          class="rounded-2xl px-4 py-3 text-sm flex items-center gap-2 font-medium"
-          style="background: rgba(182, 133, 42, 0.1); border: 1px solid rgba(182, 133, 42, 0.3); color: var(--ink-amber);"
-        >
+        <div v-if="errorMessage" class="rounded-2xl px-4 py-3 text-sm flex items-center gap-2 font-medium" style="background: rgba(182, 133, 42, 0.1); border: 1px solid rgba(182, 133, 42, 0.3); color: var(--ink-amber);">
           <span>⚠️</span><span>{{ errorMessage }}</span>
         </div>
 
-        <!-- Stats Cards -->
-        <div class="grid grid-cols-3 gap-3 md:gap-4">
-          <div class="stat-card">
-            <div class="icon-bubble mb-3" style="background: var(--bg-elevated);">📋</div>
-            <p class="text-[11px] font-medium uppercase tracking-wide relative z-10" style="color: var(--text-muted);">ที่ยังไม่เสร็จ</p>
-            <p class="text-2xl font-bold text-white mt-1 relative z-10">{{ pendingTodos.length }}</p>
-            <p class="text-xs relative z-10" style="color: var(--text-muted);">งาน</p>
+        <!-- Progress Card (เหมือน Mobile) -->
+        <div v-if="!isLoading" class="section-card p-5 flex items-center gap-6">
+          <!-- Progress Circle -->
+          <div class="relative shrink-0 w-20 h-20">
+            <svg viewBox="0 0 80 80" class="w-full h-full -rotate-90">
+              <circle cx="40" cy="40" r="32" fill="none" stroke="var(--bg-elevated)" stroke-width="8"/>
+              <circle
+                cx="40" cy="40" r="32"
+                fill="none"
+                stroke="var(--brand)"
+                stroke-width="8"
+                stroke-linecap="round"
+                :stroke-dasharray="`${completionPercentage * 201.1} 201.1`"
+                class="transition-all duration-500"
+              />
+            </svg>
+            <div class="absolute inset-0 flex flex-col items-center justify-center">
+              <span class="text-sm font-extrabold num" style="color: var(--text-primary);">{{ Math.round(completionPercentage * 100) }}%</span>
+              <span class="text-[9px] font-semibold" style="color: var(--text-muted);">สำเร็จ</span>
+            </div>
           </div>
-          <div class="stat-card">
-            <div class="icon-bubble mb-3" style="background: rgba(244,63,94,0.12);">⚠️</div>
-            <p class="text-[11px] font-medium uppercase tracking-wide relative z-10" style="color: var(--text-muted);">ด่วน/เกินกำหนด</p>
-            <p class="text-2xl font-bold text-rose-400 mt-1 relative z-10">{{ urgentTodos.length }}</p>
-            <p class="text-xs relative z-10" style="color: var(--text-muted);">งาน</p>
-          </div>
-          <div class="stat-card">
-            <div class="icon-bubble mb-3" style="background: rgba(16,185,129,0.12);">✅</div>
-            <p class="text-[11px] font-medium uppercase tracking-wide relative z-10" style="color: var(--text-muted);">เสร็จแล้ว</p>
-            <p class="text-2xl font-bold text-emerald-400 mt-1 relative z-10">{{ completedTodos.length }}</p>
-            <p class="text-xs relative z-10" style="color: var(--text-muted);">งาน</p>
+          <!-- Progress Info -->
+          <div class="flex-1 min-w-0">
+            <p class="text-base font-extrabold" style="color: var(--text-primary);">ความสำเร็จ</p>
+            <p class="text-sm mt-0.5" style="color: var(--text-secondary);">{{ completedCount }} / {{ totalCount }} รายการ</p>
+            <div class="mt-2.5 h-2 rounded-full overflow-hidden" style="background: var(--bg-elevated);">
+              <div
+                class="h-full rounded-full transition-all duration-500"
+                style="background: var(--brand);"
+                :style="{ width: `${completionPercentage * 100}%` }"
+              ></div>
+            </div>
           </div>
         </div>
 
-        <!-- Todo List -->
+        <!-- View Mode Selector (วัน / เดือน / ปี / ทั้งหมด) -->
+        <div class="flex p-1 gap-1 rounded-2xl" style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);">
+          <button
+            v-for="v in viewOptions"
+            :key="v"
+            @click="changeView(v)"
+            class="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 tap-scale touch-target"
+            :style="selectedView === v
+              ? { background: 'var(--bg-card)', color: 'var(--text-primary)', boxShadow: '0 2px 6px rgba(0,0,0,0.15)' }
+              : { color: 'var(--text-muted)' }"
+          >
+            {{ v }}
+          </button>
+        </div>
+
+        <!-- Range Navigator (เลื่อนวัน/เดือน/ปี) -->
+        <div v-if="selectedView !== 'ทั้งหมด'" class="flex items-center justify-between">
+          <button @click="shiftView(-1)" class="p-2 rounded-xl tap-scale touch-target transition-all" style="background: var(--bg-elevated); border: 1px solid var(--border-subtle); color: var(--text-secondary);">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+          </button>
+          <span class="text-sm font-bold" style="color: var(--text-primary);">{{ rangeLabel }}</span>
+          <button @click="shiftView(1)" class="p-2 rounded-xl tap-scale touch-target transition-all" style="background: var(--bg-elevated); border: 1px solid var(--border-subtle); color: var(--text-secondary);">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>
+          </button>
+        </div>
+
+        <!-- Tag Filter Chips (เรียน / งาน / ส่วนตัว / สุขภาพ) -->
+        <div class="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+          <button
+            v-for="tag in tagOptions"
+            :key="tag"
+            @click="selectedTag = tag; loadTodos()"
+            class="px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all duration-200 tap-scale touch-target"
+            :style="getTagChipStyle(tag, selectedTag === tag)"
+          >
+            {{ tag }}
+          </button>
+        </div>
+
+        <!-- Todolist Section Card -->
         <section class="section-card">
-          <div class="flex flex-col gap-3 px-5 py-4 border-b border-gray-800/60">
-            <div class="flex items-center justify-between">
-              <h2 class="text-base font-semibold text-white">รายการงาน</h2>
-              <span class="text-xs px-2.5 py-1 rounded-full" style="background: var(--bg-elevated); color: var(--text-secondary);">{{ todoPageInfo }}</span>
-            </div>
-            <div class="flex items-center gap-2 flex-wrap sm:justify-between">
-              <select
-                v-model="filterStatus"
-                class="bg-gray-800/80 border border-gray-700/60 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 transition-all"
-              >
-                <option value="all">สถานะทั้งหมด</option>
-                <option value="pending">รอดำเนินการ</option>
-                <option value="in_progress">กำลังทำ</option>
-                <option value="completed">เสร็จสิ้น</option>
-              </select>
-              <select
-                v-model.number="todoItemsPerPage"
-                @change="todoCurrentPage = 1"
-                class="text-sm px-3 py-2 rounded-xl ml-auto focus:outline-none transition-all"
-                style="background: var(--bg-elevated); border: 1px solid var(--border-default); color: var(--text-primary);"
-              >
-                <option value="10">10 รายการ/หน้า</option>
-                <option value="20">20 รายการ/หน้า</option>
-                <option value="50">50 รายการ/หน้า</option>
-              </select>
-            </div>
+          <div class="flex items-center justify-between px-5 py-4 border-b" style="border-color: var(--border-subtle);">
+            <h2 class="text-sm font-semibold" style="color: var(--text-primary);">รายการ</h2>
+            <span class="eyebrow">{{ rangeLabel }}</span>
           </div>
 
-          <!-- Loading state -->
+          <!-- Loading Skeleton -->
           <div v-if="isLoading" class="p-5 space-y-3">
-            <div v-for="i in 3" :key="i" class="h-20 rounded-xl bg-gray-800/60 animate-pulse"></div>
+            <div v-for="i in 3" :key="i" class="h-16 rounded-xl animate-pulse" style="background: var(--bg-elevated);"></div>
           </div>
 
-          <!-- Empty state -->
-          <div v-else-if="!filteredTodos.length" class="flex flex-col items-center justify-center py-16 text-center px-5">
-            <div class="w-16 h-16 rounded-2xl bg-gray-800/70 flex items-center justify-center text-2xl mb-4">✅</div>
-            <p class="text-base font-semibold text-gray-300">ไม่พบรายการงาน</p>
-            <p class="text-sm text-gray-500 mt-1">ลองเปลี่ยนตัวกรอง หรือเพิ่มงานใหม่</p>
-            <button
-              @click="isEntryModalOpen = true"
-              class="mt-4 px-4 py-2 rounded-xl bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/30 text-sm font-medium text-violet-300 transition-all"
-            >
-              + เพิ่มงานใหม่
-            </button>
+          <!-- Empty State -->
+          <div v-else-if="!todos.length" class="flex flex-col items-center justify-center py-16 text-center px-6">
+            <div class="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl mb-3" style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);">✅</div>
+            <h3 class="text-base font-semibold" style="color: var(--text-primary);">ยังไม่มีรายการ</h3>
+            <p class="text-xs mt-1" style="color: var(--text-muted);">กด + เพื่อสร้างรายการ Todolist แรก</p>
+            <button @click="openCreateModal" class="mt-4 btn-primary text-xs py-2 px-4 rounded-xl inline-flex items-center gap-1.5 tap-scale touch-target">+ เพิ่ม Todolist</button>
           </div>
 
-          <!-- Todo Items -->
-          <div v-else class="divide-y divide-gray-800/60">
+          <!-- Todo Items (เหมือน Mobile) -->
+          <div v-else class="p-3 space-y-2">
             <div
-              v-for="item in paginatedTodos"
+              v-for="item in todos"
               :key="item.id"
-              class="flex items-start gap-4 px-5 py-4 hover:bg-gray-800/30 transition-all tap-scale"
-              :class="{ 'opacity-60': item.status === 'completed' }"
+              class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all"
+              :style="item.isCompleted
+                ? 'background: rgba(16, 185, 129, 0.06); border: 1px solid rgba(16, 185, 129, 0.12);'
+                : 'background: var(--bg-elevated); border: 1px solid var(--border-subtle);'"
             >
-              <!-- Checkbox -->
+              <!-- Checkbox (ส่ง API /completion เหมือน Mobile) -->
               <button
-                @click="toggleStatus(item)"
-                class="mt-0.5 shrink-0 w-6 h-6 rounded-md flex items-center justify-center transition-all touch-target text-white"
-                :style="item.status === 'completed'
-                  ? 'background: linear-gradient(140deg, var(--brand), var(--brand-2)); border: 1px solid transparent;'
-                  : 'border: 1.5px solid var(--border-strong);'"
+                type="button"
+                @click="toggleCompletion(item)"
+                class="shrink-0 w-6 h-6 rounded-lg flex items-center justify-center transition-all tap-scale touch-target"
+                :style="item.isCompleted
+                  ? 'background: linear-gradient(135deg, var(--ink-emerald), rgba(16,185,129,0.8)); border: 2px solid var(--ink-emerald);'
+                  : 'background: transparent; border: 2px solid var(--border-strong);'"
               >
-                <svg v-if="item.status === 'completed'" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                <svg v-if="item.isCompleted" class="w-3.5 h-3.5 text-white" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
                 </svg>
               </button>
 
               <!-- Content -->
               <div class="flex-1 min-w-0">
-                <div class="flex items-center gap-2 flex-wrap mb-1">
-                  <h3
-                    class="text-sm font-semibold text-white"
-                    :class="{ 'line-through text-gray-500': item.status === 'completed' }"
-                  >{{ item.title }}</h3>
-                  <span
-                    v-if="item.priority === 'high'"
-                    class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-500/15 text-rose-300 border border-rose-500/25"
-                  >ด่วน</span>
-                  <span
-                    v-else-if="item.priority === 'low'"
-                    class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-500/15 text-sky-300 border border-sky-500/25"
-                  >ปกติ</span>
-                </div>
-                <p v-if="item.description" class="text-xs text-gray-500 line-clamp-1 mb-1.5">{{ item.description }}</p>
-                <div class="flex items-center gap-3 text-xs">
-                  <span v-if="item.due_date" class="num flex items-center gap-1.5 font-medium" :class="getDueDateColor(item)">
-                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
-                    {{ formatDate(item.due_date) }}
-                  </span>
-                  <span
-                    class="px-2 py-0.5 rounded-full text-[10px] font-medium border"
-                    :class="{
-                      'border-emerald-500/30 bg-emerald-500/10 text-emerald-400': item.status === 'completed',
-                      'border-sky-500/30 bg-sky-500/10 text-sky-400': item.status === 'in_progress',
-                      'border-gray-600 bg-gray-800/50 text-gray-400': item.status === 'pending',
-                    }"
-                  >
-                    {{ getStatusText(item.status) }}
-                  </span>
-                </div>
                 <p
-                  v-if="item.due_date && item.status !== 'completed'"
-                  class="text-[10px] text-amber-400 mt-1"
-                >🔔 {{ item.priority === 'high' ? 'เตือน 1 วันก่อน deadline' : 'เตือนเช้าวัน deadline' }}</p>
+                  class="text-sm font-semibold leading-snug truncate"
+                  :style="{
+                    color: item.isCompleted ? 'var(--text-muted)' : 'var(--text-primary)',
+                    textDecoration: item.isCompleted ? 'line-through' : 'none'
+                  }"
+                >
+                  {{ item.title }}
+                </p>
+                <div class="flex items-center gap-2 mt-1 flex-wrap">
+                  <span
+                    v-if="item.tag && item.tag !== 'ทั่วไป'"
+                    class="text-[10px] px-2 py-0.5 rounded-full font-bold"
+                    :style="getTagBadgeStyle(item.tag)"
+                  >
+                    {{ item.tag }}
+                  </span>
+                  <span v-if="item.targetDate" class="text-[10.5px] num font-medium" :style="getDueDateStyle(item)">
+                    📅 {{ formatDate(item.targetDate) }}
+                  </span>
+                  <span v-if="item.recurrenceLabel" class="text-[10px] px-1.5 py-0.5 rounded-md font-medium" style="background: var(--bg-card); color: var(--text-muted); border: 1px solid var(--border-subtle);">
+                    🔁 {{ item.recurrenceLabel }}
+                  </span>
+                </div>
               </div>
 
-              <!-- Actions -->
-              <div class="flex items-center gap-1 shrink-0">
-                <button
-                  @click="openEditModal(item)"
-                  class="w-9 h-9 rounded-lg flex items-center justify-center transition-all tap-scale touch-target"
-                  style="color: var(--text-muted);"
-                  title="แก้ไข"
-                >
-                  <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
-                </button>
-                <button
-                  @click="deleteTodo(item.id)"
-                  :disabled="isDeletingId === item.id"
-                  class="w-9 h-9 rounded-lg flex items-center justify-center disabled:opacity-50 transition-all tap-scale touch-target"
-                  style="color: var(--text-muted);"
-                  title="ลบ"
-                >
-                  <svg v-if="isDeletingId !== item.id" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
-                  <span v-else class="inline-block w-3.5 h-3.5 border-2 rounded-full animate-spin" style="border-color: var(--border-strong); border-top-color: var(--ink-rose);"></span>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Pagination Controls -->
-          <div v-if="todoTotalPages > 1" class="flex items-center justify-center gap-2 px-5 py-4 border-t border-gray-800/60">
-            <button
-              @click="todoCurrentPage = Math.max(1, todoCurrentPage - 1)"
-              :disabled="todoCurrentPage === 1"
-              class="px-3 py-2 rounded-lg text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              style="background: var(--bg-elevated); border: 1px solid var(--border-default); color: var(--text-secondary);"
-              :style="todoCurrentPage === 1 ? {} : { 'cursor': 'pointer', 'color': 'var(--text-primary)' }"
-            >
-              ← ก่อนหน้า
-            </button>
-            <div class="flex items-center gap-1">
+              <!-- Edit Button -->
               <button
-                v-for="page in todoTotalPages"
-                :key="page"
-                @click="todoCurrentPage = page"
-                class="w-9 h-9 rounded-lg text-sm font-medium transition-all"
-                :style="todoCurrentPage === page
-                  ? { 'background': 'var(--brand)', 'color': 'white', 'border': '1px solid var(--brand)' }
-                  : { 'background': 'var(--bg-elevated)', 'border': '1px solid var(--border-default)', 'color': 'var(--text-secondary)' }"
+                @click="openEditModal(item)"
+                class="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center transition-all tap-scale touch-target"
+                style="color: var(--text-muted);"
               >
-                {{ page }}
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
               </button>
             </div>
-            <button
-              @click="todoCurrentPage = Math.min(todoTotalPages, todoCurrentPage + 1)"
-              :disabled="todoCurrentPage === todoTotalPages"
-              class="px-3 py-2 rounded-lg text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              style="background: var(--bg-elevated); border: 1px solid var(--border-default); color: var(--text-secondary);"
-              :style="todoCurrentPage === todoTotalPages ? {} : { 'cursor': 'pointer', 'color': 'var(--text-primary)' }"
-            >
-              ต่อไป →
-            </button>
           </div>
         </section>
       </div>
     </div>
 
-    <!-- Add/Edit Modal -->
+    <!-- Modal: Add / Edit Todolist -->
     <Teleport to="body">
       <Transition name="backdrop">
         <div
-          v-if="isEntryModalOpen"
-          class="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style="background: rgba(3,5,12,0.62); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);"
+          v-if="isModalOpen"
+          class="fixed inset-0 z-[90] flex items-center justify-center p-4"
+          style="background: rgba(3,5,12,0.62); backdrop-filter: blur(6px);"
+          @click.self="closeModal"
         >
           <Transition name="modal">
-            <div v-if="isEntryModalOpen" class="relative z-10 w-full max-w-lg rounded-2xl border border-gray-700/80 bg-gray-900 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-              <!-- Modal Header -->
-              <div class="flex items-center justify-between px-6 py-4 border-b border-gray-800/80 shrink-0">
+            <div v-if="isModalOpen" class="relative z-10 w-full max-w-md rounded-2xl overflow-hidden shadow-2xl" style="background: var(--bg-card); border: 1px solid var(--border-default);">
+              <!-- Header -->
+              <div class="flex items-center justify-between px-6 py-4 border-b" style="border-color: var(--border-subtle);">
                 <div class="flex items-center gap-3">
-                  <div class="w-9 h-9 rounded-xl bg-violet-500/20 flex items-center justify-center text-base">{{ isEditing ? '✏️' : '➕' }}</div>
+                  <div class="w-9 h-9 rounded-xl flex items-center justify-center text-base" style="background: var(--brand-soft);">✅</div>
                   <div>
-                    <h3 class="text-base font-semibold text-white">{{ isEditing ? 'แก้ไขงาน' : 'เพิ่มงานใหม่' }}</h3>
+                    <h2 class="text-base font-semibold" style="color: var(--text-primary);">{{ editingId ? 'แก้ไข Todolist' : 'เพิ่ม Todolist ใหม่' }}</h2>
+                    <p class="text-xs" style="color: var(--text-muted);">{{ editingId ? 'ปรับปรุงรายการที่ต้องทำ' : 'เพิ่มรายการสิ่งที่ต้องทำ' }}</p>
                   </div>
                 </div>
-                <button
-                  @click="() => { isEntryModalOpen = false; resetForm() }"
-                  class="w-8 h-8 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white flex items-center justify-center text-sm transition-all tap-scale touch-target"
-                >✕</button>
+                <button @click="closeModal" class="w-8 h-8 rounded-xl flex items-center justify-center transition-all tap-scale touch-target" style="background: var(--bg-elevated); color: var(--text-muted);">✕</button>
               </div>
 
-          <!-- Modal Body -->
-          <div class="p-6 overflow-y-auto">
-            <form class="space-y-4" @submit.prevent="submitTodo">
-              <div>
-                <label class="block text-xs font-medium text-gray-400 mb-1.5">ชื่องาน <span class="text-rose-400">*</span></label>
-                <input
-                  v-model="form.title"
-                  type="text"
-                  required
-                  maxlength="100"
-                  placeholder="เช่น ส่งรายงานวิชา..., อ่านหนังสือสอบ..."
-                  class="w-full bg-gray-800/80 border border-gray-700/60 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-600 outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 transition-all"
-                >
-              </div>
-
-              <div>
-                <label class="block text-xs font-medium text-gray-400 mb-1.5">รายละเอียด</label>
-                <textarea
-                  v-model="form.description"
-                  rows="3"
-                  placeholder="รายละเอียดเพิ่มเติม..."
-                  class="w-full bg-gray-800/80 border border-gray-700/60 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-600 outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 transition-all resize-none"
-                ></textarea>
-              </div>
-
-              <div class="grid grid-cols-2 gap-4">
+              <!-- Form -->
+              <form class="p-6 space-y-4" @submit.prevent="submitTodo">
+                <!-- Title -->
                 <div>
-                  <label class="block text-xs font-medium text-gray-400 mb-1.5">วันกำหนดส่ง</label>
+                  <label class="block text-xs font-medium mb-1.5" style="color: var(--text-secondary);">รายการที่ต้องทำ <span style="color: var(--ink-rose);">*</span></label>
                   <input
-                    v-model="form.dueDate"
-                    type="date"
-                    class="w-full bg-gray-800/80 border border-gray-700/60 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 transition-all"
-                  >
+                    v-model="form.title"
+                    type="text"
+                    required
+                    maxlength="100"
+                    placeholder="เช่น อ่านหนังสือ, ส่งรายงาน..."
+                    class="w-full input-glass text-sm"
+                  />
                 </div>
+
+                <!-- Recurrence (รูปแบบวันที่) -->
                 <div>
-                  <label class="block text-xs font-medium text-gray-400 mb-1.5">ความสำคัญ</label>
-                  <select
-                    v-model="form.priority"
-                    class="w-full bg-gray-800/80 border border-gray-700/60 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 transition-all"
-                  >
-                    <option value="low">ต่ำ</option>
-                    <option value="medium">ปานกลาง</option>
-                    <option value="high">ด่วนมาก</option>
-                  </select>
+                  <label class="block text-xs font-medium mb-2" style="color: var(--text-secondary);">รูปแบบวันที่ต้องทำ</label>
+                  <div class="flex flex-wrap gap-2">
+                    <button
+                      v-for="opt in recurrenceOptions"
+                      :key="opt.value"
+                      type="button"
+                      @click="form.recurrence = opt.value"
+                      class="px-3 py-2 rounded-xl text-xs font-semibold transition-all tap-scale touch-target"
+                      :style="form.recurrence === opt.value
+                        ? { background: 'var(--brand-soft)', border: '1px solid var(--brand-border)', color: 'var(--brand-ink)' }
+                        : { background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)' }"
+                    >
+                      {{ opt.label }}
+                    </button>
+                  </div>
                 </div>
-              </div>
 
-              <div v-if="isEditing">
-                <label class="block text-xs font-medium text-gray-400 mb-1.5">สถานะ</label>
-                <select
-                  v-model="form.status"
-                  class="w-full bg-gray-800/80 border border-gray-700/60 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 transition-all"
-                >
-                  <option value="pending">รอดำเนินการ</option>
-                  <option value="in_progress">กำลังทำ</option>
-                  <option value="completed">เสร็จสิ้น</option>
-                </select>
-              </div>
+                <!-- Target Date -->
+                <div>
+                  <label class="block text-xs font-medium mb-1.5" style="color: var(--text-secondary);">{{ form.recurrence === 0 ? 'วันที่ต้องทำ' : 'วันที่เริ่มต้น' }}</label>
+                  <input
+                    v-model="form.targetDate"
+                    type="date"
+                    class="w-full input-glass text-sm"
+                  />
+                </div>
 
-              <div class="pt-2 flex gap-3">
-                <button
-                  type="button"
-                  @click="() => { isEntryModalOpen = false; resetForm() }"
-                  class="flex-1 py-2.5 rounded-xl bg-gray-800/80 hover:bg-gray-800 border border-gray-700/60 text-sm font-medium text-gray-300 hover:text-white transition-all tap-scale touch-target"
-                >
-                  ยกเลิก
-                </button>
-                <button
-                  type="submit"
-                  :disabled="isSubmitting"
-                  class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 disabled:opacity-50 text-sm font-semibold text-white shadow-md shadow-violet-500/20 transition-all flex items-center justify-center gap-2 tap-scale touch-target"
-                >
-                  <span v-if="isSubmitting" class="inline-block w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
-                  {{ isSubmitting ? 'กำลังบันทึก...' : 'บันทึกงาน' }}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+                <!-- Tag Selection -->
+                <div>
+                  <label class="block text-xs font-medium mb-2" style="color: var(--text-secondary);">เลือกแท็ก</label>
+                  <div class="flex flex-wrap gap-2">
+                    <button
+                      v-for="tag in ['เรียน', 'งาน', 'ส่วนตัว', 'สุขภาพ']"
+                      :key="tag"
+                      type="button"
+                      @click="form.tag = tag"
+                      class="px-3 py-2 rounded-xl text-xs font-semibold transition-all tap-scale touch-target"
+                      :style="getTagChipStyle(tag, form.tag === tag)"
+                    >
+                      {{ tag }}
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Buttons -->
+                <div class="flex gap-3 pt-2">
+                  <button
+                    v-if="editingId"
+                    type="button"
+                    @click="deleteTodo(editingId)"
+                    class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 tap-scale touch-target"
+                    style="background: rgba(208,39,72,0.12); color: var(--ink-rose);"
+                  >
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
+                  </button>
+                  <button
+                    type="button"
+                    @click="closeModal"
+                    class="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all tap-scale touch-target"
+                    style="background: var(--bg-elevated); border: 1px solid var(--border-default); color: var(--text-secondary);"
+                  >
+                    ยกเลิก
+                  </button>
+                  <button
+                    type="submit"
+                    :disabled="isSubmitting"
+                    class="flex-1 btn-primary py-2.5 rounded-xl disabled:opacity-50 text-sm font-semibold flex items-center justify-center gap-2 tap-scale touch-target"
+                  >
+                    <span v-if="isSubmitting" class="inline-block w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
+                    {{ isSubmitting ? 'กำลังบันทึก...' : 'บันทึก' }}
+                  </button>
+                </div>
+              </form>
+            </div>
           </Transition>
-          <div class="absolute inset-0 z-0 bg-black/70 backdrop-blur-sm" @click="isEntryModalOpen = false"></div>
         </div>
       </Transition>
     </Teleport>
@@ -342,21 +309,6 @@
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
-import { getTodayTH } from '~/utils/date'
-
-type TodoStatus = 'pending' | 'in_progress' | 'completed'
-type TodoPriority = 'low' | 'medium' | 'high'
-
-type TodoRow = {
-  id: string
-  user_id: string
-  title: string
-  description: string | null
-  due_date: string | null
-  status: TodoStatus
-  priority: TodoPriority
-  created_at: string
-}
 
 type BackendTodo = {
   id: string
@@ -365,224 +317,276 @@ type BackendTodo = {
   description: string | null
   targetDate: string
   tag: string
-  recurrence: string
+  recurrence: string | number
   status: string
   priority: string
   isCompleted: boolean
   reminderSentAt: string | null
 }
 
-const statusToBackend: Record<TodoStatus, string> = { pending: 'pending', in_progress: 'inProgress', completed: 'completed' }
-const statusFromBackend: Record<string, TodoStatus> = { pending: 'pending', inProgress: 'in_progress', completed: 'completed' }
+type TodoRow = BackendTodo & {
+  recurrenceLabel: string
+}
 
 definePageMeta({ middleware: 'auth' })
-useHead({ title: 'งานและ To-do' })
+useHead({ title: 'To-do List' })
 
 const { apiFetch, userId } = useBackendApi()
 const { toastSuccess, toastError, confirmDelete } = useAlert()
-const { notify, buildTodoSavedMessage } = useLineMessaging()
 
+const todos = ref<TodoRow[]>([])
 const isLoading = ref(true)
 const isSubmitting = ref(false)
-const isEntryModalOpen = ref(false)
-const isDeletingId = ref('')
-const editingId = ref('')
 const errorMessage = ref('')
-const todos = ref<TodoRow[]>([])
 
-const filterStatus = ref<'all' | TodoStatus>('all')
-const todoItemsPerPage = ref(20)
-const todoCurrentPage = ref(1)
+const selectedView = ref<string>('วัน')
+const selectedTag = ref<string>('ทั้งหมด')
+const viewAnchor = ref(new Date())
 
+const viewOptions = ['ทั้งหมด', 'วัน', 'เดือน', 'ปี']
+const tagOptions = ['ทั้งหมด', 'เรียน', 'งาน', 'ส่วนตัว', 'สุขภาพ']
+
+const recurrenceOptions = [
+  { label: 'เป็นวันที่', value: 0 },
+  { label: 'ทุกวัน', value: 1 },
+  { label: 'ทุกสัปดาห์', value: 2 },
+  { label: 'ทุกเดือน', value: 3 },
+  { label: 'ทุกปี', value: 4 },
+]
+
+// Modal state
+const isModalOpen = ref(false)
+const editingId = ref('')
 const form = reactive({
   title: '',
-  description: '',
-  dueDate: '',
-  priority: 'medium' as TodoPriority,
-  status: 'pending' as TodoStatus,
+  tag: 'เรียน',
+  targetDate: '',
+  recurrence: 0,
 })
 
-const getApiErrorMessage = (error: any, fallback: string) => error?.data?.message || error?.message || fallback
+// ----- Computed: Progress -----
+const completedCount = computed(() => todos.value.filter(t => t.isCompleted).length)
+const totalCount = computed(() => todos.value.length)
+const completionPercentage = computed(() => totalCount.value > 0 ? completedCount.value / totalCount.value : 0)
 
-const normalizeRows = (rows: BackendTodo[]): TodoRow[] => rows.map(row => ({
-  id: row.id,
-  user_id: row.userId,
-  title: row.title,
-  description: row.description,
-  due_date: row.targetDate ? row.targetDate.slice(0, 10) : null,
-  status: (statusFromBackend[row.status] || 'pending') as TodoStatus,
-  priority: (row.priority === 'low' || row.priority === 'high' ? row.priority : 'medium') as TodoPriority,
-  created_at: row.targetDate,
-}))
-
-const isEditing = computed(() => Boolean(editingId.value))
-
-const totalTodosCount = computed(() => todos.value.length)
-const pendingTodos = computed(() => todos.value.filter(t => t.status !== 'completed'))
-const completedTodos = computed(() => todos.value.filter(t => t.status === 'completed'))
-const urgentTodos = computed(() => {
-  const today = getTodayTH()
-  return todos.value.filter(t => t.status !== 'completed' && (t.due_date && t.due_date <= today))
+// ----- Range Label -----
+const thMonths = ['', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']
+const rangeLabel = computed(() => {
+  const d = viewAnchor.value
+  switch (selectedView.value) {
+    case 'ทั้งหมด': return 'รายการทั้งหมด'
+    case 'วัน': return `${d.getDate()} ${thMonths[d.getMonth() + 1]} ${d.getFullYear() + 543}`
+    case 'เดือน': return `${thMonths[d.getMonth() + 1]} ${d.getFullYear() + 543}`
+    default: return `${d.getFullYear() + 543}`
+  }
 })
 
-const filteredTodos = computed(() => {
-  let list = todos.value
-  if (filterStatus.value !== 'all') list = list.filter(t => t.status === filterStatus.value)
-  return list.sort((a, b) => {
-    if (a.status === 'completed' && b.status !== 'completed') return 1
-    if (a.status !== 'completed' && b.status === 'completed') return -1
-    if (a.due_date && !b.due_date) return -1
-    if (!a.due_date && b.due_date) return 1
-    if (a.due_date && b.due_date) return a.due_date.localeCompare(b.due_date)
-    return 0
-  })
-})
-
-const todoTotalPages = computed(() => Math.ceil(filteredTodos.value.length / todoItemsPerPage.value))
-const paginatedTodos = computed(() => {
-  const start = (todoCurrentPage.value - 1) * todoItemsPerPage.value
-  const end = start + todoItemsPerPage.value
-  return filteredTodos.value.slice(start, end)
-})
-
-const todoPageInfo = computed(() => {
-  const total = filteredTodos.value.length
-  if (total === 0) return 'ไม่มีรายการ'
-  const start = (todoCurrentPage.value - 1) * todoItemsPerPage.value + 1
-  const end = Math.min(todoCurrentPage.value * todoItemsPerPage.value, total)
-  return `แสดง ${start}-${end} จาก ${total} รายการ`
-})
-
-const formatDate = (dateString: string) => new Date(dateString).toLocaleDateString('th-TH', {
-  day: '2-digit', month: 'short', year: 'numeric'
-})
-
-const getStatusText = (status: string) => {
-  if (status === 'completed') return 'เสร็จสิ้น'
-  if (status === 'in_progress') return 'กำลังทำ'
-  return 'รอดำเนินการ'
+// ----- View Navigation -----
+const changeView = (v: string) => {
+  selectedView.value = v
+  loadTodos()
 }
 
-const getDueDateColor = (item: TodoRow) => {
-  if (item.status === 'completed') return 'text-gray-500'
-  if (!item.due_date) return 'text-gray-400'
-  const today = getTodayTH()
-  if (item.due_date < today) return 'text-rose-400'
-  if (item.due_date === today) return 'text-amber-400'
-  return 'text-sky-400'
+const shiftView = (delta: number) => {
+  if (selectedView.value === 'ทั้งหมด') return
+  const d = new Date(viewAnchor.value)
+  if (selectedView.value === 'วัน') {
+    d.setDate(d.getDate() + delta)
+  } else if (selectedView.value === 'เดือน') {
+    d.setMonth(d.getMonth() + delta)
+  } else {
+    d.setFullYear(d.getFullYear() + delta)
+  }
+  viewAnchor.value = d
+  loadTodos()
 }
 
-const resetForm = () => {
-  form.title = ''
-  form.description = ''
-  form.dueDate = ''
-  form.priority = 'medium'
-  form.status = 'pending'
-  editingId.value = ''
-}
-
-const openEditModal = (item: TodoRow) => {
-  editingId.value = item.id
-  form.title = item.title
-  form.description = item.description || ''
-  form.dueDate = item.due_date || ''
-  form.priority = item.priority
-  form.status = item.status
-  errorMessage.value = ''
-  isEntryModalOpen.value = true
-}
-
-const toggleStatus = async (item: TodoRow) => {
-  const newStatus: TodoStatus = item.status === 'completed' ? 'pending' : 'completed'
-  try {
-    await apiFetch(`/api/Todo/${item.id}`, {
-      method: 'PUT',
-      body: {
-        title: item.title,
-        description: item.description,
-        targetDate: `${item.due_date || getTodayTH()}T00:00:00`,
-        tag: 'ทั่วไป',
-        recurrence: 'none',
-        status: statusToBackend[newStatus],
-        priority: item.priority,
-        isCompleted: newStatus === 'completed',
-      },
-    })
-    const index = todos.value.findIndex(t => t.id === item.id)
-    if (index !== -1 && todos.value[index]) todos.value[index].status = newStatus
-  } catch (err: any) {
-    console.error('Toggle status error:', err)
-    toastError('อัปเดตสถานะไม่สำเร็จ')
+// ----- Helpers -----
+const parseRecurrence = (value: string | number | null | undefined): number => {
+  if (value === null || value === undefined) return 0
+  if (typeof value === 'number') return value
+  const n = parseInt(String(value))
+  if (!isNaN(n)) return n
+  switch (String(value).toLowerCase().trim()) {
+    case 'daily': return 1
+    case 'weekly': return 2
+    case 'monthly': return 3
+    case 'yearly': return 4
+    default: return 0
   }
 }
 
+const recurrenceLabel = (value: string | number) => {
+  switch (parseRecurrence(value)) {
+    case 1: return 'ทุกวัน'
+    case 2: return 'ทุกสัปดาห์'
+    case 3: return 'ทุกเดือน'
+    case 4: return 'ทุกปี'
+    default: return ''
+  }
+}
+
+const formatDate = (dateStr: string) => {
+  try {
+    const d = new Date(dateStr)
+    if (isNaN(d.getTime())) return dateStr
+    return `${d.getDate()} ${thMonths[d.getMonth() + 1]} ${d.getFullYear() + 543}`
+  } catch { return dateStr }
+}
+
+const getDueDateStyle = (item: TodoRow) => {
+  if (item.isCompleted) return { color: 'var(--text-muted)' }
+  try {
+    const today = new Date(); today.setHours(0, 0, 0, 0)
+    const d = new Date(item.targetDate); d.setHours(0, 0, 0, 0)
+    if (d < today) return { color: 'var(--ink-rose)' }
+    if (d.getTime() === today.getTime()) return { color: 'var(--ink-amber)' }
+  } catch {}
+  return { color: 'var(--text-muted)' }
+}
+
+const tagColorMap: Record<string, { bg: string; border: string; color: string }> = {
+  'เรียน':    { bg: 'var(--brand-soft)',                    border: 'var(--brand-border)',            color: 'var(--brand-ink)' },
+  'งาน':     { bg: 'rgba(182, 133, 42, 0.12)',              border: 'rgba(182, 133, 42, 0.35)',        color: 'var(--ink-amber)' },
+  'ส่วนตัว': { bg: 'rgba(139, 92, 246, 0.12)',              border: 'rgba(139, 92, 246, 0.35)',        color: '#a78bfa' },
+  'สุขภาพ':  { bg: 'rgba(16, 185, 129, 0.12)',              border: 'rgba(16, 185, 129, 0.35)',        color: 'var(--ink-emerald)' },
+  'ทั้งหมด': { bg: 'var(--brand-soft)',                    border: 'var(--brand-border)',            color: 'var(--brand-ink)' },
+}
+
+const getTagChipStyle = (tag: string, isSelected: boolean) => {
+  const c = tagColorMap[tag] || { bg: 'var(--bg-elevated)', border: 'var(--border-subtle)', color: 'var(--text-secondary)' }
+  if (isSelected) return { background: c.bg, border: `1px solid ${c.border}`, color: c.color }
+  return { background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)' }
+}
+
+const getTagBadgeStyle = (tag: string) => {
+  const c = tagColorMap[tag] || { bg: 'var(--bg-elevated)', border: 'var(--border-subtle)', color: 'var(--text-secondary)' }
+  return { background: c.bg, border: `1px solid ${c.border}`, color: c.color }
+}
+
+// ----- API: Load Todos -----
 const loadTodos = async () => {
   isLoading.value = true
   errorMessage.value = ''
   try {
     if (!userId.value) return
-    const data = await apiFetch<BackendTodo[]>(`/api/Todo/${userId.value}`)
-    todos.value = normalizeRows(data)
+    const params = new URLSearchParams()
+    if (selectedTag.value !== 'ทั้งหมด') params.append('tag', selectedTag.value)
+    const d = viewAnchor.value
+    if (selectedView.value !== 'ทั้งหมด') params.append('year', String(d.getFullYear()))
+    if (selectedView.value === 'วัน' || selectedView.value === 'เดือน') params.append('month', String(d.getMonth() + 1))
+    if (selectedView.value === 'วัน') params.append('day', String(d.getDate()))
+
+    const query = params.toString() ? `?${params.toString()}` : ''
+    const data = await apiFetch<BackendTodo[]>(`/api/Todo/${userId.value}${query}`)
+    todos.value = (Array.isArray(data) ? data : []).map(item => ({
+      ...item,
+      recurrenceLabel: recurrenceLabel(item.recurrence),
+    }))
   } catch (error: any) {
     console.error('Load todos error:', error)
-    errorMessage.value = getApiErrorMessage(error, 'โหลดข้อมูลงานไม่สำเร็จ')
+    errorMessage.value = error?.data?.message || error?.message || 'โหลดข้อมูลไม่สำเร็จ'
   } finally {
     isLoading.value = false
   }
 }
 
+// ----- API: Toggle Completion (ใช้ /completion endpoint เหมือน Mobile) -----
+const toggleCompletion = async (item: TodoRow) => {
+  const newCompleted = !item.isCompleted
+  // Optimistic update
+  item.isCompleted = newCompleted
+
+  try {
+    const completionDate = selectedView.value === 'วัน'
+      ? viewAnchor.value
+      : (item.targetDate ? new Date(item.targetDate) : new Date())
+
+    await apiFetch(`/api/Todo/${item.id}/completion`, {
+      method: 'PUT',
+      body: {
+        date: completionDate.toISOString(),
+        isCompleted: newCompleted,
+      },
+    })
+    toastSuccess(newCompleted ? 'ทำเสร็จเรียบร้อย! 🎉' : 'ยกเลิกการทำเครื่องหมาย')
+  } catch (error: any) {
+    // Rollback on fail
+    item.isCompleted = !newCompleted
+    console.error('Toggle completion error:', error)
+    toastError('อัปเดตสถานะไม่สำเร็จ')
+  }
+}
+
+// ----- Modal Logic -----
+const openCreateModal = () => {
+  editingId.value = ''
+  form.title = ''
+  form.tag = 'เรียน'
+  form.targetDate = new Date().toISOString().slice(0, 10)
+  form.recurrence = 0
+  isModalOpen.value = true
+}
+
+const openEditModal = (item: TodoRow) => {
+  editingId.value = item.id
+  form.title = item.title
+  form.tag = item.tag || 'เรียน'
+  form.targetDate = item.targetDate ? item.targetDate.slice(0, 10) : new Date().toISOString().slice(0, 10)
+  form.recurrence = parseRecurrence(item.recurrence)
+  isModalOpen.value = true
+}
+
+const closeModal = () => {
+  isModalOpen.value = false
+  editingId.value = ''
+}
+
 const submitTodo = async () => {
   if (isSubmitting.value) return
-  if (!form.title.trim()) { toastError('กรุณาระบุชื่องาน'); return }
+  if (!form.title.trim()) { toastError('กรุณาระบุรายการที่ต้องทำ'); return }
   isSubmitting.value = true
-  errorMessage.value = ''
   try {
-    if (!userId.value) return
-    const status: TodoStatus = isEditing.value ? form.status : 'pending'
     const body = {
       userId: userId.value,
       title: form.title.trim(),
-      description: form.description.trim() || null,
-      targetDate: `${form.dueDate || getTodayTH()}T00:00:00`,
-      tag: 'ทั่วไป',
-      recurrence: 'none',
-      status: statusToBackend[status],
-      priority: form.priority,
-      isCompleted: status === 'completed',
+      description: null,
+      targetDate: `${form.targetDate}T00:00:00`,
+      tag: form.tag,
+      recurrence: form.recurrence,
+      status: 'pending',
+      priority: 'medium',
+      isCompleted: false,
     }
-    if (isEditing.value) {
+    if (editingId.value) {
       await apiFetch(`/api/Todo/${editingId.value}`, { method: 'PUT', body })
+      toastSuccess('แก้ไขรายการสำเร็จ')
     } else {
       await apiFetch('/api/Todo', { method: 'POST', body })
+      toastSuccess('เพิ่มรายการสำเร็จ')
     }
-    const lineMessage = buildTodoSavedMessage({ title: body.title, dueDate: form.dueDate || null, priority: form.priority, isEditing: isEditing.value })
-    toastSuccess(isEditing.value ? 'แก้ไขงานสำเร็จ' : 'เพิ่มงานสำเร็จ')
-    isEntryModalOpen.value = false
-    resetForm()
+    closeModal()
     await loadTodos()
-    void notify(lineMessage)
   } catch (error: any) {
     console.error('Save todo error:', error)
-    errorMessage.value = getApiErrorMessage(error, 'บันทึกงานไม่สำเร็จ')
+    toastError(error?.data?.message || error?.message || 'บันทึกไม่สำเร็จ')
   } finally {
     isSubmitting.value = false
   }
 }
 
 const deleteTodo = async (id: string) => {
-  if (!id || isDeletingId.value) return
-  const shouldDelete = import.meta.client ? await confirmDelete('ยืนยันการลบงานนี้?', 'จะไม่สามารถกู้คืนได้') : true
-  if (!shouldDelete) return
-  isDeletingId.value = id
+  if (!id) return
+  const confirmed = await confirmDelete('ยืนยันการลบรายการนี้?', 'จะไม่สามารถกู้คืนได้')
+  if (!confirmed) return
   try {
     await apiFetch(`/api/Todo/${id}`, { method: 'DELETE' })
-    todos.value = todos.value.filter(t => t.id !== id)
-    toastSuccess('ลบงานสำเร็จ')
+    toastSuccess('ลบรายการสำเร็จ')
+    closeModal()
+    await loadTodos()
   } catch (error: any) {
     console.error('Delete todo error:', error)
-    toastError('ลบงานไม่สำเร็จ')
-  } finally {
-    isDeletingId.value = ''
+    toastError('ลบรายการไม่สำเร็จ')
   }
 }
 
