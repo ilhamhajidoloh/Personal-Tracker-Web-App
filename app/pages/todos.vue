@@ -4,8 +4,8 @@
       <!-- Page head -->
       <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
-          <p class="eyebrow">งาน · Tasks</p>
-          <h1 class="text-2xl md:text-[30px] font-extrabold tracking-tight mt-1.5" style="color: var(--text-primary);">งานและ To-do</h1>
+          <p class="eyebrow">To-do List · Checklist</p>
+          <h1 class="text-2xl md:text-[30px] font-extrabold tracking-tight mt-1.5" style="color: var(--text-primary);">To-do List</h1>
           <p class="text-xs mt-2 text-gray-400 font-medium">เสร็จแล้ว {{ completedTodos.length }} จาก {{ totalTodosCount }} &bull; ค้าง {{ pendingTodos.length }} รายการ</p>
         </div>
         <div class="flex items-center gap-2 shrink-0">
@@ -14,7 +14,7 @@
             class="btn-primary text-sm inline-flex items-center gap-2 tap-scale touch-target"
           >
             <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-            เพิ่มงานใหม่
+            เพิ่ม To-do ใหม่
           </button>
           <button
             @click="loadTodos"

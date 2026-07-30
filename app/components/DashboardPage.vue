@@ -283,8 +283,8 @@
           <!-- Todos -->
           <div class="section-card animate-slide-up delay-300">
             <div class="flex items-center justify-between gap-3 p-5" style="border-bottom: 1px solid var(--border-subtle);">
-              <h2 class="text-sm font-semibold" style="color: var(--text-primary);">งานที่ต้องทำ</h2>
-              <NuxtLink to="/todos" class="eyebrow" style="color: var(--brand);">จัดการ →</NuxtLink>
+              <h2 class="text-sm font-semibold" style="color: var(--text-primary);">To-do List</h2>
+              <NuxtLink to="/todos" class="eyebrow" style="color: var(--brand);">ดูทั้งหมด →</NuxtLink>
             </div>
             <div v-if="isTodosLoading" class="p-5 space-y-2">
               <div v-for="i in 3" :key="i" class="h-11 rounded-lg animate-pulse" style="background: var(--bg-elevated);"></div>
