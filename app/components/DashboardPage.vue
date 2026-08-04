@@ -177,6 +177,60 @@
               </div>
             </div>
           </div>
+
+          <!-- Nearest Recurring Expense -->
+          <div class="section-card animate-slide-up delay-100 overflow-hidden">
+            <div class="flex items-center justify-between gap-3 p-5" style="border-bottom: 1px solid var(--border-subtle);">
+              <div class="flex items-center gap-2">
+                <div class="w-7 h-7 rounded-lg bg-amber-500/15 text-amber-400 flex items-center justify-center text-sm shrink-0">
+                  🔄
+                </div>
+                <div>
+                  <h2 class="text-sm font-semibold text-white">รายจ่ายประจำใกล้ที่สุด</h2>
+                  <p class="text-[11px] text-gray-500">รายการถัดไปที่ต้องชำระ</p>
+                </div>
+              </div>
+              <NuxtLink to="/cashflow" class="eyebrow" style="color: var(--brand);">จัดการ →</NuxtLink>
+            </div>
+
+            <div v-if="isRecurringLoading" class="p-5">
+              <div class="h-16 rounded-xl bg-gray-800/60 animate-pulse"></div>
+            </div>
+
+            <div v-else-if="!nearestRecurringItemInfo" class="p-6 text-center text-xs" style="color: var(--text-muted);">
+              ยังไม่มีรายการจ่ายประจำ
+            </div>
+
+            <div v-else class="p-4 sm:p-5">
+              <div class="p-4 rounded-xl bg-amber-500/10 border border-amber-500/25 flex flex-wrap sm:flex-nowrap items-center justify-between gap-3">
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-center gap-2 flex-wrap mb-1">
+                    <span class="text-sm font-bold text-white truncate">{{ nearestRecurringItemInfo.item.title }}</span>
+                    <span class="text-[10.5px] font-semibold px-2 py-0.5 rounded-md border" :class="nearestRecurringItemInfo.statusClass">
+                      {{ nearestRecurringItemInfo.dueLabel }}
+                    </span>
+                  </div>
+                  <p class="text-xs text-gray-400">
+                    จ่ายทุกวันที่ {{ nearestRecurringItemInfo.item.dayOfMonthDue }} &bull;
+                    <span class="font-mono text-amber-300 font-semibold">{{ nearestRecurringItemInfo.countdownText }}</span>
+                  </p>
+                </div>
+
+                <div class="flex items-center gap-3 shrink-0 ml-auto sm:ml-0">
+                  <span class="num text-base font-extrabold text-white">฿{{ formatCurrency(nearestRecurringItemInfo.item.amount) }}</span>
+                  <button
+                    @click="payDashboardRecurring(nearestRecurringItemInfo.item)"
+                    :disabled="isPayingDashboardRecurringId === nearestRecurringItemInfo.item.id"
+                    class="px-3 py-2 rounded-xl text-xs font-bold bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-400 flex items-center gap-1.5 transition-all tap-scale touch-target disabled:opacity-50"
+                  >
+                    <svg v-if="isPayingDashboardRecurringId !== nearestRecurringItemInfo.item.id" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                    <span v-else class="inline-block w-3 h-3 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin"></span>
+                    <span>จ่ายแล้ว</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- RIGHT column -->
@@ -1322,8 +1376,186 @@ const loadEvents = async () => {
   }
 }
 
+type BackendRecurringExpense = {
+  id: string
+  userId: string
+  title: string
+  amount: number
+  category: string
+  startDate: string
+  endDate: string | null
+  isIndefinite: boolean
+  dayOfMonthDue: number
+}
+
+const recurringExpenses = ref<BackendRecurringExpense[]>([])
+const isRecurringLoading = ref(false)
+const isPayingDashboardRecurringId = ref('')
+
+const loadRecurringExpenses = async () => {
+  isRecurringLoading.value = true
+  try {
+    if (!userId.value) return
+    const data = await apiFetch<BackendRecurringExpense[]>(`/api/Finance/recurring/${userId.value}`)
+    recurringExpenses.value = data || []
+  } catch (error: any) {
+    console.error('Load dashboard recurring expenses error:', error)
+  } finally {
+    isRecurringLoading.value = false
+  }
+}
+
+const calculateNextDue = (r: { dayOfMonthDue?: number; startDate?: string }) => {
+  const day = r.dayOfMonthDue ?? 1
+  const now = nowTH()
+  const todayOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const firstOfThisMonth = new Date(todayOnly.getFullYear(), todayOnly.getMonth(), 1)
+
+  let startDate = todayOnly
+  if (r.startDate) {
+    const parsed = new Date(r.startDate)
+    if (!isNaN(parsed.getTime())) {
+      startDate = new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate())
+    }
+  }
+
+  const searchFrom = startDate > firstOfThisMonth ? startDate : firstOfThisMonth
+
+  const dueDateFor = (y: number, m: number) => {
+    const daysInMonth = new Date(y, m + 1, 0).getDate()
+    const clampedDay = Math.min(Math.max(1, day), daysInMonth)
+    return new Date(y, m, clampedDay)
+  }
+
+  let nextDue = dueDateFor(searchFrom.getFullYear(), searchFrom.getMonth())
+  if (nextDue.getTime() < searchFrom.getTime()) {
+    const nextMonth = searchFrom.getMonth() === 11 ? 0 : searchFrom.getMonth() + 1
+    const nextYear = searchFrom.getMonth() === 11 ? searchFrom.getFullYear() + 1 : searchFrom.getFullYear()
+    nextDue = dueDateFor(nextYear, nextMonth)
+  }
+  return nextDue
+}
+
+const nearestRecurringItemInfo = computed(() => {
+  if (!recurringExpenses.value.length) return null
+
+  const now = currentTime.value
+  const todayOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+
+  let nearestItem: BackendRecurringExpense | null = null
+  let nearestNextDue: Date | null = null
+  let minDays = 999999
+
+  for (const r of recurringExpenses.value) {
+    const nextDue = calculateNextDue(r)
+    const dueOnly = new Date(nextDue.getFullYear(), nextDue.getMonth(), nextDue.getDate())
+    const daysUntil = Math.round((dueOnly.getTime() - todayOnly.getTime()) / (1000 * 3600 * 24))
+
+    if (daysUntil < minDays) {
+      minDays = daysUntil
+      nearestItem = r
+      nearestNextDue = nextDue
+    }
+  }
+
+  if (!nearestItem || !nearestNextDue) return null
+
+  const dueTarget = new Date(nearestNextDue.getFullYear(), nearestNextDue.getMonth(), nearestNextDue.getDate(), 23, 59, 59)
+  const remainingMs = dueTarget.getTime() - now.getTime()
+
+  let countdownText = ''
+  if (remainingMs < 0) {
+    countdownText = 'เลยกำหนด'
+  } else if (minDays === 0) {
+    const totalSec = Math.floor(remainingMs / 1000)
+    const h = String(Math.floor(totalSec / 3600)).padStart(2, '0')
+    const m = String(Math.floor((totalSec % 3600) / 60)).padStart(2, '0')
+    const s = String(totalSec % 60).padStart(2, '0')
+    countdownText = `เหลือ ${h}:${m}:${s}`
+  } else {
+    const totalSec = Math.floor(remainingMs / 1000)
+    const h = String(Math.floor((totalSec % (3600 * 24)) / 3600)).padStart(2, '0')
+    const m = String(Math.floor((totalSec % 3600) / 60)).padStart(2, '0')
+    const s = String(totalSec % 60).padStart(2, '0')
+    countdownText = `${minDays}วัน ${h}:${m}:${s}`
+  }
+
+  let dueLabel = ''
+  let statusClass = ''
+  if (minDays === 0) {
+    dueLabel = 'ครบกำหนดวันนี้'
+    statusClass = 'bg-rose-500/15 text-rose-400 border-rose-500/30'
+  } else if (minDays < 0) {
+    dueLabel = `เลยกำหนด ${Math.abs(minDays)} วัน`
+    statusClass = 'bg-rose-500/15 text-rose-400 border-rose-500/30'
+  } else if (minDays <= 3) {
+    dueLabel = `อีก ${minDays} วัน`
+    statusClass = 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+  } else {
+    dueLabel = `อีก ${minDays} วัน`
+    statusClass = 'bg-gray-800 text-gray-400 border-gray-700/60'
+  }
+
+  return {
+    item: nearestItem,
+    nextDue: nearestNextDue,
+    minDays,
+    countdownText,
+    dueLabel,
+    statusClass,
+  }
+})
+
+const payDashboardRecurring = async (item: BackendRecurringExpense) => {
+  if (isPayingDashboardRecurringId.value) return
+  const { confirmAction, toastSuccess, toastError } = useAlert()
+  const shouldPay = import.meta.client ? await confirmAction(
+    `ยืนยันชำระ ${item.title}?`,
+    `ยอดเงิน ฿${item.amount.toLocaleString()} จะถูกบันทึกในรายการจ่าย และขยับวันชำระไปรอบถัดไป`,
+    'ชำระเงินเรียบร้อย'
+  ) : true
+  if (!shouldPay) return
+
+  isPayingDashboardRecurringId.value = item.id
+  try {
+    const currentNextDue = calculateNextDue(item)
+    // 1. Record expense
+    const bodyTx = {
+      userId: userId.value,
+      type: 'expense',
+      amount: item.amount,
+      category: item.category || 'ค่าใช้จ่ายประจำ',
+      transactionDate: new Date().toISOString(),
+      note: `ชำระรายจ่ายประจำ: ${item.title}`,
+    }
+    await apiFetch('/api/Finance', { method: 'POST', body: bodyTx })
+
+    // 2. Advance next due date
+    const newStartDate = new Date(currentNextDue)
+    newStartDate.setDate(newStartDate.getDate() + 1)
+
+    const y = newStartDate.getFullYear()
+    const m = String(newStartDate.getMonth() + 1).padStart(2, '0')
+    const d = String(newStartDate.getDate()).padStart(2, '0')
+
+    const bodyRecurring = {
+      ...item,
+      startDate: `${y}-${m}-${d}T00:00:00`,
+    }
+    await apiFetch(`/api/Finance/recurring/${item.id}`, { method: 'PUT', body: bodyRecurring })
+
+    toastSuccess(`บันทึกรายจ่าย ฿${item.amount.toLocaleString()} เรียบร้อยแล้ว`)
+    await Promise.all([loadTransactions(), loadRecurringExpenses()])
+  } catch (error: any) {
+    console.error('Pay dashboard recurring error:', error)
+    toastError(getApiErrorMessage(error, 'เกิดข้อผิดพลาดในการชำระรายจ่ายประจำ'))
+  } finally {
+    isPayingDashboardRecurringId.value = ''
+  }
+}
+
 const refreshOverview = async () => {
-  await Promise.all([loadTransactions(), loadStudySchedules(), loadTodos(), loadEvents()])
+  await Promise.all([loadTransactions(), loadStudySchedules(), loadTodos(), loadEvents(), loadRecurringExpenses()])
   lastUpdateTime.value = nowTH().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) + ' น.'
 }
 

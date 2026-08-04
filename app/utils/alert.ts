@@ -58,6 +58,20 @@ export const useAlert = () => {
       })
       return result.isConfirmed
     },
+
+    confirmAction: async (title: string, text: string = '', confirmText: string = 'ตกลง') => {
+      const result = await swalBase.fire({
+        ...getThemeColors(false),
+        title,
+        text,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: confirmText,
+        cancelButtonText: 'ยกเลิก',
+        reverseButtons: true,
+      })
+      return result.isConfirmed
+    },
     
     toastSuccess: (title: string) => {
       const themeColors = getThemeColors(true)

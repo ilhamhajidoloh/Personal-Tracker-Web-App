@@ -128,6 +128,141 @@
           </div>
         </div>
 
+        <!-- Recurring Expenses Section -->
+        <section class="section-card">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 py-4 border-b border-gray-800/60">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-xl bg-amber-500/15 text-amber-400 flex items-center justify-center text-lg shrink-0">
+                🔄
+              </div>
+              <div>
+                <h2 class="text-base font-semibold text-white">รายจ่ายประจำ</h2>
+                <p class="text-xs text-gray-500">รายการที่ต้องจ่ายทุกเดือน</p>
+              </div>
+            </div>
+            <button
+              @click="openAddRecurringModal"
+              class="btn-primary text-xs py-1.5 px-3 inline-flex items-center gap-1.5 tap-scale touch-target self-start sm:self-auto"
+            >
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+              <span>เพิ่มรายจ่ายประจำ</span>
+            </button>
+          </div>
+
+          <div v-if="isLoadingRecurring" class="p-5 space-y-2">
+            <div v-for="i in 2" :key="i" class="h-16 rounded-xl bg-gray-800/60 animate-pulse"></div>
+          </div>
+
+          <div v-else-if="!recurringExpenses.length" class="flex flex-col items-center justify-center py-10 text-center px-5">
+            <div class="w-12 h-12 rounded-xl bg-amber-500/10 flex items-center justify-center text-xl mb-2.5">📅</div>
+            <p class="text-sm font-medium text-gray-400">ยังไม่มีรายการจ่ายประจำ</p>
+            <p class="text-xs text-gray-500 mt-1">กด "+ เพิ่มรายจ่ายประจำ" เพื่อบันทึกรายจ่ายประจำของคุณ</p>
+          </div>
+
+          <div v-else class="p-4 sm:p-5 space-y-5">
+            <!-- Group 1: มีกำหนดระยะเวลา -->
+            <div v-if="fixedRecurringExpenses.length > 0">
+              <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+                มีกำหนดระยะเวลา
+              </p>
+              <div class="space-y-2">
+                <div
+                  v-for="r in fixedRecurringExpenses"
+                  :key="r.id"
+                  @click="openEditRecurringModal(r)"
+                  class="group flex flex-wrap sm:flex-nowrap items-center justify-between gap-3 p-3.5 rounded-xl bg-gray-800/40 border border-gray-800 hover:border-gray-700/80 transition-all cursor-pointer"
+                >
+                  <div class="flex items-center gap-3 min-w-0 flex-1">
+                    <div class="w-9 h-9 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center shrink-0">
+                      🗓️
+                    </div>
+                    <div class="min-w-0">
+                      <p class="text-sm font-semibold text-white truncate">{{ r.title }}</p>
+                      <p class="text-xs text-gray-400 mt-0.5 truncate">
+                        จ่ายทุกวันที่ {{ r.dayOfMonthDue }} &bull;
+                        {{ formatShortDate(r.startDate) }} - {{ formatShortDate(r.endDate!) }}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div class="flex items-center gap-3 shrink-0 ml-auto sm:ml-0">
+                    <div class="text-right">
+                      <p class="text-sm font-bold text-white">฿{{ formatCurrency(r.amount) }}</p>
+                      <span
+                        class="inline-block mt-0.5 text-[10.5px] font-semibold px-2 py-0.5 rounded-md border"
+                        :class="getDueInfo(r).statusClass"
+                      >
+                        {{ getDueInfo(r).label }}
+                      </span>
+                    </div>
+
+                    <button
+                      @click.stop="payRecurring(r)"
+                      :disabled="isPayingRecurringId === r.id"
+                      class="px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-400 flex items-center gap-1 transition-all tap-scale touch-target disabled:opacity-50"
+                    >
+                      <svg v-if="isPayingRecurringId !== r.id" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                      <span v-else class="inline-block w-3 h-3 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin"></span>
+                      <span>จ่ายแล้ว</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Group 2: ไม่มีกำหนดสิ้นสุด -->
+            <div v-if="indefiniteRecurringExpenses.length > 0">
+              <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-sky-400"></span>
+                ไม่มีกำหนดสิ้นสุด
+              </p>
+              <div class="space-y-2">
+                <div
+                  v-for="r in indefiniteRecurringExpenses"
+                  :key="r.id"
+                  @click="openEditRecurringModal(r)"
+                  class="group flex flex-wrap sm:flex-nowrap items-center justify-between gap-3 p-3.5 rounded-xl bg-gray-800/40 border border-gray-800 hover:border-gray-700/80 transition-all cursor-pointer"
+                >
+                  <div class="flex items-center gap-3 min-w-0 flex-1">
+                    <div class="w-9 h-9 rounded-lg bg-sky-500/10 text-sky-400 flex items-center justify-center shrink-0">
+                      ♾️
+                    </div>
+                    <div class="min-w-0">
+                      <p class="text-sm font-semibold text-white truncate">{{ r.title }}</p>
+                      <p class="text-xs text-gray-400 mt-0.5 truncate">
+                        จ่ายทุกวันที่ {{ r.dayOfMonthDue }} &bull; เริ่ม {{ formatShortDate(r.startDate) }}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div class="flex items-center gap-3 shrink-0 ml-auto sm:ml-0">
+                    <div class="text-right">
+                      <p class="text-sm font-bold text-white">฿{{ formatCurrency(r.amount) }}</p>
+                      <span
+                        class="inline-block mt-0.5 text-[10.5px] font-semibold px-2 py-0.5 rounded-md border"
+                        :class="getDueInfo(r).statusClass"
+                      >
+                        {{ getDueInfo(r).label }}
+                      </span>
+                    </div>
+
+                    <button
+                      @click.stop="payRecurring(r)"
+                      :disabled="isPayingRecurringId === r.id"
+                      class="px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-400 flex items-center gap-1 transition-all tap-scale touch-target disabled:opacity-50"
+                    >
+                      <svg v-if="isPayingRecurringId !== r.id" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                      <span v-else class="inline-block w-3 h-3 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin"></span>
+                      <span>จ่ายแล้ว</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <!-- Daily Summary -->
         <section class="section-card">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 py-4 border-b border-gray-800/60">
@@ -625,6 +760,157 @@
         </div>
       </Transition>
     </Teleport>
+
+    <!-- Add/Edit Recurring Expense Modal -->
+    <Teleport to="body">
+      <Transition name="backdrop">
+        <div
+          v-if="isRecurringModalOpen"
+          class="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style="background: rgba(3,5,12,0.62); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);"
+        >
+          <Transition name="modal">
+            <div v-if="isRecurringModalOpen" class="relative z-10 w-full max-w-lg rounded-2xl border border-gray-700/80 bg-gray-900 shadow-2xl overflow-hidden">
+              <!-- Header -->
+              <div class="flex items-center justify-between px-6 py-4 border-b border-gray-800/80">
+                <div class="flex items-center gap-3">
+                  <div class="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center text-base">
+                    🔄
+                  </div>
+                  <div>
+                    <h3 class="text-base font-semibold text-white">
+                      {{ editingRecurringId ? 'แก้ไขรายจ่ายประจำ' : 'เพิ่มรายจ่ายประจำ' }}
+                    </h3>
+                    <p class="text-xs text-gray-500">กำหนดการจ่ายเงินที่ต้องทำซ้ำทุกเดือน</p>
+                  </div>
+                </div>
+                <button
+                  @click="isRecurringModalOpen = false"
+                  class="w-8 h-8 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white flex items-center justify-center text-sm transition-all tap-scale touch-target"
+                >✕</button>
+              </div>
+
+              <!-- Form Body -->
+              <form @submit.prevent="submitRecurring" class="p-6 space-y-4">
+                <!-- Title -->
+                <div>
+                  <label class="block text-xs font-semibold text-gray-300 mb-1.5">ชื่อรายการ <span class="text-rose-400">*</span></label>
+                  <input
+                    v-model="recurringForm.title"
+                    type="text"
+                    placeholder="เช่น ค่าเช่าห้อง, ค่าเน็ต, ค่าน้ำค่ายาก"
+                    required
+                    class="w-full px-3.5 py-2.5 rounded-xl bg-gray-800/80 border border-gray-700 text-sm text-white focus:outline-none focus:border-amber-500 transition-all"
+                  />
+                </div>
+
+                <!-- Amount + Day of Month Due -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-xs font-semibold text-gray-300 mb-1.5">จำนวนเงิน (฿) <span class="text-rose-400">*</span></label>
+                    <input
+                      v-model="recurringForm.amount"
+                      type="number"
+                      step="any"
+                      placeholder="0.00"
+                      required
+                      class="w-full px-3.5 py-2.5 rounded-xl bg-gray-800/80 border border-gray-700 text-sm text-white focus:outline-none focus:border-amber-500 transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-xs font-semibold text-gray-300 mb-1.5">กำหนดจ่ายทุกวันที่ <span class="text-rose-400">*</span></label>
+                    <input
+                      v-model.number="recurringForm.dayOfMonthDue"
+                      type="number"
+                      min="1"
+                      max="31"
+                      required
+                      class="w-full px-3.5 py-2.5 rounded-xl bg-gray-800/80 border border-gray-700 text-sm text-white focus:outline-none focus:border-amber-500 transition-all"
+                    />
+                  </div>
+                </div>
+
+                <!-- Category + Start Date -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-xs font-semibold text-gray-300 mb-1.5">หมวดหมู่</label>
+                    <input
+                      v-model="recurringForm.category"
+                      type="text"
+                      placeholder="ค่าใช้จ่ายประจำ"
+                      class="w-full px-3.5 py-2.5 rounded-xl bg-gray-800/80 border border-gray-700 text-sm text-white focus:outline-none focus:border-amber-500 transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-xs font-semibold text-gray-300 mb-1.5">วันที่เริ่ม</label>
+                    <input
+                      v-model="recurringForm.startDate"
+                      type="date"
+                      required
+                      class="w-full px-3.5 py-2.5 rounded-xl bg-gray-800/80 border border-gray-700 text-sm text-white focus:outline-none focus:border-amber-500 transition-all"
+                    />
+                  </div>
+                </div>
+
+                <!-- Is Indefinite Checkbox/Toggle -->
+                <div class="flex items-center justify-between p-3.5 rounded-xl bg-gray-800/50 border border-gray-700/60">
+                  <div>
+                    <p class="text-sm font-semibold text-white">ไม่มีกำหนดสิ้นสุด</p>
+                    <p class="text-xs text-gray-400">จ่ายต่อเนื่องไปเรื่อยๆ จนกว่าจะยกเลิก</p>
+                  </div>
+                  <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" v-model="recurringForm.isIndefinite" class="sr-only peer" />
+                    <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
+                  </label>
+                </div>
+
+                <!-- End Date (if not indefinite) -->
+                <div v-if="!recurringForm.isIndefinite">
+                  <label class="block text-xs font-semibold text-gray-300 mb-1.5">วันที่สิ้นสุด</label>
+                  <input
+                    v-model="recurringForm.endDate"
+                    type="date"
+                    required
+                    class="w-full px-3.5 py-2.5 rounded-xl bg-gray-800/80 border border-gray-700 text-sm text-white focus:outline-none focus:border-amber-500 transition-all"
+                  />
+                </div>
+
+                <!-- Actions -->
+                <div class="flex items-center gap-3 pt-3">
+                  <button
+                    v-if="editingRecurringId"
+                    type="button"
+                    @click="deleteRecurring"
+                    :disabled="isDeletingRecurring"
+                    class="px-4 py-2.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-400 text-sm font-semibold transition-all tap-scale touch-target disabled:opacity-50"
+                  >
+                    {{ isDeletingRecurring ? 'กำลังลบ...' : 'ลบรายการ' }}
+                  </button>
+                  <div class="flex items-center gap-2 ml-auto">
+                    <button
+                      type="button"
+                      @click="isRecurringModalOpen = false"
+                      class="px-4 py-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm font-semibold transition-all tap-scale touch-target"
+                    >
+                      ยกเลิก
+                    </button>
+                    <button
+                      type="submit"
+                      :disabled="isSubmittingRecurring"
+                      class="btn-primary px-5 py-2.5 text-sm inline-flex items-center gap-2 tap-scale touch-target disabled:opacity-50"
+                    >
+                      <span v-if="isSubmittingRecurring" class="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                      <span>{{ editingRecurringId ? 'บันทึกการแก้ไข' : 'เพิ่มรายการ' }}</span>
+                    </button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </Transition>
+          <div class="absolute inset-0 z-0 bg-black/70 backdrop-blur-sm" @click="isRecurringModalOpen = false"></div>
+        </div>
+      </Transition>
+    </Teleport>
   </AppTabsLayout>
 </template>
 
@@ -986,16 +1272,56 @@ const submitTransaction = async () => {
 
 const deleteTransaction = async (transactionId: string) => {
   if (!transactionId || isDeletingId.value) return
-  const { confirmDelete, toastSuccess, toastError } = useAlert()
-  const shouldDelete = import.meta.client ? await confirmDelete('ยืนยันการลบรายการนี้?', 'สรุปยอดเงินจะถูกคำนวณใหม่') : true
-  if (!shouldDelete) return
+  const { confirmDelete, confirmAction, toastSuccess, toastError } = useAlert()
+  const targetTx = transactions.value.find(i => i.id === transactionId)
+
+  let rollbackRecurringItem: BackendRecurringExpense | null = null
+  if (targetTx && targetTx.description?.startsWith('ชำระรายจ่ายประจำ: ')) {
+    const title = targetTx.description.replace('ชำระรายจ่ายประจำ: ', '').trim()
+    rollbackRecurringItem = recurringExpenses.value.find(r => r.title.trim() === title || targetTx.description?.includes(r.title)) || null
+  }
+
+  let shouldRollbackRecurring = false
+
+  if (rollbackRecurringItem) {
+    const choice = import.meta.client ? await confirmAction(
+      `ยกเลิกชำระ ${rollbackRecurringItem.title}?`,
+      `รายการนี้เป็นรายการชำระรายจ่ายประจำ ระบบจะลบรายการนี้และย้อนวันกำหนดจ่ายของรายจ่ายประจำกลับมา 1 รอบ`,
+      'ใช่, ลบและย้อนรอบจ่าย'
+    ) : true
+    if (!choice) return
+    shouldRollbackRecurring = true
+  } else {
+    const shouldDelete = import.meta.client ? await confirmDelete('ยืนยันการลบรายการนี้?', 'สรุปยอดเงินจะถูกคำนวณใหม่') : true
+    if (!shouldDelete) return
+  }
+
   isDeletingId.value = transactionId
   errorMessage.value = ''
   try {
     await apiFetch(`/api/Finance/${transactionId}`, { method: 'DELETE' })
     transactions.value = transactions.value.filter(i => i.id !== transactionId)
+
+    if (shouldRollbackRecurring && rollbackRecurringItem) {
+      const parsed = new Date(rollbackRecurringItem.startDate)
+      const currentStart = new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate())
+      currentStart.setMonth(currentStart.getMonth() - 1)
+
+      const y = currentStart.getFullYear()
+      const m = String(currentStart.getMonth() + 1).padStart(2, '0')
+      const d = String(currentStart.getDate()).padStart(2, '0')
+
+      const updatedBody = {
+        ...rollbackRecurringItem,
+        startDate: `${y}-${m}-${d}T00:00:00`,
+      }
+      await apiFetch(`/api/Finance/recurring/${rollbackRecurringItem.id}`, { method: 'PUT', body: updatedBody })
+      await loadRecurringExpenses()
+    }
+
     if (editingTransactionId.value === transactionId) { isEntryModalOpen.value = false; resetForm() }
-    toastSuccess('ลบรายการสำเร็จ')
+    toastSuccess(shouldRollbackRecurring ? 'ลบรายการและย้อนรอบจ่ายประจำสำเร็จ' : 'ลบรายการสำเร็จ')
+    await loadTransactions()
   } catch (error: any) {
     console.error('Delete transaction error:', error)
     const msg = getApiErrorMessage(error, 'ลบรายการไม่สำเร็จ')
@@ -1006,8 +1332,257 @@ const deleteTransaction = async (transactionId: string) => {
   }
 }
 
+export interface BackendRecurringExpense {
+  id: string
+  userId: string
+  title: string
+  amount: number
+  category: string
+  startDate: string
+  endDate?: string | null
+  isIndefinite: boolean
+  dayOfMonthDue: number
+}
+
+const formatShortDate = (dStr: string) => {
+  if (!dStr) return ''
+  const d = new Date(dStr)
+  if (isNaN(d.getTime())) return dStr
+  const day = d.getDate()
+  const month = d.getMonth() + 1
+  const yearBE = d.getFullYear() + 543
+  return `${day}/${month}/${yearBE}`
+}
+
+const calculateNextDue = (r: { dayOfMonthDue?: number; startDate?: string }) => {
+  const day = r.dayOfMonthDue ?? 1
+  const now = new Date()
+  const todayOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const firstOfThisMonth = new Date(todayOnly.getFullYear(), todayOnly.getMonth(), 1)
+
+  let startDate = todayOnly
+  if (r.startDate) {
+    const parsed = new Date(r.startDate)
+    if (!isNaN(parsed.getTime())) {
+      startDate = new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate())
+    }
+  }
+
+  const searchFrom = startDate > firstOfThisMonth ? startDate : firstOfThisMonth
+
+  const dueDateFor = (y: number, m: number) => {
+    const daysInMonth = new Date(y, m + 1, 0).getDate()
+    const clampedDay = Math.min(Math.max(1, day), daysInMonth)
+    return new Date(y, m, clampedDay)
+  }
+
+  let nextDue = dueDateFor(searchFrom.getFullYear(), searchFrom.getMonth())
+  if (nextDue.getTime() < searchFrom.getTime()) {
+    const nextMonth = searchFrom.getMonth() === 11 ? 0 : searchFrom.getMonth() + 1
+    const nextYear = searchFrom.getMonth() === 11 ? searchFrom.getFullYear() + 1 : searchFrom.getFullYear()
+    nextDue = dueDateFor(nextYear, nextMonth)
+  }
+  return nextDue
+}
+
+const getDueInfo = (r: BackendRecurringExpense) => {
+  const nextDue = calculateNextDue(r)
+  const now = new Date()
+  const todayOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const dueOnly = new Date(nextDue.getFullYear(), nextDue.getMonth(), nextDue.getDate())
+
+  const diffTime = dueOnly.getTime() - todayOnly.getTime()
+  const daysUntil = Math.round(diffTime / (1000 * 3600 * 24))
+
+  let label = ''
+  let statusClass = ''
+
+  if (daysUntil === 0) {
+    label = 'ครบกำหนดวันนี้'
+    statusClass = 'bg-rose-500/15 text-rose-400 border-rose-500/30'
+  } else if (daysUntil < 0) {
+    label = `เลยกำหนด ${Math.abs(daysUntil)} วัน`
+    statusClass = 'bg-rose-500/15 text-rose-400 border-rose-500/30'
+  } else if (daysUntil <= 3) {
+    label = `อีก ${daysUntil} วัน`
+    statusClass = 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+  } else {
+    label = `อีก ${daysUntil} วัน`
+    statusClass = 'bg-gray-800 text-gray-400 border-gray-700/60'
+  }
+
+  return { nextDue, daysUntil, label, statusClass }
+}
+
+const recurringExpenses = ref<BackendRecurringExpense[]>([])
+const isLoadingRecurring = ref(false)
+const isPayingRecurringId = ref('')
+const isRecurringModalOpen = ref(false)
+const editingRecurringId = ref('')
+const isSubmittingRecurring = ref(false)
+const isDeletingRecurring = ref(false)
+
+const recurringForm = reactive({
+  title: '',
+  amount: '',
+  category: 'ค่าใช้จ่ายประจำ',
+  dayOfMonthDue: 1,
+  startDate: getTodayTH(),
+  isIndefinite: true,
+  endDate: '',
+})
+
+const fixedRecurringExpenses = computed(() => {
+  return recurringExpenses.value.filter(r => !r.isIndefinite && r.endDate)
+})
+const indefiniteRecurringExpenses = computed(() => {
+  return recurringExpenses.value.filter(r => r.isIndefinite || !r.endDate)
+})
+
+const loadRecurringExpenses = async () => {
+  isLoadingRecurring.value = true
+  try {
+    if (!userId.value) return
+    const data = await apiFetch<BackendRecurringExpense[]>(`/api/Finance/recurring/${userId.value}`)
+    recurringExpenses.value = data || []
+  } catch (error: any) {
+    console.error('Load recurring expenses error:', error)
+  } finally {
+    isLoadingRecurring.value = false
+  }
+}
+
+const openAddRecurringModal = () => {
+  editingRecurringId.value = ''
+  recurringForm.title = ''
+  recurringForm.amount = ''
+  recurringForm.category = 'ค่าใช้จ่ายประจำ'
+  recurringForm.dayOfMonthDue = 1
+  recurringForm.startDate = getTodayTH()
+  recurringForm.isIndefinite = true
+  recurringForm.endDate = ''
+  isRecurringModalOpen.value = true
+}
+
+const openEditRecurringModal = (item: BackendRecurringExpense) => {
+  editingRecurringId.value = item.id
+  recurringForm.title = item.title
+  recurringForm.amount = String(item.amount)
+  recurringForm.category = item.category || 'ค่าใช้จ่ายประจำ'
+  recurringForm.dayOfMonthDue = item.dayOfMonthDue || 1
+  recurringForm.startDate = item.startDate ? item.startDate.slice(0, 10) : getTodayTH()
+  recurringForm.isIndefinite = item.isIndefinite
+  recurringForm.endDate = item.endDate ? item.endDate.slice(0, 10) : ''
+  isRecurringModalOpen.value = true
+}
+
+const submitRecurring = async () => {
+  if (isSubmittingRecurring.value) return
+  const { toastSuccess, toastError, toastWarning } = useAlert()
+  if (!recurringForm.title.trim()) { toastWarning('กรุณาระบุชื่อรายการ'); return }
+  const amount = Math.abs(Number(recurringForm.amount))
+  if (!Number.isFinite(amount) || amount <= 0) { toastWarning('กรุณาระบุจำนวนเงินให้ถูกต้อง'); return }
+
+  isSubmittingRecurring.value = true
+  try {
+    const body = {
+      userId: userId.value,
+      title: recurringForm.title.trim(),
+      amount,
+      category: recurringForm.category.trim() || 'ค่าใช้จ่ายประจำ',
+      dayOfMonthDue: Number(recurringForm.dayOfMonthDue) || 1,
+      startDate: recurringForm.startDate ? `${recurringForm.startDate}T00:00:00` : new Date().toISOString(),
+      isIndefinite: recurringForm.isIndefinite,
+      endDate: (!recurringForm.isIndefinite && recurringForm.endDate) ? `${recurringForm.endDate}T23:59:59` : null,
+    }
+
+    if (editingRecurringId.value) {
+      await apiFetch(`/api/Finance/recurring/${editingRecurringId.value}`, { method: 'PUT', body })
+      toastSuccess('แก้ไขรายจ่ายประจำสำเร็จ')
+    } else {
+      await apiFetch('/api/Finance/recurring', { method: 'POST', body })
+      toastSuccess('เพิ่มรายจ่ายประจำสำเร็จ')
+    }
+    isRecurringModalOpen.value = false
+    await loadRecurringExpenses()
+  } catch (error: any) {
+    console.error('Save recurring error:', error)
+    toastError(getApiErrorMessage(error, 'บันทึกรายจ่ายประจำไม่สำเร็จ'))
+  } finally {
+    isSubmittingRecurring.value = false
+  }
+}
+
+const deleteRecurring = async () => {
+  if (!editingRecurringId.value || isDeletingRecurring.value) return
+  const { confirmDelete, toastSuccess, toastError } = useAlert()
+  const shouldDelete = import.meta.client ? await confirmDelete('ยืนยันการลบรายจ่ายประจำนี้?', '') : true
+  if (!shouldDelete) return
+  isDeletingRecurring.value = true
+  try {
+    await apiFetch(`/api/Finance/recurring/${editingRecurringId.value}`, { method: 'DELETE' })
+    toastSuccess('ลบรายจ่ายประจำสำเร็จ')
+    isRecurringModalOpen.value = false
+    await loadRecurringExpenses()
+  } catch (error: any) {
+    console.error('Delete recurring error:', error)
+    toastError(getApiErrorMessage(error, 'ลบรายการไม่สำเร็จ'))
+  } finally {
+    isDeletingRecurring.value = false
+  }
+}
+
+const payRecurring = async (item: BackendRecurringExpense) => {
+  if (isPayingRecurringId.value) return
+  const { confirmAction, toastSuccess, toastError } = useAlert()
+  const shouldPay = import.meta.client ? await confirmAction(
+    `ยืนยันชำระ ${item.title}?`,
+    `ยอดเงิน ฿${item.amount.toLocaleString()} จะถูกบันทึกในรายการจ่าย และขยับวันชำระไปรอบถัดไป`,
+    'ชำระเงินเรียบร้อย'
+  ) : true
+  if (!shouldPay) return
+
+  isPayingRecurringId.value = item.id
+  try {
+    const currentNextDue = calculateNextDue(item)
+    // 1. Record expense transaction
+    const bodyTx = {
+      userId: userId.value,
+      type: 'expense',
+      amount: item.amount,
+      category: item.category || 'ค่าใช้จ่ายประจำ',
+      transactionDate: new Date().toISOString(),
+      note: `ชำระรายจ่ายประจำ: ${item.title}`,
+    }
+    await apiFetch('/api/Finance', { method: 'POST', body: bodyTx })
+
+    // 2. Advance startDate to day after current next due
+    const newStartDate = new Date(currentNextDue)
+    newStartDate.setDate(newStartDate.getDate() + 1)
+
+    const y = newStartDate.getFullYear()
+    const m = String(newStartDate.getMonth() + 1).padStart(2, '0')
+    const d = String(newStartDate.getDate()).padStart(2, '0')
+
+    const bodyRecurring = {
+      ...item,
+      startDate: `${y}-${m}-${d}T00:00:00`,
+    }
+    await apiFetch(`/api/Finance/recurring/${item.id}`, { method: 'PUT', body: bodyRecurring })
+
+    toastSuccess(`บันทึกรายจ่าย ฿${item.amount.toLocaleString()} เรียบร้อยแล้ว`)
+    await Promise.all([loadTransactions(), loadRecurringExpenses()])
+  } catch (error: any) {
+    console.error('Pay recurring error:', error)
+    toastError(getApiErrorMessage(error, 'เกิดข้อผิดพลาดในการชำระรายจ่ายประจำ'))
+  } finally {
+    isPayingRecurringId.value = ''
+  }
+}
+
 onMounted(() => {
   loadTransactions()
+  loadRecurringExpenses()
   document.addEventListener('mousedown', handleClickOutsideCombobox)
 })
 
