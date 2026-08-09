@@ -68,7 +68,7 @@
 
         <!-- Today's Schedule Countdown Live Box -->
         <section v-if="schedules.length" class="section-card p-5 animate-slide-up">
-          <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
             <div>
               <h2 class="text-base font-bold text-white flex items-center gap-2">
                 📅 คาบเรียนวันนี้
@@ -85,10 +85,17 @@
             </div>
           </div>
 
-          <div v-if="!todaysClasses.length" class="flex flex-col items-center justify-center py-8 text-center rounded-2xl border border-dashed border-gray-800" style="background: var(--bg-elevated);">
+          <div v-if="!todaysClasses.length" class="flex flex-col items-center justify-center py-8 text-center rounded-2xl border border-dashed border-gray-800 transition-all duration-300"
+            :class="{ 'study-blinking-card border-solid border-indigo-500/60': isBlinking && nextClass }"
+            :style="!isBlinking ? { background: 'var(--bg-elevated)' } : {}">
             <span class="text-2xl mb-1">🌴</span>
-            <p class="text-sm font-semibold text-gray-400">วันนี้ไม่มีคาบเรียน</p>
-            <p class="text-xs text-gray-500 mt-0.5">พักผ่อนให้เต็มที่ หรือทบทวนบทเรียน!</p>
+            <p class="text-sm font-semibold" :class="{ 'animate-study-text-blink text-white': isBlinking && nextClass }" :style="!isBlinking ? { color: 'var(--text-secondary)' } : {}">
+              วันนี้ไม่มีคาบเรียน
+            </p>
+            <p v-if="nextClass" class="text-xs mt-1 flex items-center justify-center gap-1.5"
+              :class="{ 'animate-study-text-blink text-white font-bold': isBlinking }">
+              <span>คาบถัดไป: {{ nextClassTitle }} ({{ nextClassSubtitle }})</span>
+            </p>
           </div>
 
           <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -96,41 +103,53 @@
               v-for="item in todaysClasses" 
               :key="item.id"
               class="relative rounded-2xl p-4 border transition-all duration-300 flex flex-col justify-between"
-              :style="getClassCardStyle(item)"
+              :class="{ 'study-blinking-card': isBlinkingCard(item) }"
+              :style="!isBlinkingCard(item) ? getClassCardStyle(item) : {}"
             >
               <div>
                 <!-- Header of the card -->
                 <div class="flex items-start justify-between gap-2 mb-2.5">
-                  <span class="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider"
-                    :style="{ ...getStatusBadgeStyle(item), color: '#ffffff' }">
+                  <span class="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider transition-colors"
+                    :class="{ 'animate-study-text-blink text-white': isBlinkingCard(item) }"
+                    :style="!isBlinkingCard(item) ? { ...getStatusBadgeStyle(item), color: '#ffffff' } : { background: '#1e293b', color: '#ffffff' }">
                     {{ getStatusLabel(item) }}
                   </span>
-                  <span class="num text-[11px] font-semibold" style="color: var(--text-muted);">
+                  <span class="num text-[11px] font-semibold" 
+                    :class="{ 'animate-study-text-blink text-white': isBlinkingCard(item) }"
+                    :style="!isBlinkingCard(item) ? { color: 'var(--text-muted)' } : {}">
                     🕒 {{ formatTimeRange(item.start_time, item.end_time) }}
                   </span>
                 </div>
 
                 <!-- Course Title -->
                 <h3 class="text-sm font-bold leading-tight" 
-                  :style="{ 
+                  :class="{ 'animate-study-text-blink text-white': isBlinkingCard(item) }"
+                  :style="!isBlinkingCard(item) ? { 
                     color: getClassStatus(item) === 'finished' ? 'var(--text-muted)' : 'var(--text-primary)',
                     textDecoration: getClassStatus(item) === 'finished' ? 'line-through' : 'none'
-                  }">
+                  } : { color: '#ffffff' }">
                   {{ item.course_name }}
                 </h3>
 
                 <!-- Location -->
-                <p v-if="item.location" class="text-xs mt-1.5 flex items-center gap-1" style="color: var(--text-secondary);">
+                <p v-if="item.location" class="text-xs mt-1.5 flex items-center gap-1"
+                  :class="{ 'animate-study-text-blink text-white': isBlinkingCard(item) }"
+                  :style="!isBlinkingCard(item) ? { color: 'var(--text-secondary)' } : { color: '#ffffff' }">
                   <span>📍</span> <span>{{ item.location }}</span>
                 </p>
               </div>
 
               <!-- Footer with Countdown -->
-              <div class="mt-4 pt-3 flex items-center justify-between border-t" style="border-color: var(--border-subtle);">
-                <span class="text-xs font-semibold" :style="getCountdownTextStyle(item)">
+              <div class="mt-4 pt-3 flex items-center justify-between border-t"
+                :style="!isBlinkingCard(item) ? { borderColor: 'var(--border-subtle)' } : { borderColor: 'rgba(255, 255, 255, 0.2)' }">
+                <span class="text-xs font-semibold" 
+                  :class="{ 'animate-study-text-blink text-white': isBlinkingCard(item) }"
+                  :style="!isBlinkingCard(item) ? getCountdownTextStyle(item) : { color: '#ffffff' }">
                   {{ getCountdownLabel(item) }}
                 </span>
-                <span class="text-[10px] text-gray-500 font-bold">
+                <span class="text-[10px] font-bold" 
+                  :class="{ 'animate-study-text-blink text-white': isBlinkingCard(item) }"
+                  :style="!isBlinkingCard(item) ? { color: 'var(--text-muted)' } : { color: '#ffffff' }">
                   {{ getClassStatus(item) === 'finished' ? '✓ เสร็จแล้ว' : '...' }}
                 </span>
               </div>
@@ -626,7 +645,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
-import { nowTH } from '~/utils/date'
+import { getTodayTH, nowTH } from '~/utils/date'
 
 type ScheduleRow = {
   id: string
@@ -922,6 +941,25 @@ const sortedSchedules = computed(() => [...schedules.value].sort((a, b) => {
 
 const todaysClasses = computed(() => sortedSchedules.value.filter(item => item.day_of_week === todayWeekday.value))
 
+const { isBlinking, remainingSeconds, triggerBlink } = useStudyBlink(5000)
+
+const currentClass = computed(() => {
+  return todaysClasses.value.find(item => getClassStatus(item) === 'active') || null
+})
+
+const nextClassToday = computed(() => {
+  return todaysClasses.value.find(item => getClassStatus(item) === 'upcoming') || null
+})
+
+const targetBlinkClass = computed(() => {
+  return currentClass.value || nextClassToday.value || nextClass.value || null
+})
+
+const isBlinkingCard = (item: ScheduleRow) => {
+  if (!isBlinking.value || !targetBlinkClass.value) return false
+  return item.id === targetBlinkClass.value.id
+}
+
 const timeStringToDate = (timeStr: string) => {
   const parts = timeStr.split(':')
   const hours = Number(parts[0] || '0')
@@ -1142,13 +1180,43 @@ const submitTerm = async () => {
   }
 }
 
+const findCurrentTerm = (termList: BackendTerm[]): BackendTerm | null => {
+  if (!termList || !termList.length) return null
+  const todayStr = getTodayTH()
+  
+  // 1. Term active today (startDate <= todayStr <= endDate)
+  const activeTerm = termList.find(t => {
+    const start = t.startDate ? t.startDate.slice(0, 10) : ''
+    const end = t.endDate ? t.endDate.slice(0, 10) : ''
+    return start <= todayStr && end >= todayStr
+  })
+  if (activeTerm) return activeTerm
+
+  // 2. Fallback to term with latest start date prior to or closest to today
+  const sorted = [...termList].sort((a, b) => {
+    const startA = a.startDate ? a.startDate.slice(0, 10) : ''
+    const startB = b.startDate ? b.startDate.slice(0, 10) : ''
+    return startB.localeCompare(startA)
+  })
+
+  const pastOrCurrent = sorted.find(t => (t.startDate ? t.startDate.slice(0, 10) : '') <= todayStr)
+  if (pastOrCurrent) return pastOrCurrent
+
+  return sorted[0] || null
+}
+
 const loadSchedules = async () => {
   isLoading.value = true; errorMessage.value = ''
   try {
     if (!userId.value) return
     const data = await apiFetch<BackendTerm[]>(`/api/Schedule/terms/${userId.value}`)
     terms.value = data
-    if (!selectedTermId.value || !data.some(t => t.id === selectedTermId.value)) {
+    
+    // Automatically select the term corresponding to current date/time
+    const currentTerm = findCurrentTerm(data)
+    if (currentTerm) {
+      selectedTermId.value = currentTerm.id
+    } else {
       selectedTermId.value = data[0]?.id || ''
     }
   } catch (error: any) {

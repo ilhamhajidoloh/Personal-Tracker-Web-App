@@ -727,3 +727,49 @@
 		justify-content: center;
 	}
 }
+
+/* =====================================================================
+   STUDY CLASS BLINKING ANIMATION & STYLES
+   - Dark background + white text while blinking
+   - Text blinking keyframe animation
+   - Smooth transition back to normal styles when finished
+   ===================================================================== */
+@keyframes studyTextBlink {
+  0%, 100% {
+    opacity: 1;
+    filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.95));
+  }
+  50% {
+    opacity: 0.18;
+    filter: drop-shadow(0 0 0px transparent);
+  }
+}
+
+@keyframes studyDarkGlow {
+  0%, 100% {
+    border-color: rgba(59, 130, 246, 0.75);
+    box-shadow: 0 0 24px rgba(11, 15, 25, 0.9), 0 0 14px rgba(59, 130, 246, 0.35);
+  }
+  50% {
+    border-color: rgba(16, 185, 129, 0.75);
+    box-shadow: 0 0 28px rgba(11, 15, 25, 0.95), 0 0 18px rgba(16, 185, 129, 0.45);
+  }
+}
+
+.animate-study-text-blink {
+  animation: studyTextBlink 0.85s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.study-blinking-card {
+  background-color: #0b0f19 !important;
+  background: radial-gradient(circle at top right, #1e293b, #0b0f19 85%) !important;
+  color: #ffffff !important;
+  border-width: 1.5px !important;
+  animation: studyDarkGlow 1.8s infinite ease-in-out !important;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.study-blinking-card * {
+  color: #ffffff !important;
+}
+

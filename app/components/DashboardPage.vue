@@ -268,30 +268,36 @@
               <div v-for="i in 2" :key="i" class="h-12 rounded-lg animate-pulse" style="background: var(--bg-elevated);"></div>
             </div>
             <template v-else>
-              <div v-if="todaysStudyClasses.length" >
+              <div v-if="todaysStudyClasses.length">
                 <!-- Countdown Banner for Active or Next Class -->
-                <div v-if="currentStudyClass || nextStudyClassToday" class="mx-5 mt-4 p-4 rounded-xl border flex flex-col gap-1.5 transition-all duration-300"
-                  :style="currentStudyClass 
+                <div v-if="currentStudyClass || nextStudyClassToday" class="mx-5 mt-4 p-4 rounded-xl border flex flex-col gap-1.5 transition-all duration-300 relative overflow-hidden"
+                  :class="{ 'study-blinking-card': isStudyBlinking }"
+                  :style="!isStudyBlinking ? (currentStudyClass 
                     ? 'background: rgba(10,138,92,0.05); border-color: rgba(10,138,92,0.25); color: var(--ink-emerald);'
-                    : 'background: rgba(59,78,240,0.05); border-color: rgba(59,78,240,0.25); color: var(--brand-ink);'">
+                    : 'background: rgba(59,78,240,0.05); border-color: rgba(59,78,240,0.25); color: var(--brand-ink);') : ''">
                   <div class="flex items-center justify-between">
-                    <span class="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider"
-                      :style="{ background: currentStudyClass ? 'var(--ink-emerald)' : 'var(--brand)', color: '#ffffff' }">
+                    <span class="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider transition-colors"
+                      :class="{ 'animate-study-text-blink text-white': isStudyBlinking }"
+                      :style="!isStudyBlinking ? { background: currentStudyClass ? 'var(--ink-emerald)' : 'var(--brand)', color: '#ffffff' } : { background: '#1e293b', color: '#ffffff' }">
                       {{ currentStudyClass ? '🔴 กำลังเรียน' : '⏳ คาบเรียนถัดไป' }}
                     </span>
-                    <span class="num text-[11px] font-bold">
+                    <span class="num text-[11px] font-bold" :class="{ 'animate-study-text-blink text-white': isStudyBlinking }">
                       {{ formatTime(currentStudyClass ? currentStudyClass.start_time : (nextStudyClassToday?.start_time || '')) }} - 
                       {{ formatTime(currentStudyClass ? currentStudyClass.end_time : (nextStudyClassToday?.end_time || '')) }} น.
                     </span>
                   </div>
-                  <h3 class="text-sm font-bold leading-tight" style="color: var(--text-primary);">
+                  <h3 class="text-sm font-bold leading-tight" 
+                    :class="{ 'animate-study-text-blink text-white': isStudyBlinking }"
+                    :style="!isStudyBlinking ? { color: 'var(--text-primary)' } : { color: '#ffffff' }">
                     {{ currentStudyClass ? currentStudyClass.course_name : (nextStudyClassToday?.course_name || '') }}
                   </h3>
                   <p class="text-xs font-semibold mt-0.5 flex items-center gap-1">
                     <span>🕒</span>
-                    <span class="font-bold">{{ studyCountdownText }}</span>
+                    <span class="font-bold" :class="{ 'animate-study-text-blink text-white': isStudyBlinking }">{{ studyCountdownText }}</span>
                   </p>
-                  <p v-if="currentStudyClass?.location || nextStudyClassToday?.location" class="text-[11px]" style="color: var(--text-secondary);">
+                  <p v-if="currentStudyClass?.location || nextStudyClassToday?.location" class="text-[11px]"
+                    :class="{ 'animate-study-text-blink text-white': isStudyBlinking }"
+                    :style="!isStudyBlinking ? { color: 'var(--text-secondary)' } : { color: '#ffffff' }">
                     📍 {{ currentStudyClass ? currentStudyClass.location : (nextStudyClassToday?.location || '') }}
                   </p>
                 </div>
@@ -300,36 +306,51 @@
                 <div
                   v-for="(item, i) in todaysStudyClasses"
                   :key="item.id"
-                  class="grid grid-cols-[58px_1fr_auto] gap-3.5 px-5 py-3 transition-all duration-200"
-                  :class="{ 'opacity-55': getClassStatus(item) === 'finished' }"
-                  style="border-bottom: 1px solid var(--border-subtle);"
+                  class="grid grid-cols-[58px_1fr_auto] gap-3.5 px-5 py-3 transition-all duration-300"
+                  :class="{ 
+                    'opacity-55': getClassStatus(item) === 'finished',
+                    'study-blinking-card my-1 mx-2 rounded-xl border': isBlinkingRow(item)
+                  }"
+                  :style="!isBlinkingRow(item) ? { borderBottom: '1px solid var(--border-subtle)' } : {}"
                 >
-                  <div class="num text-[11px] pt-0.5" style="color: var(--text-muted);">
-                    {{ formatTime(item.start_time) }}<span class="block font-semibold" style="color: var(--text-primary);">{{ formatTime(item.end_time) }}</span>
+                  <div class="num text-[11px] pt-0.5" 
+                    :class="{ 'animate-study-text-blink text-white': isBlinkingRow(item) }"
+                    :style="!isBlinkingRow(item) ? { color: 'var(--text-muted)' } : {}">
+                    {{ formatTime(item.start_time) }}<span class="block font-semibold" :style="!isBlinkingRow(item) ? { color: 'var(--text-primary)' } : {}">{{ formatTime(item.end_time) }}</span>
                   </div>
-                  <div class="pl-3.5" :style="{ borderLeft: '3px solid ' + (getClassStatus(item) === 'finished' ? 'var(--text-muted)' : courseTint(item.course_name)) }">
-                    <strong class="text-[13.5px] font-semibold" 
-                      :style="{ 
+                  <div class="pl-3.5" :style="{ borderLeft: '3px solid ' + (isBlinkingRow(item) ? '#3b82f6' : (getClassStatus(item) === 'finished' ? 'var(--text-muted)' : courseTint(item.course_name))) }">
+                    <strong class="text-[13.5px] font-semibold block" 
+                      :class="{ 'animate-study-text-blink text-white': isBlinkingRow(item) }"
+                      :style="!isBlinkingRow(item) ? { 
                         color: getClassStatus(item) === 'finished' ? 'var(--text-muted)' : 'var(--text-primary)',
                         textDecoration: getClassStatus(item) === 'finished' ? 'line-through' : 'none'
-                      }">
+                      } : {}">
                       {{ item.course_name }}
                     </strong>
-                    <span v-if="item.location" class="num block text-[11px] mt-0.5" style="color: var(--text-muted);">{{ item.location }}</span>
+                    <span v-if="item.location" class="num block text-[11px] mt-0.5"
+                      :class="{ 'animate-study-text-blink text-white': isBlinkingRow(item) }"
+                      :style="!isBlinkingRow(item) ? { color: 'var(--text-muted)' } : {}">{{ item.location }}</span>
                   </div>
                   <div class="flex items-center shrink-0">
                     <span v-if="getClassStatus(item) === 'finished'" class="text-[11px] font-bold text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded-full flex items-center gap-0.5">
                       ✓ เสร็จสิ้น
                     </span>
-                    <span v-else-if="getClassStatus(item) === 'active'" class="text-[11px] font-bold bg-emerald-600 px-2 py-0.5 rounded-full animate-pulse flex items-center gap-1" style="color: #ffffff;">
+                    <span v-else-if="getClassStatus(item) === 'active'" 
+                      class="text-[11px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1"
+                      :class="isBlinkingRow(item) ? 'bg-indigo-600 text-white animate-study-text-blink' : 'bg-emerald-600 animate-pulse text-white'">
                       <span class="w-1.5 h-1.5 rounded-full bg-white block"></span> กำลังเรียน
                     </span>
                   </div>
                 </div>
               </div>
-              <div v-else class="p-6 text-center text-sm" style="color: var(--text-muted);">
+              <div v-else class="p-6 text-center text-sm transition-all duration-300"
+                :class="{ 'study-blinking-card mx-4 my-3 rounded-2xl': isStudyBlinking && nextStudyClass }"
+                :style="!isStudyBlinking ? { color: 'var(--text-muted)' } : {}">
                 วันนี้ไม่มีคาบเรียน
-                <p class="num text-[11px] mt-1">คาบถัดไป · {{ nextStudyClassSubtitle }}</p>
+                <p class="num text-[11px] mt-1 flex items-center justify-center gap-1.5"
+                  :class="{ 'animate-study-text-blink text-white font-semibold': isStudyBlinking && nextStudyClass }">
+                  <span>คาบถัดไป · {{ nextStudyClassSubtitle }}</span>
+                </p>
               </div>
             </template>
           </div>
@@ -891,6 +912,23 @@ const nextStudyClassToday = computed(() => {
     return startM > currentMinutes
   }) || null
 })
+
+const { isBlinking: isStudyBlinking, remainingSeconds: studyBlinkRemainingSecs, triggerBlink: triggerStudyBlink } = useStudyBlink(5000)
+
+const targetBlinkStudyClass = computed(() => {
+  return currentStudyClass.value || nextStudyClassToday.value || nextStudyClass.value || null
+})
+
+const isBlinkingRow = (item: StudyScheduleRow) => {
+  if (!isStudyBlinking.value) return false
+  if (currentStudyClass.value) {
+    return item.id === currentStudyClass.value.id
+  }
+  if (nextStudyClassToday.value) {
+    return item.id === nextStudyClassToday.value.id
+  }
+  return false
+}
 
 const studyCountdownText = computed(() => {
   if (currentStudyClass.value) {
