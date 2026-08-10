@@ -351,6 +351,20 @@
                 class="text-sm px-3 py-2 rounded-xl focus:outline-none transition-all"
                 style="background: var(--bg-elevated); border: 1px solid var(--border-default); color: var(--text-primary);"
               />
+              <div class="flex items-center gap-1 rounded-xl p-1" style="background: var(--bg-elevated); border: 1px solid var(--border-default);">
+                <button
+                  v-for="option in transactionTypeFilterOptions"
+                  :key="option.value"
+                  type="button"
+                  @click="transactionTypeFilter = option.value"
+                  class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all tap-scale"
+                  :style="transactionTypeFilter === option.value
+                    ? { background: option.activeBg, color: option.activeColor }
+                    : { color: 'var(--text-secondary)' }"
+                >
+                  {{ option.label }}
+                </button>
+              </div>
               <select
                 v-model.number="transactionItemsPerPage"
                 @change="transactionCurrentPage = 1"
@@ -373,49 +387,67 @@
 
           <!-- Unified transaction rows -->
           <div v-else>
-            <div
-              v-for="item in paginatedTransactions"
-              :key="item.id"
-              class="group grid grid-cols-[36px_1fr_auto] items-center gap-3 px-4 md:px-5 py-3 transition-colors"
-              style="border-bottom: 1px solid var(--border-subtle);"
-            >
-              <!-- direction icon -->
-              <span class="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);">
-                <svg v-if="item.type === 'income'" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="var(--ink-emerald)" stroke-width="2"><path d="M7 17L17 7M17 7H9M17 7v8"/></svg>
-                <svg v-else class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="var(--ink-rose)" stroke-width="2"><path d="M17 7L7 17M7 17h8M7 17V9"/></svg>
-              </span>
-              <!-- title + meta -->
-              <div class="min-w-0">
-                <p class="text-[13.5px] font-medium truncate" style="color: var(--text-primary);">{{ item.category || 'ไม่ระบุหมวดหมู่' }}</p>
-                <p class="num text-[10.5px] mt-0.5 truncate" style="color: var(--text-muted);">
-                  {{ item.type === 'income' ? 'รายรับ' : 'รายจ่าย' }} · {{ formatDate(item.entry_date) }}<span v-if="item.description"> · {{ item.description }}</span>
-                </p>
-              </div>
-              <!-- amount + actions -->
-              <div class="flex items-center gap-2.5 shrink-0">
-                <span class="num text-[14px] font-semibold text-right whitespace-nowrap" :style="{ color: item.type === 'income' ? 'var(--ink-emerald)' : 'var(--ink-rose)' }">
-                  {{ item.type === 'income' ? '+' : '−' }}{{ formatCurrency(item.amount) }}
+            <div v-for="group in paginatedTransactionGroups" :key="group.type">
+              <div class="flex items-center justify-between gap-3 px-4 md:px-5 py-2.5" style="background: var(--bg-elevated); border-bottom: 1px solid var(--border-subtle);">
+                <div class="flex items-center gap-2 min-w-0">
+                  <span class="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" :style="{ background: group.type === 'income' ? 'rgba(16, 185, 129, 0.14)' : 'rgba(244, 63, 94, 0.14)' }">
+                    <svg v-if="group.type === 'income'" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="var(--ink-emerald)" stroke-width="2"><path d="M7 17L17 7M17 7H9M17 7v8"/></svg>
+                    <svg v-else class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="var(--ink-rose)" stroke-width="2"><path d="M17 7L7 17M7 17h8M7 17V9"/></svg>
+                  </span>
+                  <div class="min-w-0">
+                    <h3 class="text-sm font-semibold truncate" style="color: var(--text-primary);">{{ group.label }}</h3>
+                    <p class="num text-[10.5px] mt-0.5" style="color: var(--text-muted);">{{ group.items.length }} รายการในหน้านี้</p>
+                  </div>
+                </div>
+                <span class="num text-[13px] font-semibold whitespace-nowrap" :style="{ color: group.type === 'income' ? 'var(--ink-emerald)' : 'var(--ink-rose)' }">
+                  {{ group.type === 'income' ? '+' : '−' }}{{ formatCurrency(group.total) }}
                 </span>
-                <div class="flex items-center gap-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                  <button
-                    @click="openEditTransactionModal(item)"
-                    :disabled="isDeletingId === item.id"
-                    class="w-8 h-8 rounded-lg flex items-center justify-center disabled:opacity-50 transition-all tap-scale"
-                    style="background: var(--bg-elevated); border: 1px solid var(--border-subtle); color: var(--ink-sky);"
-                    aria-label="แก้ไข"
-                  >
-                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
-                  </button>
-                  <button
-                    @click="deleteTransaction(item.id)"
-                    :disabled="isDeletingId === item.id"
-                    class="w-8 h-8 rounded-lg flex items-center justify-center disabled:opacity-50 transition-all tap-scale"
-                    style="background: var(--bg-elevated); border: 1px solid var(--border-subtle); color: var(--ink-rose);"
-                    aria-label="ลบ"
-                  >
-                    <svg v-if="isDeletingId !== item.id" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
-                    <span v-else class="inline-block w-3 h-3 border-2 rounded-full animate-spin" style="border-color: var(--border-strong); border-top-color: var(--ink-rose);"></span>
-                  </button>
+              </div>
+
+              <div
+                v-for="item in group.items"
+                :key="item.id"
+                class="group grid grid-cols-[36px_1fr_auto] items-center gap-3 px-4 md:px-5 py-3 transition-colors"
+                style="border-bottom: 1px solid var(--border-subtle);"
+              >
+                <!-- direction icon -->
+                <span class="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);">
+                  <svg v-if="item.type === 'income'" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="var(--ink-emerald)" stroke-width="2"><path d="M7 17L17 7M17 7H9M17 7v8"/></svg>
+                  <svg v-else class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="var(--ink-rose)" stroke-width="2"><path d="M17 7L7 17M7 17h8M7 17V9"/></svg>
+                </span>
+                <!-- title + meta -->
+                <div class="min-w-0">
+                  <p class="text-[13.5px] font-medium truncate" style="color: var(--text-primary);">{{ item.category || 'ไม่ระบุหมวดหมู่' }}</p>
+                  <p class="num text-[10.5px] mt-0.5 truncate" style="color: var(--text-muted);">
+                    {{ item.type === 'income' ? 'รายรับ' : 'รายจ่าย' }} · {{ formatDate(item.entry_date) }}<span v-if="item.description"> · {{ item.description }}</span>
+                  </p>
+                </div>
+                <!-- amount + actions -->
+                <div class="flex items-center gap-2.5 shrink-0">
+                  <span class="num text-[14px] font-semibold text-right whitespace-nowrap" :style="{ color: item.type === 'income' ? 'var(--ink-emerald)' : 'var(--ink-rose)' }">
+                    {{ item.type === 'income' ? '+' : '−' }}{{ formatCurrency(item.amount) }}
+                  </span>
+                  <div class="flex items-center gap-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                    <button
+                      @click="openEditTransactionModal(item)"
+                      :disabled="isDeletingId === item.id"
+                      class="w-8 h-8 rounded-lg flex items-center justify-center disabled:opacity-50 transition-all tap-scale"
+                      style="background: var(--bg-elevated); border: 1px solid var(--border-subtle); color: var(--ink-sky);"
+                      aria-label="แก้ไข"
+                    >
+                      <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+                    </button>
+                    <button
+                      @click="deleteTransaction(item.id)"
+                      :disabled="isDeletingId === item.id"
+                      class="w-8 h-8 rounded-lg flex items-center justify-center disabled:opacity-50 transition-all tap-scale"
+                      style="background: var(--bg-elevated); border: 1px solid var(--border-subtle); color: var(--ink-rose);"
+                      aria-label="ลบ"
+                    >
+                      <svg v-if="isDeletingId !== item.id" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
+                      <span v-else class="inline-block w-3 h-3 border-2 rounded-full animate-spin" style="border-color: var(--border-strong); border-top-color: var(--ink-rose);"></span>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -955,6 +987,7 @@ const transactions = ref<TransactionRow[]>([])
 
 const summaryFilterMonth = ref(getThisMonthTH())
 const transactionFilterMode = ref<'all' | 'day' | 'month'>('all')
+const transactionTypeFilter = ref<'all' | TransactionType>('all')
 const transactionFilterDate = ref(getTodayTH())
 const transactionFilterMonth = ref(getThisMonthTH())
 const transactionItemsPerPage = ref(20)
@@ -975,6 +1008,17 @@ const formatCurrency = (amount: number) => new Intl.NumberFormat('th-TH', {
 const formatDate = (dateString: string) => new Date(dateString).toLocaleDateString('th-TH', {
   day: '2-digit', month: 'short', year: 'numeric',
 })
+
+const transactionTypeFilterOptions: {
+  value: 'all' | TransactionType
+  label: string
+  activeBg: string
+  activeColor: string
+}[] = [
+  { value: 'all', label: 'ทั้งหมด', activeBg: 'var(--brand)', activeColor: 'white' },
+  { value: 'income', label: 'รายรับ', activeBg: 'rgba(16, 185, 129, 0.18)', activeColor: 'var(--ink-emerald)' },
+  { value: 'expense', label: 'รายจ่าย', activeBg: 'rgba(244, 63, 94, 0.18)', activeColor: 'var(--ink-rose)' },
+]
 
 const currentMonthYearLabel = computed(() => {
   if (!summaryFilterMonth.value) return 'เดือนนี้'
@@ -1151,11 +1195,14 @@ const dailySummaries = computed<DailySummary[]>(() => {
 })
 
 const filteredTransactions = computed(() => {
+  let source = transactions.value
   if (transactionFilterMode.value === 'day' && transactionFilterDate.value)
-    return transactions.value.filter(i => i.entry_date === transactionFilterDate.value)
+    source = source.filter(i => i.entry_date === transactionFilterDate.value)
   if (transactionFilterMode.value === 'month' && transactionFilterMonth.value)
-    return transactions.value.filter(i => i.entry_date.startsWith(transactionFilterMonth.value))
-  return transactions.value
+    source = source.filter(i => i.entry_date.startsWith(transactionFilterMonth.value))
+  if (transactionTypeFilter.value !== 'all')
+    source = source.filter(i => i.type === transactionTypeFilter.value)
+  return source
 })
 
 const transactionTotalPages = computed(() => Math.ceil(filteredTransactions.value.length / transactionItemsPerPage.value))
@@ -1164,6 +1211,22 @@ const paginatedTransactions = computed(() => {
   const end = start + transactionItemsPerPage.value
   return filteredTransactions.value.slice(start, end)
 })
+const paginatedTransactionGroups = computed(() => {
+  const groups: Record<TransactionType, TransactionRow[]> = {
+    income: [],
+    expense: [],
+  }
+  for (const item of paginatedTransactions.value) groups[item.type].push(item)
+
+  return (['income', 'expense'] as TransactionType[])
+    .filter(type => groups[type].length > 0)
+    .map(type => ({
+      type,
+      label: type === 'income' ? 'รายรับ' : 'รายจ่าย',
+      total: groups[type].reduce((sum, item) => sum + item.amount, 0),
+      items: groups[type],
+    }))
+})
 
 const transactionPageInfo = computed(() => {
   const total = filteredTransactions.value.length
@@ -1171,6 +1234,20 @@ const transactionPageInfo = computed(() => {
   const start = (transactionCurrentPage.value - 1) * transactionItemsPerPage.value + 1
   const end = Math.min(transactionCurrentPage.value * transactionItemsPerPage.value, total)
   return `แสดง ${start}-${end} จาก ${total} รายการ`
+})
+
+watch([
+  transactionFilterMode,
+  transactionFilterDate,
+  transactionFilterMonth,
+  transactionTypeFilter,
+], () => {
+  transactionCurrentPage.value = 1
+})
+
+watch(transactionTotalPages, (totalPages) => {
+  if (transactionCurrentPage.value > totalPages)
+    transactionCurrentPage.value = Math.max(totalPages, 1)
 })
 
 const resetForm = () => {
