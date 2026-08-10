@@ -89,6 +89,40 @@ export const useAuth = () => {
     clearSession()
   }
 
+  const updateProfile = async (fullName: string) => {
+    const token = session.value?.token
+    if (!token) throw new Error('ไม่พบข้อมูล session การเข้าสู่ระบบ')
+    const res = await $fetch<{ message: string; userId: string; email: string; fullName: string }>(
+      `${config.public.apiBase}/api/Auth/profile`,
+      {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}` },
+        body: { fullName },
+      }
+    )
+    if (session.value) {
+      session.value = {
+        ...session.value,
+        fullName: res.fullName,
+      }
+    }
+    return res
+  }
+
+  const changePassword = async (currentPassword: string | null, newPassword: string) => {
+    const token = session.value?.token
+    if (!token) throw new Error('ไม่พบข้อมูล session การเข้าสู่ระบบ')
+    const res = await $fetch<{ message: string; hasPassword?: boolean }>(
+      `${config.public.apiBase}/api/Auth/password`,
+      {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}` },
+        body: { currentPassword, newPassword },
+      }
+    )
+    return res
+  }
+
   return {
     currentUser,
     isSessionValid,
@@ -98,5 +132,7 @@ export const useAuth = () => {
     signOut,
     setSession,
     clearSession,
+    updateProfile,
+    changePassword,
   }
 }

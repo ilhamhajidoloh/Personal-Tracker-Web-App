@@ -8,14 +8,28 @@
           <h1 class="text-2xl md:text-[30px] font-extrabold tracking-tight mt-1.5" style="color: var(--text-primary);">โปรไฟล์</h1>
           <p class="text-xs mt-2" style="color: var(--text-muted);">ข้อมูลบัญชีผู้ใช้และการตั้งค่า</p>
         </div>
-        <button
-          @click="loadProfile"
-          :disabled="isLoading"
-          class="btn-secondary text-sm inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed self-start tap-scale touch-target"
-        >
-          <svg class="w-4 h-4" :class="isLoading ? 'animate-spin' : ''" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5M21 12a9 9 0 0 1-15 6.7L3 16M3 21v-5h5"/></svg>
-          {{ isLoading ? 'กำลังโหลด...' : 'รีเฟรช' }}
-        </button>
+        <div class="flex items-center gap-2 shrink-0 flex-wrap">
+          <button
+            @click="openEditProfileModal"
+            class="px-3.5 py-2 rounded-xl bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/30 text-xs sm:text-sm font-semibold text-violet-300 transition-all tap-scale touch-target flex items-center gap-1.5"
+          >
+            ✏️ แก้ไขโปรไฟล์
+          </button>
+          <button
+            @click="openChangePasswordModal"
+            class="px-3.5 py-2 rounded-xl bg-gray-800 hover:bg-gray-700 border border-gray-700/60 text-xs sm:text-sm font-semibold text-gray-300 hover:text-white transition-all tap-scale touch-target flex items-center gap-1.5"
+          >
+            🔑 {{ userHasPassword ? 'เปลี่ยนรหัสผ่าน' : 'ตั้งรหัสผ่าน' }}
+          </button>
+          <button
+            @click="loadProfile"
+            :disabled="isLoading"
+            class="btn-secondary text-xs sm:text-sm inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed tap-scale touch-target"
+          >
+            <svg class="w-4 h-4" :class="isLoading ? 'animate-spin' : ''" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5M21 12a9 9 0 0 1-15 6.7L3 16M3 21v-5h5"/></svg>
+            {{ isLoading ? 'กำลังโหลด...' : 'รีเฟรช' }}
+          </button>
+        </div>
       </div>
 
       <div class="space-y-5 mt-6">
@@ -41,34 +55,59 @@
           <!-- Profile Section -->
           <section class="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <!-- Avatar Card -->
-            <div class="lg:col-span-1 glass-card p-6 flex flex-col items-start">
-              <!-- Avatar -->
-              <div class="relative mb-4">
-                <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-3xl font-bold shadow-xl shadow-violet-500/25">
-                  {{ avatarFallback }}
+            <div class="lg:col-span-1 glass-card p-6 flex flex-col items-start justify-between">
+              <div class="w-full">
+                <!-- Avatar -->
+                <div class="relative mb-4">
+                  <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-3xl font-bold shadow-xl shadow-violet-500/25">
+                    {{ avatarFallback }}
+                  </div>
+                </div>
+
+                <h2 class="text-lg font-bold text-white leading-tight">{{ displayName }}</h2>
+                <p class="text-xs text-gray-500 mt-1 break-all">{{ currentUser?.email || '-' }}</p>
+
+                <div class="mt-4 w-full space-y-2">
+                  <div class="flex items-center justify-between py-1.5 border-b border-gray-800/60">
+                    <span class="text-xs text-gray-500">ชื่อ</span>
+                    <span class="text-xs font-medium text-white">{{ firstName }}</span>
+                  </div>
+                  <div class="flex items-center justify-between py-1.5">
+                    <span class="text-xs text-gray-500">นามสกุล</span>
+                    <span class="text-xs font-medium text-white">{{ lastName }}</span>
+                  </div>
                 </div>
               </div>
 
-              <h2 class="text-lg font-bold text-white leading-tight">{{ displayName }}</h2>
-              <p class="text-xs text-gray-500 mt-1 break-all">{{ currentUser?.email || '-' }}</p>
-
-              <div class="mt-4 w-full space-y-2">
-                <div class="flex items-center justify-between py-1.5 border-b border-gray-800/60">
-                  <span class="text-xs text-gray-500">ชื่อ</span>
-                  <span class="text-xs font-medium text-white">{{ firstName }}</span>
-                </div>
-                <div class="flex items-center justify-between py-1.5">
-                  <span class="text-xs text-gray-500">นามสกุล</span>
-                  <span class="text-xs font-medium text-white">{{ lastName }}</span>
-                </div>
-              </div>
+              <button
+                @click="openEditProfileModal"
+                class="mt-6 w-full py-2.5 rounded-xl bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/30 text-xs font-semibold text-violet-300 transition-all tap-scale touch-target flex items-center justify-center gap-1.5"
+              >
+                ✏️ แก้ไขชื่อโปรไฟล์
+              </button>
             </div>
 
             <!-- Account Info Card -->
             <div class="lg:col-span-2 section-card">
-              <div class="px-5 py-4 border-b border-gray-800/60">
-                <h3 class="text-base font-semibold text-white">ข้อมูลบัญชี</h3>
-                <p class="text-xs text-gray-500 mt-0.5">ข้อมูลหลักของบัญชีผู้ใช้</p>
+              <div class="px-5 py-4 border-b border-gray-800/60 flex items-center justify-between gap-3 flex-wrap">
+                <div>
+                  <h3 class="text-base font-semibold text-white">ข้อมูลบัญชี</h3>
+                  <p class="text-xs text-gray-500 mt-0.5">ข้อมูลหลักของบัญชีผู้ใช้</p>
+                </div>
+                <div class="flex items-center gap-2">
+                  <button
+                    @click="openEditProfileModal"
+                    class="px-3 py-1.5 rounded-xl bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/30 text-xs font-semibold text-violet-300 transition-all tap-scale touch-target flex items-center gap-1"
+                  >
+                    ✏️ แก้ไขข้อมูล
+                  </button>
+                  <button
+                    @click="openChangePasswordModal"
+                    class="px-3 py-1.5 rounded-xl bg-gray-800 hover:bg-gray-700 border border-gray-700/60 text-xs font-semibold text-gray-300 hover:text-white transition-all tap-scale touch-target flex items-center gap-1"
+                  >
+                    🔑 {{ userHasPassword ? 'เปลี่ยนรหัสผ่าน' : 'ตั้งรหัสผ่าน' }}
+                  </button>
+                </div>
               </div>
               <div class="divide-y divide-gray-800/50">
                 <div
@@ -338,11 +377,172 @@
         </template>
       </div>
     </div>
+
+    <!-- Edit Profile Modal -->
+    <Teleport to="body">
+      <Transition name="backdrop">
+        <div
+          v-if="isEditProfileModalOpen"
+          class="fixed inset-0 z-[90] flex items-center justify-center p-4"
+          style="background: rgba(3,5,12,0.62); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);"
+          @click.self="closeEditProfileModal"
+        >
+          <Transition name="modal">
+            <div v-if="isEditProfileModalOpen" class="relative z-10 w-full max-w-md bg-gray-900 border border-gray-700/80 rounded-2xl shadow-2xl overflow-hidden">
+              <div class="flex items-center justify-between px-6 py-4 border-b border-gray-800/80">
+                <div class="flex items-center gap-3">
+                  <div class="w-9 h-9 rounded-xl bg-violet-500/20 flex items-center justify-center text-base">👤</div>
+                  <div>
+                    <h2 class="text-base font-semibold text-white">แก้ไขข้อมูลโปรไฟล์</h2>
+                    <p class="text-xs text-gray-500">ปรับเปลี่ยนข้อมูลส่วนตัวของคุณ</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  @click="closeEditProfileModal"
+                  class="w-8 h-8 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white flex items-center justify-center transition-all tap-scale touch-target"
+                >✕</button>
+              </div>
+
+              <form class="p-6 space-y-4" @submit.prevent="submitEditProfile">
+                <div>
+                  <label class="block text-xs font-medium text-gray-400 mb-1.5">อีเมลบัญชี</label>
+                  <input
+                    :value="currentUser?.email || ''"
+                    type="email"
+                    disabled
+                    class="w-full bg-gray-800/40 border border-gray-700/40 rounded-xl px-4 py-2.5 text-sm text-gray-400 outline-none cursor-not-allowed"
+                  >
+                  <p class="text-[11px] text-gray-600 mt-1">ไม่อนุญาตให้แก้ไขอีเมลที่ลงทะเบียนแล้ว</p>
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-gray-400 mb-1.5">ชื่อ - นามสกุล (ชื่อที่แสดง) <span class="text-rose-400">*</span></label>
+                  <input
+                    v-model="editProfileForm.fullName"
+                    type="text"
+                    maxlength="100"
+                    placeholder="กรอกชื่อ-นามสกุล เช่น สมชาย ใจดี"
+                    class="w-full bg-gray-800/80 border border-gray-700/60 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-600 outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 transition-all"
+                  >
+                </div>
+
+                <div class="flex gap-3 pt-2">
+                  <button
+                    type="button"
+                    @click="closeEditProfileModal"
+                    class="flex-1 py-2.5 rounded-xl bg-gray-800/80 hover:bg-gray-800 border border-gray-700/60 text-sm font-medium text-gray-300 hover:text-white transition-all tap-scale touch-target"
+                  >ยกเลิก</button>
+                  <button
+                    type="submit"
+                    :disabled="isSubmittingProfile"
+                    class="flex-1 btn-primary py-2.5 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed text-sm font-semibold flex items-center justify-center gap-2 tap-scale touch-target"
+                  >
+                    <span v-if="isSubmittingProfile" class="inline-block w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
+                    {{ isSubmittingProfile ? 'กำลังบันทึก...' : 'บันทึกข้อมูล' }}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </Transition>
+          <div class="absolute inset-0 z-0 bg-black/70 backdrop-blur-sm" @click="closeEditProfileModal"></div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- Change Password Modal -->
+    <Teleport to="body">
+      <Transition name="backdrop">
+        <div
+          v-if="isChangePasswordModalOpen"
+          class="fixed inset-0 z-[90] flex items-center justify-center p-4"
+          style="background: rgba(3,5,12,0.62); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);"
+          @click.self="closeChangePasswordModal"
+        >
+          <Transition name="modal">
+            <div v-if="isChangePasswordModalOpen" class="relative z-10 w-full max-w-md bg-gray-900 border border-gray-700/80 rounded-2xl shadow-2xl overflow-hidden">
+              <div class="flex items-center justify-between px-6 py-4 border-b border-gray-800/80">
+                <div class="flex items-center gap-3">
+                  <div class="w-9 h-9 rounded-xl bg-amber-500/20 flex items-center justify-center text-base">🔑</div>
+                  <div>
+                    <h2 class="text-base font-semibold text-white">{{ userHasPassword ? 'เปลี่ยนรหัสผ่าน' : 'ตั้งรหัสผ่านใหม่' }}</h2>
+                    <p class="text-xs text-gray-500">
+                      {{ userHasPassword ? 'กรอกรหัสผ่านปัจจุบันและรหัสผ่านใหม่' : 'ตั้งรหัสผ่านสำหรับเข้าใช้งานด้วยอีเมลครั้งแรก' }}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  @click="closeChangePasswordModal"
+                  class="w-8 h-8 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white flex items-center justify-center transition-all tap-scale touch-target"
+                >✕</button>
+              </div>
+
+              <form class="p-6 space-y-4" @submit.prevent="submitChangePassword">
+                <!-- Current password (only if user already has password set) -->
+                <div v-if="userHasPassword">
+                  <label class="block text-xs font-medium text-gray-400 mb-1.5">รหัสผ่านปัจจุบัน <span class="text-rose-400">*</span></label>
+                  <input
+                    v-model="changePasswordForm.currentPassword"
+                    type="password"
+                    autocomplete="current-password"
+                    placeholder="กรอกรหัสผ่านปัจจุบัน"
+                    class="w-full bg-gray-800/80 border border-gray-700/60 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-600 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20 transition-all"
+                  >
+                </div>
+                <!-- Notice for first time password creation -->
+                <div v-else class="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/25 text-xs text-amber-300 flex items-start gap-2">
+                  <span class="text-base leading-none">💡</span>
+                  <span>คุณเข้าสู่ระบบด้วย Social Email เป็นครั้งแรก กรุณากำหนดรหัสผ่านเพื่อสิทธิ์การเข้าใช้งานผ่านอีเมลในครั้งถัดไป</span>
+                </div>
+
+                <div>
+                  <label class="block text-xs font-medium text-gray-400 mb-1.5">รหัสผ่านใหม่ <span class="text-rose-400">*</span></label>
+                  <input
+                    v-model="changePasswordForm.newPassword"
+                    type="password"
+                    autocomplete="new-password"
+                    placeholder="อย่างน้อย 6 ตัวอักษร"
+                    class="w-full bg-gray-800/80 border border-gray-700/60 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-600 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20 transition-all"
+                  >
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-gray-400 mb-1.5">ยืนยันรหัสผ่านใหม่ <span class="text-rose-400">*</span></label>
+                  <input
+                    v-model="changePasswordForm.confirmPassword"
+                    type="password"
+                    autocomplete="new-password"
+                    placeholder="กรอกรหัสผ่านใหม่อีกครั้ง"
+                    class="w-full bg-gray-800/80 border border-gray-700/60 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-600 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20 transition-all"
+                  >
+                </div>
+
+                <div class="flex gap-3 pt-2">
+                  <button
+                    type="button"
+                    @click="closeChangePasswordModal"
+                    class="flex-1 py-2.5 rounded-xl bg-gray-800/80 hover:bg-gray-800 border border-gray-700/60 text-sm font-medium text-gray-300 hover:text-white transition-all tap-scale touch-target"
+                  >ยกเลิก</button>
+                  <button
+                    type="submit"
+                    :disabled="isSubmittingPassword"
+                    class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-semibold text-white flex items-center justify-center gap-2 tap-scale touch-target"
+                  >
+                    <span v-if="isSubmittingPassword" class="inline-block w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
+                    {{ isSubmittingPassword ? 'กำลังบันทึก...' : (userHasPassword ? 'เปลี่ยนรหัสผ่าน' : 'ตั้งรหัสผ่าน') }}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </Transition>
+          <div class="absolute inset-0 z-0 bg-black/70 backdrop-blur-sm" @click="closeChangePasswordModal"></div>
+        </div>
+      </Transition>
+    </Teleport>
   </AppTabsLayout>
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 
 type LineConnectionStatus = {
   connected: boolean
@@ -367,9 +567,29 @@ useHead({ title: 'Profile' })
 
 const router = useRouter()
 const route = useRoute()
-const { currentUser: user } = useAuth()
+const { currentUser: user, updateProfile, changePassword } = useAuth()
+const { apiFetch } = useBackendApi()
 const { toastSuccess, toastError } = useAlert()
 const config = useRuntimeConfig()
+
+const userMe = ref<{ userId: string; email: string; fullName: string; hasGoogle: boolean; hasLine: boolean; hasPassword: boolean } | null>(null)
+const userHasPassword = computed(() => userMe.value?.hasPassword ?? true)
+
+// Edit Profile state
+const isEditProfileModalOpen = ref(false)
+const isSubmittingProfile = ref(false)
+const editProfileForm = reactive({
+  fullName: '',
+})
+
+// Change Password state
+const isChangePasswordModalOpen = ref(false)
+const isSubmittingPassword = ref(false)
+const changePasswordForm = reactive({
+  currentPassword: '',
+  newPassword: '',
+  confirmPassword: '',
+})
 
 const isLoading = ref(true)
 const errorMessage = ref('')
@@ -395,6 +615,79 @@ let lineStatusPollingTimer: ReturnType<typeof setInterval> | null = null
 const currentUser = computed(() => user.value)
 const createEmptyLineStatus = (): LineConnectionStatus => ({ connected: false, lineUserId: '', notificationsEnabled: false, connectedAt: null })
 
+const openEditProfileModal = () => {
+  editProfileForm.fullName = currentUser.value?.fullName || ''
+  isEditProfileModalOpen.value = true
+}
+
+const closeEditProfileModal = () => {
+  isEditProfileModalOpen.value = false
+}
+
+const submitEditProfile = async () => {
+  if (isSubmittingProfile.value) return
+  const { toastSuccess, toastError, toastWarning } = useAlert()
+  const name = editProfileForm.fullName.trim()
+  if (!name) {
+    toastWarning('กรุณาระบุชื่อ-นามสกุล')
+    return
+  }
+  isSubmittingProfile.value = true
+  try {
+    const res = await updateProfile(name)
+    toastSuccess(res.message || 'อัปเดตข้อมูลโปรไฟล์สำเร็จ')
+    closeEditProfileModal()
+  } catch (error: any) {
+    console.error('Update profile error:', error)
+    toastError(getRequestErrorMessage(error, 'อัปเดตโปรไฟล์ไม่สำเร็จ'))
+  } finally {
+    isSubmittingProfile.value = false
+  }
+}
+
+const openChangePasswordModal = () => {
+  changePasswordForm.currentPassword = ''
+  changePasswordForm.newPassword = ''
+  changePasswordForm.confirmPassword = ''
+  isChangePasswordModalOpen.value = true
+}
+
+const closeChangePasswordModal = () => {
+  isChangePasswordModalOpen.value = false
+}
+
+const submitChangePassword = async () => {
+  if (isSubmittingPassword.value) return
+  const { toastSuccess, toastError, toastWarning } = useAlert()
+  const { currentPassword, newPassword, confirmPassword } = changePasswordForm
+  if (userHasPassword.value && !currentPassword) {
+    toastWarning('กรุณาระบุรหัสผ่านปัจจุบัน')
+    return
+  }
+  if (!newPassword || newPassword.length < 6) {
+    toastWarning('รหัสผ่านใหม่ต้องมีอย่างน้อย 6 ตัวอักษร')
+    return
+  }
+  if (newPassword !== confirmPassword) {
+    toastWarning('รหัสผ่านใหม่และการยืนยันรหัสผ่านไม่ตรงกัน')
+    return
+  }
+  isSubmittingPassword.value = true
+  try {
+    const res = await changePassword(userHasPassword.value ? currentPassword : null, newPassword)
+    toastSuccess(res.message || (userHasPassword.value ? 'เปลี่ยนรหัสผ่านสำเร็จ' : 'ตั้งรหัสผ่านสำเร็จ'))
+    if (userMe.value) {
+      userMe.value.hasPassword = true
+    }
+    closeChangePasswordModal()
+  } catch (error: any) {
+    console.error('Change password error:', error)
+    toastError(getRequestErrorMessage(error, userHasPassword.value ? 'เปลี่ยนรหัสผ่านไม่สำเร็จ' : 'ตั้งรหัสผ่านไม่สำเร็จ'))
+  } finally {
+    isSubmittingPassword.value = false
+  }
+}
+
 const getProfileValue = (...values: unknown[]) => {
   const matchedValue = values.find(value => typeof value === 'string' && value.trim())
   return typeof matchedValue === 'string' ? matchedValue.trim() : ''
@@ -415,6 +708,7 @@ const importantProfileRows = computed(() => [
   { key: 'นามสกุล', value: lastName.value },
   { key: 'ชื่อที่แสดง', value: displayName.value || '-' },
   { key: 'อีเมล', value: currentUser.value?.email || '-' },
+  { key: 'รหัสผ่าน', value: userHasPassword.value ? '•••••••• (ตั้งค่าแล้ว)' : 'ยังไม่ได้ตั้งรหัสผ่าน (เข้าด้วย Social Login)' },
 ])
 
 const lineStatusLabel = computed(() => {
@@ -645,6 +939,8 @@ const loadProfile = async () => {
   isLoading.value = true; errorMessage.value = ''
   try {
     if (!user.value) { await router.push('/login'); return }
+    const me = await apiFetch<{ userId: string; email: string; fullName: string; hasGoogle: boolean; hasLine: boolean; hasPassword: boolean }>('/api/Auth/me')
+    userMe.value = me
   } catch (error: any) {
     console.error('Load profile error:', error)
     errorMessage.value = error?.message || 'โหลดข้อมูลโปรไฟล์ไม่สำเร็จ'
