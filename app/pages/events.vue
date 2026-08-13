@@ -6,7 +6,18 @@
         <div>
           <p class="eyebrow">กิจกรรม · Events</p>
           <h1 class="text-2xl md:text-[30px] font-extrabold tracking-tight mt-1.5" style="color: var(--text-primary);">กิจกรรมและนัดหมาย</h1>
-          <p class="text-xs mt-2 text-gray-400 font-medium">กำลังจะมาถึง {{ upcomingEventsCount }} &bull; ที่ผ่านมา {{ pastEventsCount }}</p>
+          <p class="text-xs mt-2 font-medium" style="color: var(--text-muted);">
+            <span v-if="ongoingEventsCount > 0" class="inline-flex items-center gap-1.5 font-semibold mr-1.5" style="color: var(--event-status-ongoing-ink);">
+              <span class="relative flex h-2 w-2">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style="background: var(--event-status-ongoing-ink);"></span>
+                <span class="relative inline-flex rounded-full h-2 w-2" style="background: var(--event-status-ongoing-ink);"></span>
+              </span>
+              กำลังดำเนินอยู่ {{ ongoingEventsCount }}
+            </span>
+            <span v-if="ongoingEventsCount > 0">&bull; </span>
+            <span>กำลังจะมาถึง {{ upcomingEventsCount }}</span> &bull; 
+            <span>ที่ผ่านมา {{ pastEventsCount }}</span>
+          </p>
         </div>
         <div class="flex items-center gap-2 shrink-0">
           <button
@@ -35,6 +46,70 @@
           style="background: rgba(182, 133, 42, 0.1); border: 1px solid rgba(182, 133, 42, 0.3); color: var(--ink-amber);"
         >
           <span>⚠️</span><span>{{ errorMessage }}</span>
+        </div>
+
+        <!-- Ongoing Spotlight Banner -->
+        <div
+          v-if="ongoingEvents.length > 0"
+          class="relative overflow-hidden rounded-2xl p-5 md:p-6 transition-all"
+          style="background: var(--event-status-ongoing-soft); border: 1px solid var(--event-status-ongoing-border); box-shadow: var(--event-status-ongoing-shadow);"
+        >
+          <div class="flex items-center justify-between gap-3 mb-4">
+            <div class="flex items-center gap-2">
+              <span class="relative flex h-3 w-3">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style="background: var(--event-status-ongoing-ink);"></span>
+                <span class="relative inline-flex rounded-full h-3 w-3" style="background: var(--event-status-ongoing-ink);"></span>
+              </span>
+              <span class="text-xs font-extrabold uppercase tracking-wider" style="color: var(--event-status-ongoing-ink);">
+                กิจกรรมที่กำลังดำเนินอยู่ (LIVE COUNTDOWN)
+              </span>
+            </div>
+            <span class="num text-xs font-semibold px-2.5 py-0.5 rounded-full" style="background: var(--bg-card); color: var(--event-status-ongoing-ink); border: 1px solid var(--event-status-ongoing-border);">
+              {{ ongoingEvents.length }} กิจกรรม
+            </span>
+          </div>
+
+          <div class="space-y-3">
+            <div
+              v-for="item in ongoingEvents"
+              :key="'spotlight-' + item.id"
+              class="rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all"
+              style="background: var(--bg-card); border: 1px solid var(--border-subtle);"
+            >
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 flex-wrap mb-1">
+                  <span class="text-[10px] px-2 py-0.5 rounded-md font-bold whitespace-nowrap flex items-center gap-1" style="background: var(--event-status-ongoing-soft); color: var(--event-status-ongoing-ink); border: 1px solid var(--event-status-ongoing-border);">
+                    <span class="w-1.5 h-1.5 rounded-full" style="background: var(--event-status-ongoing-ink);"></span>
+                    กำลังดำเนินอยู่
+                  </span>
+                  <span class="text-[10px] px-2 py-0.5 rounded-md border font-semibold whitespace-nowrap" :class="getEventBadgeClass(item.event_type)">
+                    {{ getEventTypeName(item.event_type) }}
+                  </span>
+                </div>
+                <h3 class="text-base font-bold text-white truncate">{{ item.title }}</h3>
+                <p class="num text-xs mt-1 text-gray-400 font-medium">{{ displayEventDateTime(item) }}</p>
+                <p v-if="item.description" class="text-xs mt-1 text-gray-400 line-clamp-1">{{ item.description }}</p>
+              </div>
+
+              <!-- Live Countdown Box -->
+              <div class="shrink-0 flex flex-col items-start md:items-end gap-1.5 min-w-[240px]">
+                <div class="text-xs text-gray-400 flex items-center gap-1.5">
+                  <span>⏱️ เหลือเวลาอีก</span>
+                  <span class="num font-mono font-bold text-xs" style="color: var(--event-status-ongoing-ink);">({{ getOngoingEventDetails(item).progress }}% ผ่านไป)</span>
+                </div>
+                <div class="num text-lg md:text-xl font-black font-mono tracking-tight px-3 py-1.5 rounded-xl border" style="background: var(--bg-elevated); color: var(--event-status-ongoing-ink); border-color: var(--event-status-ongoing-border);">
+                  {{ getOngoingEventDetails(item).countdownText }}
+                </div>
+                <!-- Progress bar -->
+                <div class="w-full h-2 rounded-full overflow-hidden mt-0.5" style="background: var(--bg-elevated-2);">
+                  <div
+                    class="h-full rounded-full transition-all duration-1000 ease-linear"
+                    :style="{ width: getOngoingEventDetails(item).progress + '%', background: 'var(--event-status-ongoing-ink)' }"
+                  ></div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- Events List -->
@@ -114,6 +189,29 @@
                 <span v-if="item.google_event_id" class="num text-[10px]" style="color: var(--ink-sky);">ซิงก์ Google แล้ว</span>
               </div>
               <p v-if="item.description" class="text-xs mt-1.5 line-clamp-2" style="color: var(--text-muted);">{{ item.description }}</p>
+
+              <!-- Ongoing countdown widget inside card -->
+              <div v-if="getEventStatusMeta(item).status === 'ongoing'" class="mt-3 p-3 rounded-xl border flex flex-col gap-2 transition-all" style="background: var(--event-status-ongoing-soft); border-color: var(--event-status-ongoing-border); box-shadow: var(--event-status-ongoing-shadow);">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-semibold flex items-center gap-1.5" style="color: var(--event-status-ongoing-ink);">
+                    <span class="relative flex h-2 w-2">
+                      <span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style="background: var(--event-status-ongoing-ink);"></span>
+                      <span class="relative inline-flex rounded-full h-2 w-2" style="background: var(--event-status-ongoing-ink);"></span>
+                    </span>
+                    นับถอยหลังเวลาที่เหลือ
+                  </span>
+                  <span class="num text-xs font-mono font-bold" style="color: var(--event-status-ongoing-ink);">
+                    {{ getOngoingEventDetails(item).progress }}%
+                  </span>
+                </div>
+                <div class="num text-sm md:text-base font-bold font-mono tracking-tight" style="color: var(--text-primary);">
+                  ⏱️ {{ getOngoingEventDetails(item).countdownText }}
+                </div>
+                <!-- Progress Bar -->
+                <div class="w-full h-1.5 rounded-full overflow-hidden" style="background: rgba(0, 0, 0, 0.15);">
+                  <div class="h-full rounded-full transition-all duration-1000 ease-linear" :style="{ width: getOngoingEventDetails(item).progress + '%', background: 'var(--event-status-ongoing-ink)' }"></div>
+                </div>
+              </div>
 
               <!-- Actions -->
               <div class="flex items-center gap-1 mt-3 pt-3" style="border-top: 1px solid var(--border-subtle);">
@@ -464,11 +562,21 @@ const activeReminderOptions = computed(() =>
 
 const isEditing = computed(() => Boolean(editingId.value))
 
+const ongoingEvents = computed(() => {
+  return events.value.filter(item => {
+    const { startMs, endMs } = getEventDateTimeBounds(item)
+    const nowMs = currentTime.value.getTime()
+    return startMs <= nowMs && nowMs <= endMs
+  })
+})
+
+const ongoingEventsCount = computed(() => ongoingEvents.value.length)
+
 const upcomingEventsCount = computed(() => {
   const nowMs = currentTime.value.getTime()
   return events.value.filter(item => {
-    const { endMs } = getEventDateTimeBounds(item)
-    return endMs >= nowMs
+    const { startMs } = getEventDateTimeBounds(item)
+    return startMs > nowMs
   }).length
 })
 
@@ -568,8 +676,8 @@ const getEventStatusMeta = (item: EventRow) => {
     return { status: 'past', text: `ผ่านไปแล้ว (${formatStatusDuration(Math.abs(minutesUntilEnd))}ก่อน)` }
   }
 
-  if (minutesUntilStart <= 0) {
-    return { status: 'soon', text: 'กำลังจะถึง (กำลังดำเนินอยู่)' }
+  if (startMs <= nowMs && nowMs <= endMs) {
+    return { status: 'ongoing', text: 'กำลังดำเนินอยู่' }
   }
 
   if (minutesUntilStart <= soonThresholdMinutes) {
@@ -577,6 +685,43 @@ const getEventStatusMeta = (item: EventRow) => {
   }
 
   return { status: 'future', text: `ยังไม่ถึง (อีก ${formatStatusDuration(minutesUntilStart)})` }
+}
+
+const getOngoingEventDetails = (item: EventRow) => {
+  const { startMs, endMs } = getEventDateTimeBounds(item)
+  const nowMs = currentTime.value.getTime()
+  const totalMs = Math.max(1, endMs - startMs)
+  const remainingMs = Math.max(0, endMs - nowMs)
+  
+  const totalSec = Math.floor(remainingMs / 1000)
+  const seconds = totalSec % 60
+  const totalMin = Math.floor(totalSec / 60)
+  const minutes = totalMin % 60
+  const totalHours = Math.floor(totalMin / 60)
+  const hours = totalHours % 24
+  const days = Math.floor(totalHours / 24)
+
+  const progress = Math.min(100, Math.max(0, ((nowMs - startMs) / totalMs) * 100))
+
+  const pad = (n: number) => String(n).padStart(2, '0')
+  let countdownText = ''
+  if (days > 0) {
+    countdownText = `${days} วัน ${pad(hours)}:${pad(minutes)}:${pad(seconds)}`
+  } else if (hours > 0) {
+    countdownText = `${pad(hours)} ชม. ${pad(minutes)} นาที ${pad(seconds)} วินาที`
+  } else {
+    countdownText = `${pad(minutes)} นาที ${pad(seconds)} วินาที`
+  }
+
+  return {
+    remainingMs,
+    days,
+    hours,
+    minutes,
+    seconds,
+    countdownText,
+    progress: Number(progress.toFixed(1)),
+  }
 }
 
 const getEventStatusText = (item: EventRow) => getEventStatusMeta(item).text
@@ -757,7 +902,7 @@ onMounted(() => {
   loadEvents()
   clockTimer = setInterval(() => {
     currentTime.value = new Date()
-  }, 60_000)
+  }, 1000)
 })
 
 onUnmounted(() => {

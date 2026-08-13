@@ -62,7 +62,10 @@
 		--ink-orange: #c2620f;
 		--ink-amber: #b6852a;
 
-		/* event status accents */
+		--event-status-ongoing-ink: #0a8a5c;
+		--event-status-ongoing-soft: rgba(10, 138, 92, 0.12);
+		--event-status-ongoing-border: rgba(10, 138, 92, 0.35);
+		--event-status-ongoing-shadow: 0 0 20px rgba(10, 138, 92, 0.2);
 		--event-status-past-ink: #7b8398;
 		--event-status-past-soft: rgba(123, 131, 152, 0.10);
 		--event-status-past-border: rgba(123, 131, 152, 0.26);
@@ -121,6 +124,10 @@
 		--ink-orange: #ffa06b;
 		--ink-amber: #e0b44e;
 
+		--event-status-ongoing-ink: #3ad196;
+		--event-status-ongoing-soft: rgba(58, 209, 150, 0.16);
+		--event-status-ongoing-border: rgba(58, 209, 150, 0.4);
+		--event-status-ongoing-shadow: 0 0 20px rgba(58, 209, 150, 0.25);
 		--event-status-past-ink: #8892a6;
 		--event-status-past-soft: rgba(136, 146, 166, 0.12);
 		--event-status-past-border: rgba(136, 146, 166, 0.22);

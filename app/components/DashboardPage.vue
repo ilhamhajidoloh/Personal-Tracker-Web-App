@@ -432,12 +432,15 @@
             <div
               v-for="event in dashboardEvents"
               :key="event.id"
-              class="rounded-[10px] p-4 pl-[18px] relative overflow-hidden tap-scale"
+              class="rounded-[10px] p-4 pl-[18px] relative overflow-hidden tap-scale transition-all"
               style="background: var(--bg-card); border: 1px solid var(--border-subtle);"
             >
               <span class="absolute left-0 top-0 bottom-0 w-1" :style="{ background: 'var(' + getDashboardEventStatusTokenPrefix(event) + '-ink)' }"></span>
               <div class="flex items-start justify-between gap-2">
-                <span class="text-[10px] px-2 py-0.5 rounded-md border font-semibold uppercase tracking-wide" :style="getDashboardEventStatusBadgeStyle(event)">{{ getDashboardEventStatusText(event) }}</span>
+                <span class="text-[10px] px-2 py-0.5 rounded-md border font-semibold uppercase tracking-wide flex items-center gap-1" :style="getDashboardEventStatusBadgeStyle(event)">
+                  <span v-if="getDashboardEventStatusMeta(event).status === 'ongoing'" class="w-1.5 h-1.5 rounded-full animate-ping" style="background: var(--event-status-ongoing-ink);"></span>
+                  {{ getDashboardEventStatusText(event) }}
+                </span>
                 <div class="text-right shrink-0">
                   <span class="num text-[10px] font-bold uppercase" :style="getDashboardEventStatusTextStyle(event)">{{ getMonthShort(event.start_date) }}</span>
                   <span class="num block text-lg font-bold leading-none" style="color: var(--text-primary);">{{ getDay(event.start_date) }}</span>
@@ -445,6 +448,28 @@
               </div>
               <p class="text-sm font-semibold mt-2.5 line-clamp-1" style="color: var(--text-primary);">{{ event.title }}</p>
               <p class="num text-[11px] mt-1" style="color: var(--text-muted);">{{ displayEventDateTimeShort(event) }}</p>
+
+              <!-- Ongoing countdown widget inside existing card on Dashboard -->
+              <div v-if="getDashboardEventStatusMeta(event).status === 'ongoing'" class="mt-2.5 p-2.5 rounded-xl border flex flex-col gap-1.5 transition-all" style="background: var(--event-status-ongoing-soft); border-color: var(--event-status-ongoing-border); box-shadow: var(--event-status-ongoing-shadow);">
+                <div class="flex items-center justify-between text-[11px]">
+                  <span class="font-semibold flex items-center gap-1" style="color: var(--event-status-ongoing-ink);">
+                    <span class="relative flex h-2 w-2">
+                      <span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style="background: var(--event-status-ongoing-ink);"></span>
+                      <span class="relative inline-flex rounded-full h-2 w-2" style="background: var(--event-status-ongoing-ink);"></span>
+                    </span>
+                    นับถอยหลังเวลาที่เหลือ
+                  </span>
+                  <span class="num font-mono font-bold" style="color: var(--event-status-ongoing-ink);">
+                    {{ getDashboardOngoingEventDetails(event).progress }}%
+                  </span>
+                </div>
+                <div class="num text-xs font-bold font-mono tracking-tight" style="color: var(--text-primary);">
+                  ⏱️ {{ getDashboardOngoingEventDetails(event).countdownText }}
+                </div>
+                <div class="w-full h-1.5 rounded-full overflow-hidden" style="background: rgba(0, 0, 0, 0.15);">
+                  <div class="h-full rounded-full transition-all duration-1000 ease-linear" :style="{ width: getDashboardOngoingEventDetails(event).progress + '%', background: 'var(--event-status-ongoing-ink)' }"></div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -1027,8 +1052,8 @@ const getDashboardEventStatusMeta = (item: DashboardEventRow) => {
     return { status: 'past', text: 'ผ่านไปแล้ว' }
   }
 
-  if (minutesUntilStart <= 0) {
-    return { status: 'soon', text: 'กำลังจะถึง' }
+  if (startMs <= nowMs && nowMs <= endMs) {
+    return { status: 'ongoing', text: 'กำลังดำเนินอยู่' }
   }
 
   if (minutesUntilStart <= dashboardSoonThresholdMinutes) {
@@ -1036,6 +1061,43 @@ const getDashboardEventStatusMeta = (item: DashboardEventRow) => {
   }
 
   return { status: 'future', text: `ยังไม่ถึง อีก ${formatDashboardStatusDuration(minutesUntilStart)}` }
+}
+
+const getDashboardOngoingEventDetails = (item: DashboardEventRow) => {
+  const { startMs, endMs } = getDashboardEventDateTimeBounds(item)
+  const nowMs = currentTime.value.getTime()
+  const totalMs = Math.max(1, endMs - startMs)
+  const remainingMs = Math.max(0, endMs - nowMs)
+  
+  const totalSec = Math.floor(remainingMs / 1000)
+  const seconds = totalSec % 60
+  const totalMin = Math.floor(totalSec / 60)
+  const minutes = totalMin % 60
+  const totalHours = Math.floor(totalMin / 60)
+  const hours = totalHours % 24
+  const days = Math.floor(totalHours / 24)
+
+  const progress = Math.min(100, Math.max(0, ((nowMs - startMs) / totalMs) * 100))
+
+  const pad = (n: number) => String(n).padStart(2, '0')
+  let countdownText = ''
+  if (days > 0) {
+    countdownText = `${days} วัน ${pad(hours)}:${pad(minutes)}:${pad(seconds)}`
+  } else if (hours > 0) {
+    countdownText = `${pad(hours)} ชม. ${pad(minutes)} นาที ${pad(seconds)} วินาที`
+  } else {
+    countdownText = `${pad(minutes)} นาที ${pad(seconds)} วินาที`
+  }
+
+  return {
+    remainingMs,
+    days,
+    hours,
+    minutes,
+    seconds,
+    countdownText,
+    progress: Number(progress.toFixed(1)),
+  }
 }
 
 const getDashboardEventStatusText = (item: DashboardEventRow) => getDashboardEventStatusMeta(item).text
