@@ -320,7 +320,7 @@
           </div>
         </section>
 
-        <!-- Transaction List -->
+        <!-- Transaction List (Ledger Style) -->
         <section class="section-card">
           <div class="flex flex-col gap-3 px-5 py-4" style="border-bottom: 1px solid var(--border-subtle);">
             <div class="flex items-center justify-between">
@@ -333,9 +333,8 @@
                 class="text-sm px-3 py-2 rounded-xl focus:outline-none transition-all"
                 style="background: var(--bg-elevated); border: 1px solid var(--border-default); color: var(--text-primary);"
               >
-                <option value="all">ทั้งหมด</option>
-                <option value="day">รายวัน</option>
                 <option value="month">รายเดือน</option>
+                <option value="day">รายวัน</option>
               </select>
               <input
                 v-if="transactionFilterMode === 'day'"
@@ -351,103 +350,222 @@
                 class="text-sm px-3 py-2 rounded-xl focus:outline-none transition-all"
                 style="background: var(--bg-elevated); border: 1px solid var(--border-default); color: var(--text-primary);"
               />
-              <div class="flex items-center gap-1 rounded-xl p-1" style="background: var(--bg-elevated); border: 1px solid var(--border-default);">
-                <button
-                  v-for="option in transactionTypeFilterOptions"
-                  :key="option.value"
-                  type="button"
-                  @click="transactionTypeFilter = option.value"
-                  class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all tap-scale"
-                  :style="transactionTypeFilter === option.value
-                    ? { background: option.activeBg, color: option.activeColor }
-                    : { color: 'var(--text-secondary)' }"
-                >
-                  {{ option.label }}
-                </button>
-              </div>
               <select
                 v-model.number="transactionItemsPerPage"
                 @change="transactionCurrentPage = 1"
                 class="text-sm px-3 py-2 rounded-xl ml-auto focus:outline-none transition-all"
                 style="background: var(--bg-elevated); border: 1px solid var(--border-default); color: var(--text-primary);"
               >
-                <option value="10">10 รายการ/หน้า</option>
-                <option value="20">20 รายการ/หน้า</option>
-                <option value="50">50 รายการ/หน้า</option>
+                <option value="10">10 วัน/หน้า</option>
+                <option value="20">20 วัน/หน้า</option>
+                <option value="50">50 วัน/หน้า</option>
               </select>
             </div>
           </div>
 
-          <div v-if="!filteredTransactions.length" class="flex flex-col items-center justify-center py-12 text-center px-5">
+          <div v-if="!filteredTransactionsByDate.length" class="flex flex-col items-center justify-center py-12 text-center px-5">
             <div class="w-12 h-12 rounded-xl flex items-center justify-center mb-3" style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);">
               <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
             </div>
             <p class="text-sm font-medium" style="color: var(--text-secondary);">ยังไม่มีรายการ</p>
           </div>
 
-          <!-- Unified transaction rows -->
-          <div v-else>
-            <div v-for="group in paginatedTransactionGroups" :key="group.type">
-              <div class="flex items-center justify-between gap-3 px-4 md:px-5 py-2.5" style="background: var(--bg-elevated); border-bottom: 1px solid var(--border-subtle);">
-                <div class="flex items-center gap-2 min-w-0">
-                  <span class="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" :style="{ background: group.type === 'income' ? 'rgba(16, 185, 129, 0.14)' : 'rgba(244, 63, 94, 0.14)' }">
-                    <svg v-if="group.type === 'income'" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="var(--ink-emerald)" stroke-width="2"><path d="M7 17L17 7M17 7H9M17 7v8"/></svg>
-                    <svg v-else class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="var(--ink-rose)" stroke-width="2"><path d="M17 7L7 17M7 17h8M7 17V9"/></svg>
-                  </span>
-                  <div class="min-w-0">
-                    <h3 class="text-sm font-semibold truncate" style="color: var(--text-primary);">{{ group.label }}</h3>
-                    <p class="num text-[10.5px] mt-0.5" style="color: var(--text-muted);">{{ group.items.length }} รายการในหน้านี้</p>
+          <!-- Ledger Style Table -->
+          <div v-else class="overflow-x-auto">
+            <div v-for="dayGroup in paginatedLedgerGroups" :key="dayGroup.date" class="border-b" style="border-color: var(--border-subtle);">
+              <!-- Date Header -->
+              <div class="px-4 md:px-5 py-2.5" style="background: var(--bg-elevated);">
+                <div class="flex items-center justify-between mb-2">
+                  <div class="flex items-center gap-2">
+                    <span class="text-sm font-semibold" style="color: var(--text-primary);">{{ formatDate(dayGroup.date) }}</span>
+                    <span class="text-xs px-2 py-0.5 rounded" style="background: var(--bg-surface); color: var(--text-muted);">{{ dayGroup.items.length }} รายการ</span>
+                  </div>
+                  <div class="text-xs font-medium px-2.5 py-1 rounded-lg" style="background: var(--bg-surface); color: var(--text-secondary);">
+                    ยกมา: {{ formatCurrency(dayGroup.openingBalance) }}
                   </div>
                 </div>
-                <span class="num text-[13px] font-semibold whitespace-nowrap" :style="{ color: group.type === 'income' ? 'var(--ink-emerald)' : 'var(--ink-rose)' }">
-                  {{ group.type === 'income' ? '+' : '−' }}{{ formatCurrency(group.total) }}
-                </span>
+                <div class="flex items-center gap-3 text-xs font-medium">
+                  <span style="color: var(--ink-emerald);">รับ: +{{ formatCurrency(dayGroup.totalIncome) }}</span>
+                  <span style="color: var(--ink-rose);">จ่าย: −{{ formatCurrency(dayGroup.totalExpense) }}</span>
+                  <span :style="{ color: dayGroup.balance >= 0 ? 'var(--ink-sky)' : 'var(--ink-amber)' }">
+                    สุทธิ: {{ dayGroup.balance >= 0 ? '+' : '' }}{{ formatCurrency(dayGroup.balance) }}
+                  </span>
+                  <span class="ml-auto font-semibold px-2.5 py-1 rounded-lg" :style="{
+                    background: 'var(--bg-surface)',
+                    color: dayGroup.closingBalance >= 0 ? 'var(--ink-emerald)' : 'var(--ink-rose)'
+                  }">
+                    ยกไป: {{ formatCurrency(dayGroup.closingBalance) }}
+                  </span>
+                </div>
               </div>
 
-              <div
-                v-for="item in group.items"
-                :key="item.id"
-                class="group grid grid-cols-[36px_1fr_auto] items-center gap-3 px-4 md:px-5 py-3 transition-colors"
-                style="border-bottom: 1px solid var(--border-subtle);"
-              >
-                <!-- direction icon -->
-                <span class="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);">
-                  <svg v-if="item.type === 'income'" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="var(--ink-emerald)" stroke-width="2"><path d="M7 17L17 7M17 7H9M17 7v8"/></svg>
-                  <svg v-else class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="var(--ink-rose)" stroke-width="2"><path d="M17 7L7 17M7 17h8M7 17V9"/></svg>
-                </span>
-                <!-- title + meta -->
-                <div class="min-w-0">
-                  <p class="text-[13.5px] font-medium truncate" style="color: var(--text-primary);">{{ item.category || 'ไม่ระบุหมวดหมู่' }}</p>
-                  <p class="num text-[10.5px] mt-0.5 truncate" style="color: var(--text-muted);">
-                    {{ item.type === 'income' ? 'รายรับ' : 'รายจ่าย' }} · {{ formatDate(item.entry_date) }}<span v-if="item.description"> · {{ item.description }}</span>
-                  </p>
-                </div>
-                <!-- amount + actions -->
-                <div class="flex items-center gap-2.5 shrink-0">
-                  <span class="num text-[14px] font-semibold text-right whitespace-nowrap" :style="{ color: item.type === 'income' ? 'var(--ink-emerald)' : 'var(--ink-rose)' }">
-                    {{ item.type === 'income' ? '+' : '−' }}{{ formatCurrency(item.amount) }}
+              <!-- Ledger Table -->
+              <div class="hidden md:block">
+                <table class="w-full">
+                  <thead>
+                    <tr style="background: var(--bg-surface); border-bottom: 1px solid var(--border-subtle);">
+                      <th class="px-4 py-2 text-left text-xs font-semibold" style="color: var(--text-secondary); width: 35%;">รายละเอียด</th>
+                      <th class="px-4 py-2 text-right text-xs font-semibold" style="color: var(--ink-emerald); width: 18%;">รายรับ (+)</th>
+                      <th class="px-4 py-2 text-right text-xs font-semibold" style="color: var(--ink-rose); width: 18%;">รายจ่าย (−)</th>
+                      <th class="px-4 py-2 text-right text-xs font-semibold" style="color: var(--ink-sky); width: 18%;">คงเหลือ</th>
+                      <th class="px-4 py-2 text-center text-xs font-semibold" style="color: var(--text-secondary); width: 11%;"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <!-- Opening Balance Row -->
+                    <tr style="background: var(--bg-surface); border-bottom: 1px solid var(--border-subtle);">
+                      <td class="px-4 py-2.5">
+                        <p class="text-sm font-semibold italic" style="color: var(--text-secondary);">ยอดยกมา</p>
+                      </td>
+                      <td class="px-4 py-2.5 text-right">
+                        <span class="text-sm" style="color: var(--text-muted);">—</span>
+                      </td>
+                      <td class="px-4 py-2.5 text-right">
+                        <span class="text-sm" style="color: var(--text-muted);">—</span>
+                      </td>
+                      <td class="px-4 py-2.5 text-right">
+                        <span class="text-sm font-semibold" :style="{ color: dayGroup.openingBalance >= 0 ? 'var(--text-primary)' : 'var(--ink-amber)' }">
+                          {{ formatCurrency(dayGroup.openingBalance) }}
+                        </span>
+                      </td>
+                      <td class="px-4 py-2.5"></td>
+                    </tr>
+                    <!-- Transaction Rows -->
+                    <tr
+                      v-for="item in dayGroup.items"
+                      :key="item.id"
+                      class="group hover:bg-gray-800/10 transition-colors"
+                      style="border-bottom: 1px solid var(--border-subtle);"
+                    >
+                      <td class="px-4 py-3">
+                        <p class="text-sm font-medium" style="color: var(--text-primary);">{{ item.category || 'ไม่ระบุหมวดหมู่' }}</p>
+                        <p v-if="item.description" class="text-xs mt-0.5" style="color: var(--text-muted);">{{ item.description }}</p>
+                      </td>
+                      <td class="px-4 py-3 text-right">
+                        <span v-if="item.type === 'income'" class="text-sm font-semibold" style="color: var(--ink-emerald);">
+                          +{{ formatCurrency(item.amount) }}
+                        </span>
+                        <span v-else class="text-sm" style="color: var(--text-muted);">—</span>
+                      </td>
+                      <td class="px-4 py-3 text-right">
+                        <span v-if="item.type === 'expense'" class="text-sm font-semibold" style="color: var(--ink-rose);">
+                          −{{ formatCurrency(item.amount) }}
+                        </span>
+                        <span v-else class="text-sm" style="color: var(--text-muted);">—</span>
+                      </td>
+                      <td class="px-4 py-3 text-right">
+                        <span class="text-sm font-semibold" :style="{ color: item.runningBalance >= 0 ? 'var(--text-primary)' : 'var(--ink-amber)' }">
+                          {{ formatCurrency(item.runningBalance) }}
+                        </span>
+                      </td>
+                      <td class="px-4 py-3">
+                        <div class="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button
+                            @click="openEditTransactionModal(item)"
+                            :disabled="isDeletingId === item.id"
+                            class="w-7 h-7 rounded-lg flex items-center justify-center disabled:opacity-50 transition-all tap-scale"
+                            style="background: var(--bg-elevated); border: 1px solid var(--border-subtle); color: var(--ink-sky);"
+                            aria-label="แก้ไข"
+                          >
+                            <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+                          </button>
+                          <button
+                            @click="deleteTransaction(item.id)"
+                            :disabled="isDeletingId === item.id"
+                            class="w-7 h-7 rounded-lg flex items-center justify-center disabled:opacity-50 transition-all tap-scale"
+                            style="background: var(--bg-elevated); border: 1px solid var(--border-subtle); color: var(--ink-rose);"
+                            aria-label="ลบ"
+                          >
+                            <svg v-if="isDeletingId !== item.id" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
+                            <span v-else class="inline-block w-3 h-3 border-2 rounded-full animate-spin" style="border-color: var(--border-strong); border-top-color: var(--ink-rose);"></span>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                    <!-- Closing Balance Row -->
+                    <tr style="background: var(--bg-surface);">
+                      <td class="px-4 py-2.5">
+                        <p class="text-sm font-semibold italic" style="color: var(--text-secondary);">ยอดยกไป</p>
+                      </td>
+                      <td class="px-4 py-2.5 text-right">
+                        <span class="text-sm font-semibold" style="color: var(--ink-emerald);">+{{ formatCurrency(dayGroup.totalIncome) }}</span>
+                      </td>
+                      <td class="px-4 py-2.5 text-right">
+                        <span class="text-sm font-semibold" style="color: var(--ink-rose);">−{{ formatCurrency(dayGroup.totalExpense) }}</span>
+                      </td>
+                      <td class="px-4 py-2.5 text-right">
+                        <span class="text-sm font-bold" :style="{ color: dayGroup.closingBalance >= 0 ? 'var(--ink-emerald)' : 'var(--ink-rose)' }">
+                          {{ formatCurrency(dayGroup.closingBalance) }}
+                        </span>
+                      </td>
+                      <td class="px-4 py-2.5"></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Mobile Card View -->
+              <div class="md:hidden">
+                <!-- Opening Balance -->
+                <div class="px-4 py-3 flex items-center justify-between" style="background: var(--bg-surface); border-bottom: 1px solid var(--border-subtle);">
+                  <span class="text-sm font-semibold italic" style="color: var(--text-secondary);">ยอดยกมา</span>
+                  <span class="text-sm font-semibold" :style="{ color: dayGroup.openingBalance >= 0 ? 'var(--text-primary)' : 'var(--ink-amber)' }">
+                    {{ formatCurrency(dayGroup.openingBalance) }}
                   </span>
-                  <div class="flex items-center gap-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                    <button
-                      @click="openEditTransactionModal(item)"
-                      :disabled="isDeletingId === item.id"
-                      class="w-8 h-8 rounded-lg flex items-center justify-center disabled:opacity-50 transition-all tap-scale"
-                      style="background: var(--bg-elevated); border: 1px solid var(--border-subtle); color: var(--ink-sky);"
-                      aria-label="แก้ไข"
-                    >
-                      <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
-                    </button>
-                    <button
-                      @click="deleteTransaction(item.id)"
-                      :disabled="isDeletingId === item.id"
-                      class="w-8 h-8 rounded-lg flex items-center justify-center disabled:opacity-50 transition-all tap-scale"
-                      style="background: var(--bg-elevated); border: 1px solid var(--border-subtle); color: var(--ink-rose);"
-                      aria-label="ลบ"
-                    >
-                      <svg v-if="isDeletingId !== item.id" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
-                      <span v-else class="inline-block w-3 h-3 border-2 rounded-full animate-spin" style="border-color: var(--border-strong); border-top-color: var(--ink-rose);"></span>
-                    </button>
+                </div>
+
+                <!-- Transactions -->
+                <div class="divide-y" style="border-color: var(--border-subtle);">
+                  <div
+                    v-for="item in dayGroup.items"
+                    :key="item.id"
+                    class="px-4 py-3 flex items-start justify-between gap-3"
+                  >
+                    <div class="flex-1 min-w-0">
+                      <p class="text-sm font-medium" style="color: var(--text-primary);">{{ item.category || 'ไม่ระบุหมวดหมู่' }}</p>
+                      <p v-if="item.description" class="text-xs mt-0.5" style="color: var(--text-muted);">{{ item.description }}</p>
+                      <div class="flex items-center gap-3 mt-2 text-xs">
+                        <span v-if="item.type === 'income'" style="color: var(--ink-emerald);">รายรับ: +{{ formatCurrency(item.amount) }}</span>
+                        <span v-else style="color: var(--ink-rose);">รายจ่าย: −{{ formatCurrency(item.amount) }}</span>
+                        <span style="color: var(--text-muted);">คงเหลือ: {{ formatCurrency(item.runningBalance) }}</span>
+                      </div>
+                    </div>
+                    <div class="flex items-center gap-1 shrink-0">
+                      <button
+                        @click="openEditTransactionModal(item)"
+                        :disabled="isDeletingId === item.id"
+                        class="w-8 h-8 rounded-lg flex items-center justify-center disabled:opacity-50 transition-all tap-scale"
+                        style="background: var(--bg-elevated); border: 1px solid var(--border-subtle); color: var(--ink-sky);"
+                        aria-label="แก้ไข"
+                      >
+                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+                      </button>
+                      <button
+                        @click="deleteTransaction(item.id)"
+                        :disabled="isDeletingId === item.id"
+                        class="w-8 h-8 rounded-lg flex items-center justify-center disabled:opacity-50 transition-all tap-scale"
+                        style="background: var(--bg-elevated); border: 1px solid var(--border-subtle); color: var(--ink-rose);"
+                        aria-label="ลบ"
+                      >
+                        <svg v-if="isDeletingId !== item.id" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
+                        <span v-else class="inline-block w-3 h-3 border-2 rounded-full animate-spin" style="border-color: var(--border-strong); border-top-color: var(--ink-rose);"></span>
+                      </button>
+                    </div>
                   </div>
+                </div>
+
+                <!-- Closing Balance -->
+                <div class="px-4 py-3 flex items-center justify-between" style="background: var(--bg-surface);">
+                  <div class="flex items-center gap-3">
+                    <span class="text-sm font-semibold italic" style="color: var(--text-secondary);">ยอดยกไป</span>
+                    <div class="flex items-center gap-2 text-xs">
+                      <span style="color: var(--ink-emerald);">+{{ formatCurrency(dayGroup.totalIncome) }}</span>
+                      <span style="color: var(--ink-rose);">−{{ formatCurrency(dayGroup.totalExpense) }}</span>
+                    </div>
+                  </div>
+                  <span class="text-sm font-bold" :style="{ color: dayGroup.closingBalance >= 0 ? 'var(--ink-emerald)' : 'var(--ink-rose)' }">
+                    {{ formatCurrency(dayGroup.closingBalance) }}
+                  </span>
                 </div>
               </div>
             </div>
@@ -947,7 +1065,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref, watch, nextTick } from 'vue'
 import { getTodayTH, getThisMonthTH } from '~/utils/date'
 
 type TransactionType = 'income' | 'expense'
@@ -986,8 +1104,7 @@ const errorMessage = ref('')
 const transactions = ref<TransactionRow[]>([])
 
 const summaryFilterMonth = ref(getThisMonthTH())
-const transactionFilterMode = ref<'all' | 'day' | 'month'>('all')
-const transactionTypeFilter = ref<'all' | TransactionType>('all')
+const transactionFilterMode = ref<'day' | 'month'>('month')
 const transactionFilterDate = ref(getTodayTH())
 const transactionFilterMonth = ref(getThisMonthTH())
 const transactionItemsPerPage = ref(20)
@@ -1008,17 +1125,6 @@ const formatCurrency = (amount: number) => new Intl.NumberFormat('th-TH', {
 const formatDate = (dateString: string) => new Date(dateString).toLocaleDateString('th-TH', {
   day: '2-digit', month: 'short', year: 'numeric',
 })
-
-const transactionTypeFilterOptions: {
-  value: 'all' | TransactionType
-  label: string
-  activeBg: string
-  activeColor: string
-}[] = [
-  { value: 'all', label: 'ทั้งหมด', activeBg: 'var(--brand)', activeColor: 'white' },
-  { value: 'income', label: 'รายรับ', activeBg: 'rgba(16, 185, 129, 0.18)', activeColor: 'var(--ink-emerald)' },
-  { value: 'expense', label: 'รายจ่าย', activeBg: 'rgba(244, 63, 94, 0.18)', activeColor: 'var(--ink-rose)' },
-]
 
 const currentMonthYearLabel = computed(() => {
   if (!summaryFilterMonth.value) return 'เดือนนี้'
@@ -1200,49 +1306,136 @@ const filteredTransactions = computed(() => {
     source = source.filter(i => i.entry_date === transactionFilterDate.value)
   if (transactionFilterMode.value === 'month' && transactionFilterMonth.value)
     source = source.filter(i => i.entry_date.startsWith(transactionFilterMonth.value))
-  if (transactionTypeFilter.value !== 'all')
-    source = source.filter(i => i.type === transactionTypeFilter.value)
   return source
 })
 
-const transactionTotalPages = computed(() => Math.ceil(filteredTransactions.value.length / transactionItemsPerPage.value))
-const paginatedTransactions = computed(() => {
+// Calculate opening balance from transactions before the filtered period
+const openingBalance = computed(() => {
+  let cutoffDate = ''
+
+  if (transactionFilterMode.value === 'day' && transactionFilterDate.value) {
+    cutoffDate = transactionFilterDate.value
+  } else if (transactionFilterMode.value === 'month' && transactionFilterMonth.value) {
+    cutoffDate = `${transactionFilterMonth.value}-01`
+  }
+
+  if (!cutoffDate) return 0
+
+  // Sum all transactions before the cutoff date
+  const previousTransactions = transactions.value.filter(t => t.entry_date < cutoffDate)
+  let balance = 0
+  for (const tx of previousTransactions) {
+    if (tx.type === 'income') {
+      balance += tx.amount
+    } else {
+      balance -= tx.amount
+    }
+  }
+  return balance
+})
+
+// Group transactions by date for ledger view
+type LedgerTransaction = TransactionRow & { runningBalance: number }
+type LedgerDayGroup = {
+  date: string
+  items: LedgerTransaction[]
+  totalIncome: number
+  totalExpense: number
+  balance: number
+  openingBalance: number
+  closingBalance: number
+}
+
+const filteredTransactionsByDate = computed<LedgerDayGroup[]>(() => {
+  const source = filteredTransactions.value
+
+  // Group by date
+  const grouped = source.reduce<Record<string, TransactionRow[]>>((acc, item) => {
+    if (!acc[item.entry_date]) acc[item.entry_date] = []
+    acc[item.entry_date].push(item)
+    return acc
+  }, {})
+
+  // Sort dates ascending for chronological order (oldest first)
+  const sortedDates = Object.keys(grouped).sort((a, b) => a.localeCompare(b))
+
+  // Start with opening balance from previous period
+  let runningBalance = openingBalance.value
+
+  const result = sortedDates.map(date => {
+    const dayItems = grouped[date]
+
+    // Sort items within the day by created_at (chronological order)
+    dayItems.sort((a, b) => {
+      const timeA = new Date(a.created_at).getTime()
+      const timeB = new Date(b.created_at).getTime()
+      return timeA - timeB
+    })
+
+    const totalIncome = dayItems.filter(i => i.type === 'income').reduce((s, i) => s + i.amount, 0)
+    const totalExpense = dayItems.filter(i => i.type === 'expense').reduce((s, i) => s + i.amount, 0)
+    const dayBalance = totalIncome - totalExpense
+
+    // Opening balance = balance from previous day
+    const dayOpeningBalance = runningBalance
+
+    // Calculate running balance for each item
+    const itemsWithBalance: LedgerTransaction[] = dayItems.map(item => {
+      if (item.type === 'income') {
+        runningBalance += item.amount
+      } else {
+        runningBalance -= item.amount
+      }
+      return {
+        ...item,
+        runningBalance
+      }
+    })
+
+    // Closing balance = opening + day's net change
+    const closingBalance = runningBalance
+
+    return {
+      date,
+      items: itemsWithBalance,
+      totalIncome,
+      totalExpense,
+      balance: dayBalance,
+      openingBalance: dayOpeningBalance,
+      closingBalance
+    }
+  })
+
+  // Keep chronological order (oldest to newest) for display
+  return result
+})
+
+const transactionTotalPages = computed(() => Math.ceil(filteredTransactionsByDate.value.length / transactionItemsPerPage.value))
+
+const paginatedLedgerGroups = computed(() => {
   const start = (transactionCurrentPage.value - 1) * transactionItemsPerPage.value
   const end = start + transactionItemsPerPage.value
-  return filteredTransactions.value.slice(start, end)
-})
-const paginatedTransactionGroups = computed(() => {
-  const groups: Record<TransactionType, TransactionRow[]> = {
-    income: [],
-    expense: [],
-  }
-  for (const item of paginatedTransactions.value) groups[item.type].push(item)
-
-  return (['income', 'expense'] as TransactionType[])
-    .filter(type => groups[type].length > 0)
-    .map(type => ({
-      type,
-      label: type === 'income' ? 'รายรับ' : 'รายจ่าย',
-      total: groups[type].reduce((sum, item) => sum + item.amount, 0),
-      items: groups[type],
-    }))
+  return filteredTransactionsByDate.value.slice(start, end)
 })
 
 const transactionPageInfo = computed(() => {
-  const total = filteredTransactions.value.length
-  if (total === 0) return 'ไม่มีรายการ'
+  const totalDays = filteredTransactionsByDate.value.length
+  const totalItems = filteredTransactions.value.length
+  if (totalDays === 0) return 'ไม่มีรายการ'
   const start = (transactionCurrentPage.value - 1) * transactionItemsPerPage.value + 1
-  const end = Math.min(transactionCurrentPage.value * transactionItemsPerPage.value, total)
-  return `แสดง ${start}-${end} จาก ${total} รายการ`
+  const end = Math.min(transactionCurrentPage.value * transactionItemsPerPage.value, totalDays)
+  return `แสดง ${start}-${end} จาก ${totalDays} วัน (${totalItems} รายการ)`
 })
 
 watch([
   transactionFilterMode,
   transactionFilterDate,
   transactionFilterMonth,
-  transactionTypeFilter,
 ], () => {
-  transactionCurrentPage.value = 1
+  // Set to last page (newest dates) after filter change
+  nextTick(() => {
+    transactionCurrentPage.value = transactionTotalPages.value || 1
+  })
 })
 
 watch(transactionTotalPages, (totalPages) => {

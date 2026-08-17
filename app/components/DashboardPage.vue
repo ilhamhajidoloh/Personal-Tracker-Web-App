@@ -449,26 +449,56 @@
               <p class="text-sm font-semibold mt-2.5 line-clamp-1" style="color: var(--text-primary);">{{ event.title }}</p>
               <p class="num text-[11px] mt-1" style="color: var(--text-muted);">{{ displayEventDateTimeShort(event) }}</p>
 
-              <!-- Ongoing countdown widget inside existing card on Dashboard -->
-              <div v-if="getDashboardEventStatusMeta(event).status === 'ongoing'" class="mt-2.5 p-2.5 rounded-xl border flex flex-col gap-1.5 transition-all" style="background: var(--event-status-ongoing-soft); border-color: var(--event-status-ongoing-border); box-shadow: var(--event-status-ongoing-shadow);">
-                <div class="flex items-center justify-between text-[11px]">
-                  <span class="font-semibold flex items-center gap-1" style="color: var(--event-status-ongoing-ink);">
-                    <span class="relative flex h-2 w-2">
-                      <span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style="background: var(--event-status-ongoing-ink);"></span>
-                      <span class="relative inline-flex rounded-full h-2 w-2" style="background: var(--event-status-ongoing-ink);"></span>
+              <!-- Countdown widget for both ongoing and next upcoming -->
+              <div v-if="getDashboardEventStatusMeta(event).status === 'ongoing' || isNextUpcomingEvent(event)" class="mt-3 p-3 rounded-xl border flex flex-col gap-2 transition-all" :style="getDashboardCountdownStyle(event)">
+                <!-- Ongoing variant -->
+                <template v-if="getDashboardEventStatusMeta(event).status === 'ongoing'">
+                  <div class="flex items-center justify-between text-[11px]">
+                    <span class="font-semibold flex items-center gap-1.5" style="color: var(--event-status-ongoing-ink);">
+                      <span class="relative flex h-2 w-2">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style="background: var(--event-status-ongoing-ink);"></span>
+                        <span class="relative inline-flex rounded-full h-2 w-2" style="background: var(--event-status-ongoing-ink);"></span>
+                      </span>
+                      กำลังดำเนินอยู่
                     </span>
-                    นับถอยหลังเวลาที่เหลือ
-                  </span>
-                  <span class="num font-mono font-bold" style="color: var(--event-status-ongoing-ink);">
-                    {{ getDashboardOngoingEventDetails(event).progress }}%
-                  </span>
-                </div>
-                <div class="num text-xs font-bold font-mono tracking-tight" style="color: var(--text-primary);">
-                  ⏱️ {{ getDashboardOngoingEventDetails(event).countdownText }}
-                </div>
-                <div class="w-full h-1.5 rounded-full overflow-hidden" style="background: rgba(0, 0, 0, 0.15);">
-                  <div class="h-full rounded-full transition-all duration-1000 ease-linear" :style="{ width: getDashboardOngoingEventDetails(event).progress + '%', background: 'var(--event-status-ongoing-ink)' }"></div>
-                </div>
+                    <span class="num font-mono font-bold text-xs" style="color: var(--event-status-ongoing-ink);">
+                      {{ getDashboardOngoingEventDetails(event).progress }}%
+                    </span>
+                  </div>
+                  <div class="num text-sm font-bold font-mono tracking-tight" style="color: var(--text-primary);">
+                    ⏱️ {{ getDashboardOngoingEventDetails(event).countdownText }}
+                  </div>
+                  <div class="w-full h-1.5 rounded-full overflow-hidden" style="background: rgba(0, 0, 0, 0.15);">
+                    <div class="h-full rounded-full transition-all duration-1000 ease-linear" :style="{ width: getDashboardOngoingEventDetails(event).progress + '%', background: 'var(--event-status-ongoing-ink)' }"></div>
+                  </div>
+                  <div class="flex items-center justify-between text-[10px]" style="color: var(--text-muted);">
+                    <span>เริ่ม {{ getDashboardOngoingEventDetails(event).startTimeFormatted }}</span>
+                    <span>สิ้นสุด {{ getDashboardOngoingEventDetails(event).endTimeFormatted }}</span>
+                  </div>
+                </template>
+
+                <!-- Next Upcoming variant -->
+                <template v-else>
+                  <div class="flex items-center justify-between text-[11px]">
+                    <span class="font-semibold flex items-center gap-1.5" style="color: var(--brand-ink);">
+                      <span>⏰</span>
+                      กิจกรรมถัดไป
+                    </span>
+                    <span class="num text-xs font-mono font-bold" style="color: var(--brand-ink);">
+                      {{ getDashboardUpcomingEventDetails(event).progress }}% • {{ getDashboardUpcomingEventDetails(event).durationText }}
+                    </span>
+                  </div>
+                  <div class="num text-sm font-bold font-mono tracking-tight" style="color: var(--text-primary);">
+                    ⏱️ {{ getDashboardUpcomingEventDetails(event).countdownText }}
+                  </div>
+                  <div class="w-full h-1.5 rounded-full overflow-hidden" style="background: rgba(59, 78, 240, 0.15);">
+                    <div class="h-full rounded-full transition-all duration-1000 ease-linear" :style="{ width: getDashboardUpcomingEventDetails(event).progress + '%', background: 'var(--brand)' }"></div>
+                  </div>
+                  <div class="flex items-center justify-between text-[10px]" style="color: var(--text-muted);">
+                    <span>ตอนนี้</span>
+                    <span class="font-semibold" style="color: var(--brand-ink);">{{ getDashboardUpcomingEventDetails(event).progressLabel }}: {{ getDashboardUpcomingEventDetails(event).progress }}%</span>
+                  </div>
+                </template>
               </div>
             </div>
           </div>
@@ -989,14 +1019,29 @@ const getTodoDateColor = (item: TodoRow) => {
 }
 
 const dashboardEvents = computed(() => {
-  const today = getTodayTH()
-  return events.value
+  const nowMs = currentTime.value.getTime()
+
+  // Filter out past events (events that have already ended)
+  const upcomingEvents = events.value
     .filter(e => {
-      const maxDate = e.end_date || e.start_date
-      return maxDate >= today
+      const { endMs } = getDashboardEventDateTimeBounds(e)
+      return endMs >= nowMs
     })
     .sort((a, b) => a.start_date.localeCompare(b.start_date) || (a.start_time || '').localeCompare(b.start_time || ''))
-    .slice(0, 4)
+
+  // Find ongoing events
+  const ongoingEvents = upcomingEvents.filter(e => {
+    const { startMs, endMs } = getDashboardEventDateTimeBounds(e)
+    return startMs <= nowMs && nowMs <= endMs
+  })
+
+  // If there are ongoing events, show them (max 4)
+  if (ongoingEvents.length > 0) {
+    return ongoingEvents.slice(0, 4)
+  }
+
+  // Otherwise, show only the next upcoming event
+  return upcomingEvents.slice(0, 1)
 })
 
 const displayEventDateTimeShort = (item: DashboardEventRow) => {
@@ -1068,6 +1113,7 @@ const getDashboardOngoingEventDetails = (item: DashboardEventRow) => {
   const nowMs = currentTime.value.getTime()
   const totalMs = Math.max(1, endMs - startMs)
   const remainingMs = Math.max(0, endMs - nowMs)
+  const elapsedMs = Math.max(0, nowMs - startMs)
   
   const totalSec = Math.floor(remainingMs / 1000)
   const seconds = totalSec % 60
@@ -1084,10 +1130,17 @@ const getDashboardOngoingEventDetails = (item: DashboardEventRow) => {
   if (days > 0) {
     countdownText = `${days} วัน ${pad(hours)}:${pad(minutes)}:${pad(seconds)}`
   } else if (hours > 0) {
-    countdownText = `${pad(hours)} ชม. ${pad(minutes)} นาที ${pad(seconds)} วินาที`
+    countdownText = `${pad(hours)}:${pad(minutes)}:${pad(seconds)} ชม.`
   } else {
-    countdownText = `${pad(minutes)} นาที ${pad(seconds)} วินาที`
+    countdownText = `${pad(minutes)}:${pad(seconds)} นาที`
   }
+
+  const startFormatted = item.event_type === 'same_day_all_day' 
+    ? '00:00 น.' 
+    : (item.start_time ? item.start_time.slice(0, 5) + ' น.' : '')
+  const endFormatted = item.event_type === 'same_day_all_day' 
+    ? '23:59 น.' 
+    : (item.end_time ? item.end_time.slice(0, 5) + ' น.' : '')
 
   return {
     remainingMs,
@@ -1097,6 +1150,88 @@ const getDashboardOngoingEventDetails = (item: DashboardEventRow) => {
     seconds,
     countdownText,
     progress: Number(progress.toFixed(1)),
+    startTimeFormatted: startFormatted,
+    endTimeFormatted: endFormatted,
+  }
+}
+
+const getDashboardUpcomingEventDetails = (item: DashboardEventRow) => {
+  const { startMs, endMs } = getDashboardEventDateTimeBounds(item)
+  const nowMs = currentTime.value.getTime()
+  const remainingMs = Math.max(0, startMs - nowMs)
+  const durationMs = Math.max(0, endMs - startMs)
+
+  const totalSec = Math.floor(remainingMs / 1000)
+  const seconds = totalSec % 60
+  const totalMin = Math.floor(totalSec / 60)
+  const minutes = totalMin % 60
+  const totalHours = Math.floor(totalMin / 60)
+  const hours = totalHours % 24
+  const days = Math.floor(totalHours / 24)
+
+  const pad = (n: number) => String(n).padStart(2, '0')
+  let countdownText = ''
+  if (days > 0) {
+    countdownText = `${days} วัน ${pad(hours)}:${pad(minutes)}:${pad(seconds)}`
+  } else if (hours > 0) {
+    countdownText = `${pad(hours)}:${pad(minutes)}:${pad(seconds)} ชม.`
+  } else {
+    countdownText = `${pad(minutes)}:${pad(seconds)} นาที`
+  }
+
+  // Duration
+  const durationMin = Math.floor(durationMs / 60000)
+  const durHrs = Math.floor(durationMin / 60)
+  const durRemMin = durationMin % 60
+  let durationText = ''
+  if (item.event_type === 'same_day_all_day') {
+    durationText = 'ตลอดวัน'
+  } else if (durHrs > 0) {
+    durationText = durRemMin > 0 ? `${durHrs} ชม. ${durRemMin} นาที` : `${durHrs} ชม.`
+  } else {
+    durationText = `${Math.max(1, durationMin)} นาที`
+  }
+
+  // Adaptive progress towards start time (Today / 7-Day / 30-Day countdown)
+  const now = new Date(nowMs)
+  const todayStartMs = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0).getTime()
+  let progress = 0
+  let progressLabel = ''
+
+  if (startMs <= todayStartMs + 24 * 60 * 60 * 1000) {
+    // Event is today! Progress of the day towards start time
+    const totalDayWindow = Math.max(1, startMs - todayStartMs)
+    const elapsedToday = Math.max(0, nowMs - todayStartMs)
+    progress = Math.min(99, Math.max(1, (elapsedToday / totalDayWindow) * 100))
+    progressLabel = 'ความคืบหน้าของวันนี้'
+  } else if (remainingMs <= 7 * 24 * 60 * 60 * 1000) {
+    // Within 7 days
+    const window7d = 7 * 24 * 60 * 60 * 1000
+    const elapsed7d = window7d - remainingMs
+    progress = Math.min(99, Math.max(5, (elapsed7d / window7d) * 100))
+    progressLabel = 'นับถอยหลังรอบ 7 วัน'
+  } else if (remainingMs <= 30 * 24 * 60 * 60 * 1000) {
+    // Within 30 days
+    const window30d = 30 * 24 * 60 * 60 * 1000
+    const elapsed30d = window30d - remainingMs
+    progress = Math.min(99, Math.max(5, (elapsed30d / window30d) * 100))
+    progressLabel = 'นับถอยหลังรอบ 30 วัน'
+  } else {
+    progress = 5
+    progressLabel = 'เตรียมการล่วงหน้า'
+  }
+
+  return {
+    remainingMs,
+    days,
+    hours,
+    minutes,
+    seconds,
+    countdownText,
+    durationText,
+    progressLabel,
+    progress: Number(progress.toFixed(1)),
+    isWithin24h: remainingMs <= 24 * 60 * 60 * 1000,
   }
 }
 
@@ -1125,6 +1260,62 @@ const getDashboardEventDateBadgeStyle = (item: DashboardEventRow) => {
 const getDashboardEventStatusTextStyle = (item: DashboardEventRow) => {
   const prefix = getDashboardEventStatusTokenPrefix(item)
   return { color: `var(${prefix}-ink)` }
+}
+
+const isNextUpcomingEvent = (item: DashboardEventRow) => {
+  const nowMs = currentTime.value.getTime()
+  const ongoingEvents = dashboardEvents.value.filter(e => {
+    const { startMs, endMs } = getDashboardEventDateTimeBounds(e)
+    return startMs <= nowMs && nowMs <= endMs
+  })
+
+  // If there are ongoing events, this is not "next upcoming"
+  if (ongoingEvents.length > 0) return false
+
+  // Otherwise, check if this is the first upcoming event
+  const upcoming = dashboardEvents.value.filter(e => {
+    const { startMs } = getDashboardEventDateTimeBounds(e)
+    return startMs > nowMs
+  }).sort((a, b) => {
+    const aStart = getDashboardEventDateTimeBounds(a).startMs
+    const bStart = getDashboardEventDateTimeBounds(b).startMs
+    return aStart - bStart
+  })
+
+  return Boolean(upcoming[0] && upcoming[0].id === item.id)
+}
+
+const getDashboardCountdownStyle = (item: DashboardEventRow) => {
+  if (getDashboardEventStatusMeta(item).status === 'ongoing') {
+    return {
+      background: 'var(--event-status-ongoing-soft)',
+      borderColor: 'var(--event-status-ongoing-border)',
+      boxShadow: 'var(--event-status-ongoing-shadow)'
+    }
+  } else {
+    // Use different color for next upcoming (e.g., sky blue)
+    return {
+      background: 'rgba(14, 165, 233, 0.1)',
+      borderColor: 'rgba(14, 165, 233, 0.3)',
+      boxShadow: '0 0 0 1px rgba(14, 165, 233, 0.1)'
+    }
+  }
+}
+
+const getDashboardCountdownColor = (item: DashboardEventRow) => {
+  if (getDashboardEventStatusMeta(item).status === 'ongoing') {
+    return 'var(--event-status-ongoing-ink)'
+  } else {
+    // Sky blue for next upcoming
+    return 'rgb(14, 165, 233)'
+  }
+}
+
+const getDashboardNextEventCountdown = (item: DashboardEventRow) => {
+  const { startMs } = getDashboardEventDateTimeBounds(item)
+  const nowMs = currentTime.value.getTime()
+  const minutesUntil = (startMs - nowMs) / 60000
+  return formatDashboardStatusDuration(minutesUntil)
 }
 
 const nextEventMeta = computed(() => {
