@@ -15,6 +15,15 @@ type EventLineNotificationPayload = {
   isEditing?: boolean
 }
 
+type ClassLineNotificationPayload = {
+  courseName: string
+  dayOfWeek: string
+  startTime: string
+  endTime: string
+  location?: string | null
+  minutesBefore: number
+}
+
 type LineNotifyResponse = {
   sent: boolean
   skipped?: boolean
@@ -51,6 +60,16 @@ const eventTypeLabelMap: Record<EventLineNotificationPayload['eventType'], strin
   same_day_time: 'วันเดียวมีเวลา',
   same_day_all_day: 'วันเดียวทั้งวัน',
   multi_day: 'หลายวัน',
+}
+
+const dayOfWeekLabelMap: Record<string, string> = {
+  monday: 'จันทร์',
+  tuesday: 'อังคาร',
+  wednesday: 'พุธ',
+  thursday: 'พฤหัสบดี',
+  friday: 'ศุกร์',
+  saturday: 'เสาร์',
+  sunday: 'อาทิตย์',
 }
 
 const buildEventTimeSummary = (payload: EventLineNotificationPayload) => {
@@ -112,9 +131,25 @@ export const useLineMessaging = () => {
     ].join('\n')
   }
 
+  const buildClassReminderMessage = (payload: ClassLineNotificationPayload) => {
+    const dayLabel = dayOfWeekLabelMap[payload.dayOfWeek.toLowerCase()] || payload.dayOfWeek
+    const locationText = payload.location ? `\n📍 สถานที่: ${payload.location}` : ''
+
+    return [
+      `🔔 แจ้งเตือนคาบเรียน`,
+      ``,
+      `📚 วิชา: ${payload.courseName}`,
+      `📅 วัน${dayLabel}`,
+      `🕐 เวลา: ${payload.startTime.slice(0, 5)} - ${payload.endTime.slice(0, 5)} น.${locationText}`,
+      ``,
+      `⏰ คาบเรียนจะเริ่มในอีก ${payload.minutesBefore} นาที`,
+    ].join('\n')
+  }
+
   return {
     notify,
     buildTodoSavedMessage,
     buildEventSavedMessage,
+    buildClassReminderMessage,
   }
 }

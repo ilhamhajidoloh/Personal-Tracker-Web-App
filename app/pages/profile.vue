@@ -253,6 +253,32 @@
                       <span class="text-xs text-gray-300 leading-relaxed">รับแจ้งเตือนใน LINE เมื่อมีการเพิ่มหรือแก้ไขงานและกิจกรรม</span>
                     </label>
 
+                    <!-- Class Reminder Settings -->
+                    <div class="border-t border-gray-800/60 pt-3 space-y-3">
+                      <label class="flex items-start gap-3 p-3 border border-gray-800/60 rounded-xl bg-gray-800/30 cursor-pointer hover:bg-gray-800/50 transition-all">
+                        <input
+                          v-model="lineClassRemindersEnabled"
+                          type="checkbox"
+                          class="mt-0.5 accent-violet-500"
+                        >
+                        <span class="text-xs text-gray-300 leading-relaxed">รับแจ้งเตือนคาบเรียนก่อนเรียน</span>
+                      </label>
+
+                      <div v-if="lineClassRemindersEnabled" class="pl-3 space-y-2">
+                        <label class="block text-xs font-medium text-gray-400">แจ้งเตือนก่อนเรียนกี่นาที</label>
+                        <select
+                          v-model.number="lineClassReminderMinutes"
+                          class="w-full bg-gray-800/80 border border-gray-700/60 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 transition-all"
+                        >
+                          <option :value="5">5 นาที</option>
+                          <option :value="10">10 นาที</option>
+                          <option :value="15">15 นาที</option>
+                          <option :value="30">30 นาที</option>
+                          <option :value="60">1 ชั่วโมง</option>
+                        </select>
+                      </div>
+                    </div>
+
                     <div class="flex flex-wrap gap-2">
                       <button
                         type="button"
@@ -548,6 +574,8 @@ type LineConnectionStatus = {
   connected: boolean
   lineUserId: string
   notificationsEnabled: boolean
+  classRemindersEnabled: boolean
+  classReminderMinutes: number
   connectedAt: string | null
 }
 
@@ -598,11 +626,13 @@ const isSavingLine = ref(false)
 const isTestingLine = ref(false)
 const isGeneratingLineCode = ref(false)
 const lineStatus = ref<LineConnectionStatus>({
-  connected: false, lineUserId: '', notificationsEnabled: false, connectedAt: null,
+  connected: false, lineUserId: '', notificationsEnabled: false, classRemindersEnabled: false, classReminderMinutes: 15, connectedAt: null,
 })
 const lineLinkCode = ref<LineLinkCodeResponse | null>(null)
 const lineUserIdInput = ref('')
 const lineNotificationsEnabled = ref(true)
+const lineClassRemindersEnabled = ref(false)
+const lineClassReminderMinutes = ref(15)
 
 const isGoogleLoading = ref(true)
 const isDisconnectingGoogle = ref(false)
@@ -613,7 +643,7 @@ const { syncAllEventsToGoogle } = useGoogleCalendarSync()
 let lineStatusPollingTimer: ReturnType<typeof setInterval> | number | null = null
 
 const currentUser = computed(() => user.value)
-const createEmptyLineStatus = (): LineConnectionStatus => ({ connected: false, lineUserId: '', notificationsEnabled: false, connectedAt: null })
+const createEmptyLineStatus = (): LineConnectionStatus => ({ connected: false, lineUserId: '', notificationsEnabled: false, classRemindersEnabled: false, classReminderMinutes: 15, connectedAt: null })
 
 const openEditProfileModal = () => {
   editProfileForm.fullName = currentUser.value?.fullName || ''
@@ -744,6 +774,8 @@ const getRequestErrorMessage = (error: any, fallbackMessage: string) => error?.d
 const syncLineForm = () => {
   lineUserIdInput.value = lineStatus.value.lineUserId
   lineNotificationsEnabled.value = lineStatus.value.connected ? lineStatus.value.notificationsEnabled : true
+  lineClassRemindersEnabled.value = lineStatus.value.connected ? lineStatus.value.classRemindersEnabled : false
+  lineClassReminderMinutes.value = lineStatus.value.connected ? lineStatus.value.classReminderMinutes : 15
 }
 
 const stopLineStatusPolling = () => {
@@ -796,7 +828,12 @@ const openLineComposer = (message: string) => { if (!import.meta.client) return;
 
 const saveLineConnection = async (lineUserId: string) => {
   lineStatus.value = await $fetch<LineConnectionStatus>('/api/line/connect', {
-    method: 'POST', body: { lineUserId, notificationsEnabled: lineNotificationsEnabled.value },
+    method: 'POST', body: {
+      lineUserId,
+      notificationsEnabled: lineNotificationsEnabled.value,
+      classRemindersEnabled: lineClassRemindersEnabled.value,
+      classReminderMinutes: lineClassReminderMinutes.value,
+    },
   })
   syncLineForm()
   lineLinkCode.value = null
@@ -808,7 +845,11 @@ const generateLineLinkCode = async (options: { openLine?: boolean } = {}) => {
   isGeneratingLineCode.value = true
   try {
     lineLinkCode.value = await $fetch<LineLinkCodeResponse>('/api/line/link-code', {
-      method: 'POST', body: { notificationsEnabled: lineNotificationsEnabled.value },
+      method: 'POST', body: {
+        notificationsEnabled: lineNotificationsEnabled.value,
+        classRemindersEnabled: lineClassRemindersEnabled.value,
+        classReminderMinutes: lineClassReminderMinutes.value,
+      },
     })
     await copyTextToClipboard(lineLinkCode.value.code, 'คัดลอกข้อความเชื่อม LINE แล้ว')
     if (options.openLine) openLineComposer(lineLinkCode.value.code)
