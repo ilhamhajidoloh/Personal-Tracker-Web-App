@@ -45,12 +45,51 @@
       <section v-if="hasLeftColumn || hasRightColumn" :class="gridClasses">
         <!-- LEFT column -->
         <div v-if="hasLeftColumn" class="space-y-4">
+          <!-- Multi-Book Selector Bar (if user has books) -->
+          <div v-if="books.length > 0" class="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+            <!-- All Books Pill -->
+            <button
+              type="button"
+              @click="selectBook('all')"
+              class="px-3 py-1.5 rounded-xl text-xs font-semibold transition-all tap-scale flex items-center gap-1.5 shrink-0"
+              :style="selectedBookId === 'all'
+                ? 'background: var(--brand); color: #ffffff; box-shadow: 0 4px 14px rgba(59,78,240,0.35);'
+                : 'background: var(--bg-surface); border: 1px solid var(--border-subtle); color: var(--text-secondary);'"
+            >
+              <span>📊</span>
+              <span>ทุกสมุด (รวม)</span>
+              <span class="text-[10px] px-1.5 py-0.2 rounded-full opacity-80" :style="selectedBookId === 'all' ? 'background: rgba(255,255,255,0.2);' : 'background: rgba(0,0,0,0.2);'">
+                {{ books.length }}
+              </span>
+            </button>
+
+            <!-- Individual Book Pills -->
+            <button
+              v-for="book in books"
+              :key="book.id"
+              type="button"
+              @click="selectBook(book.id)"
+              class="px-3 py-1.5 rounded-xl text-xs font-semibold transition-all tap-scale flex items-center gap-1.5 shrink-0"
+              :style="selectedBookId === book.id
+                ? `background: ${book.color}22; border: 1px solid ${book.color}66; color: ${book.color}; box-shadow: 0 2px 10px ${book.color}20;`
+                : 'background: var(--bg-surface); border: 1px solid var(--border-subtle); color: var(--text-secondary);'"
+            >
+              <span>{{ book.icon || '💼' }}</span>
+              <span>{{ book.name }}</span>
+              <span v-if="book.isDefault" class="text-[9px] px-1 py-0.2 rounded font-medium" :style="{ background: `${book.color}25`, color: book.color }">หลัก</span>
+            </button>
+          </div>
+
           <!-- Hero balance + chart -->
           <div class="section-card animate-slide-up overflow-hidden">
             <div class="p-5 md:p-6">
               <div class="flex items-start justify-between gap-3">
                 <div>
-                  <p class="eyebrow">เงินคงเหลือรวม</p>
+                  <p class="eyebrow flex items-center gap-1.5">
+                    <span>เงินคงเหลือ</span>
+                    <span v-if="selectedBook" class="font-semibold" :style="{ color: selectedBook.color }">({{ selectedBook.icon }} {{ selectedBook.name }})</span>
+                    <span v-else class="font-normal" style="color: var(--text-muted);">(รวมทุกสมุด)</span>
+                  </p>
                   <p class="num text-[34px] md:text-[42px] font-bold leading-none mt-2" :style="{ color: remainingBalance >= 0 ? 'var(--text-primary)' : 'var(--ink-rose)' }">
                     <span class="text-xl md:text-2xl font-semibold mr-1" style="color: var(--text-muted);">฿</span>{{ formattedBalanceParts.sign }}{{ formattedBalanceParts.integer }}<span class="text-xl md:text-2xl font-semibold" style="color: var(--text-muted);">.{{ formattedBalanceParts.decimal }}</span>
                   </p>
@@ -178,7 +217,21 @@
                   <svg v-else class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="var(--ink-rose)" stroke-width="2"><path d="M17 7L7 17M7 17h8M7 17V9"/></svg>
                 </span>
                 <div class="min-w-0">
-                  <p class="text-[13.5px] font-medium truncate" style="color: var(--text-primary);">{{ tx.category || (tx.type === 'income' ? 'รายรับ' : 'รายจ่าย') }}</p>
+                  <div class="flex items-center gap-1.5 flex-wrap">
+                    <p class="text-[13.5px] font-medium truncate" style="color: var(--text-primary);">{{ tx.category || (tx.type === 'income' ? 'รายรับ' : 'รายจ่าย') }}</p>
+                    <span
+                      v-if="selectedBookId === 'all' && getBookById(tx.book_id)"
+                      class="text-[9.5px] px-1.5 py-0.2 rounded-md font-medium shrink-0 flex items-center gap-0.5"
+                      :style="{
+                        backgroundColor: `${getBookById(tx.book_id)?.color}15`,
+                        color: getBookById(tx.book_id)?.color,
+                        border: `1px solid ${getBookById(tx.book_id)?.color}35`
+                      }"
+                    >
+                      <span>{{ getBookById(tx.book_id)?.icon }}</span>
+                      <span>{{ getBookById(tx.book_id)?.name }}</span>
+                    </span>
+                  </div>
                   <p class="num text-[10.5px] mt-0.5 truncate" style="color: var(--text-muted);">{{ tx.type === 'income' ? 'รายรับ' : 'รายจ่าย' }} · {{ formatDate(tx.entry_date) }}</p>
                 </div>
                 <span class="num text-[14px] font-semibold text-right" :style="{ color: tx.type === 'income' ? 'var(--ink-emerald)' : 'var(--ink-rose)' }">{{ tx.type === 'income' ? '+' : '−' }}{{ formatCurrency(tx.amount) }}</span>
@@ -633,8 +686,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { getTodayTH, nowTH } from '~/utils/date'
+import { useFinanceBooks } from '~/composables/useFinanceBooks'
 
 const { isModuleEnabled, allModules, enabledModules } = useUserModules()
 
@@ -656,6 +710,7 @@ type TransactionType = 'income' | 'expense'
 type TransactionRow = {
   id: string
   user_id: string
+  book_id?: string | null
   entry_date: string
   type: TransactionType
   category: string | null
@@ -708,6 +763,21 @@ type DashboardEventRow = {
 
 const { apiFetch, userId } = useBackendApi()
 const { currentUser } = useAuth()
+
+// Multi-Book Finance System
+const {
+  books,
+  isLoadingBooks,
+  selectedBookId,
+  selectedBook,
+  fetchBooks,
+  selectBook,
+} = useFinanceBooks()
+
+const getBookById = (bookId?: string | null) => {
+  if (!bookId) return null
+  return books.value.find(b => b.id === bookId) || null
+}
 
 const userDisplayName = computed(() => currentUser.value?.fullName?.trim() || currentUser.value?.email?.split('@')[0] || 'MyLife User')
 
@@ -1677,6 +1747,7 @@ const nextStudyAlertBoxClass = computed(() => {
 type BackendTransaction = {
   id: string
   userId: string
+  bookId?: string | null
   type: string
   amount: number
   category: string | null
@@ -1724,6 +1795,7 @@ type BackendActivity = {
 const normalizeTransactionRows = (rows: BackendTransaction[]): TransactionRow[] => rows.map((row) => ({
   id: String(row.id),
   user_id: String(row.userId),
+  book_id: row.bookId ? String(row.bookId) : null,
   entry_date: String(row.transactionDate).slice(0, 10),
   type: row.type === 'income' ? 'income' : 'expense',
   category: typeof row.category === 'string' ? row.category : null,
@@ -1759,7 +1831,8 @@ const loadTransactions = async () => {
   errorMessage.value = ''
   try {
     if (!userId.value) return
-    const data = await apiFetch<BackendTransaction[]>(`/api/Finance/${userId.value}`)
+    const query = selectedBookId.value && selectedBookId.value !== 'all' ? `?bookId=${selectedBookId.value}` : ''
+    const data = await apiFetch<BackendTransaction[]>(`/api/Finance/${userId.value}${query}`)
     const sorted = [...data].sort((a, b) => b.transactionDate.localeCompare(a.transactionDate))
     transactions.value = normalizeTransactionRows(sorted)
   } catch (error: any) {
@@ -1866,6 +1939,7 @@ const loadEvents = async () => {
 type BackendRecurringExpense = {
   id: string
   userId: string
+  bookId?: string | null
   title: string
   amount: number
   category: string
@@ -1883,7 +1957,8 @@ const loadRecurringExpenses = async () => {
   isRecurringLoading.value = true
   try {
     if (!userId.value) return
-    const data = await apiFetch<BackendRecurringExpense[]>(`/api/Finance/recurring/${userId.value}`)
+    const query = selectedBookId.value && selectedBookId.value !== 'all' ? `?bookId=${selectedBookId.value}` : ''
+    const data = await apiFetch<BackendRecurringExpense[]>(`/api/Finance/recurring/${userId.value}${query}`)
     recurringExpenses.value = data || []
   } catch (error: any) {
     console.error('Load dashboard recurring expenses error:', error)
@@ -2009,6 +2084,7 @@ const payDashboardRecurring = async (item: BackendRecurringExpense) => {
     // 1. Record expense
     const bodyTx = {
       userId: userId.value,
+      bookId: item.bookId || null,
       type: 'expense',
       amount: item.amount,
       category: item.category || 'ค่าใช้จ่ายประจำ',
@@ -2027,7 +2103,7 @@ const payDashboardRecurring = async (item: BackendRecurringExpense) => {
 
     const bodyRecurring = {
       ...item,
-      startDate: `${y}-${m}-${d}T00:00:00`,
+      startDate: `${y}-${m}-${d}T00:00:00.000Z`,
     }
     await apiFetch(`/api/Finance/recurring/${item.id}`, { method: 'PUT', body: bodyRecurring })
 
@@ -2041,10 +2117,17 @@ const payDashboardRecurring = async (item: BackendRecurringExpense) => {
   }
 }
 
+watch(selectedBookId, () => {
+  if (isModuleEnabled('cashflow')) {
+    loadTransactions()
+    loadRecurringExpenses()
+  }
+})
+
 const refreshOverview = async () => {
   const promises: Promise<any>[] = []
   if (isModuleEnabled('cashflow')) {
-    promises.push(loadTransactions(), loadRecurringExpenses())
+    promises.push(fetchBooks(), loadTransactions(), loadRecurringExpenses())
   }
   if (isModuleEnabled('study-schedule')) {
     promises.push(loadStudySchedules())
