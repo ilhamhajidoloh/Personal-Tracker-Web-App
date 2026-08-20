@@ -72,8 +72,10 @@ type BackendLineStatus = {
   connectedAt: string | null
 }
 
-export const getLineConnectionStatus = async (apiBase: string, userId: string): Promise<LineConnectionStatus> => {
-  const data = await $fetch<BackendLineStatus>(`${apiBase}/api/Line/${userId}`).catch(() => null)
+export const getLineConnectionStatus = async (apiBase: string, userId: string, authHeaders: Record<string, string> = {}): Promise<LineConnectionStatus> => {
+  const data = await $fetch<BackendLineStatus>(`${apiBase}/api/Line/${userId}`, {
+    headers: authHeaders,
+  }).catch(() => null)
   if (!data?.connected) return { connected: false, lineUserId: '', notificationsEnabled: false, connectedAt: null }
   return {
     connected: true,

@@ -1,11 +1,12 @@
-import { requireBackendUserId } from '../../utils/auth'
+import { getBackendAuthHeader, requireBackendUserId } from '../../utils/auth'
 import { getLineConnectionStatus, pushLineTextMessage } from '../../utils/line'
 
 export default defineEventHandler(async (event) => {
   const authUserId = await requireBackendUserId(event)
 
   const config = useRuntimeConfig(event)
-  const connection = await getLineConnectionStatus(config.public.apiBase, authUserId)
+  const authHeaders = await getBackendAuthHeader(event, authUserId)
+  const connection = await getLineConnectionStatus(config.public.apiBase, authUserId, authHeaders)
 
   if (!connection.connected) {
     throw createError({

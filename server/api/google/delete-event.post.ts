@@ -1,4 +1,4 @@
-import { requireBackendUserId } from '../../utils/auth'
+import { getBackendAuthHeader, requireBackendUserId } from '../../utils/auth'
 import { deleteGoogleCalendarEvent, getValidGoogleAccessToken } from '../../utils/googleCalendar'
 
 type DeleteEventBody = {
@@ -21,6 +21,7 @@ export default defineEventHandler(async (event): Promise<DeleteEventResponse> =>
   }
 
   const config = useRuntimeConfig(event)
+  const authHeaders = await getBackendAuthHeader(event, authUserId)
 
   console.log('[delete-event] Request to delete Google Event ID:', googleEventId)
 
@@ -28,7 +29,7 @@ export default defineEventHandler(async (event): Promise<DeleteEventResponse> =>
     clientId: config.google.clientId,
     clientSecret: config.google.clientSecret,
     redirectUri: `${config.public.appUrl}/api/google/callback`,
-  })
+  }, authHeaders)
 
   if (!accessToken) {
     console.log('[delete-event] Access token not found or not connected')

@@ -1,4 +1,4 @@
-import { requireBackendUserId } from '../../utils/auth'
+import { getBackendAuthHeader, requireBackendUserId } from '../../utils/auth'
 import { activityToGoogleEventRow, getValidGoogleAccessToken, upsertGoogleCalendarEvent, type BackendActivityForSync } from '../../utils/googleCalendar'
 
 type SyncEventBody = {
@@ -21,18 +21,22 @@ export default defineEventHandler(async (event): Promise<SyncEventResponse> => {
   }
 
   const config = useRuntimeConfig(event)
+  const authHeaders = await getBackendAuthHeader(event, authUserId)
 
   const accessToken = await getValidGoogleAccessToken(config.public.apiBase, authUserId, {
     clientId: config.google.clientId,
     clientSecret: config.google.clientSecret,
     redirectUri: `${config.public.appUrl}/api/google/callback`,
-  })
+  }, authHeaders)
 
   if (!accessToken) {
     return { synced: false, reason: 'not_connected' }
   }
 
-  const activity = await $fetch<BackendActivityForSync & { userId: string }>(`${config.public.apiBase}/api/Activity/single/${eventId}`).catch(() => null)
+  const activity = await $fetch<BackendActivityForSync & { userId: string }>(
+    `${config.public.apiBase}/api/Activity/single/${eventId}`,
+    { headers: authHeaders },
+  ).catch(() => null)
 
   if (!activity || activity.userId !== authUserId) {
     throw createError({ statusCode: 404, statusMessage: 'ไม่พบกิจกรรมนี้' })
@@ -46,6 +50,7 @@ export default defineEventHandler(async (event): Promise<SyncEventResponse> => {
     if (googleEventId !== activity.googleEventId) {
       await $fetch(`${config.public.apiBase}/api/Activity/${eventId}/google-sync`, {
         method: 'PUT',
+        headers: authHeaders,
         body: { googleEventId },
       })
       console.log('[sync-event] Updated googleEventId in back_mylife to:', googleEventId)

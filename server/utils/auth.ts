@@ -55,7 +55,7 @@ export const verifyBackendJwt = async (token: string, config: JwtVerifyConfig): 
   }
 }
 
-const extractToken = (event: any): string => {
+export const extractToken = (event: any): string => {
   const authHeader = getHeader(event, 'authorization')
   if (authHeader?.startsWith('Bearer ')) {
     return authHeader.slice(7).trim()
@@ -74,6 +74,75 @@ const extractToken = (event: any): string => {
   }
 
   return tryParse(cookieValue) || tryParse(decodeURIComponent(cookieValue))
+}
+
+const toBase64Url = (value: string) => btoa(value).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '')
+
+const bytesToBinary = (bytes: Uint8Array) => {
+  let binary = ''
+  for (const byte of bytes) binary += String.fromCharCode(byte)
+  return binary
+}
+
+export const createBackendJwt = async (
+  userId: string,
+  config: JwtVerifyConfig,
+  ttlSeconds = 3600,
+): Promise<string> => {
+  const header = { alg: 'HS256', typ: 'JWT' }
+  const now = Math.floor(Date.now() / 1000)
+  const payload = {
+    sub: userId,
+    email: '',
+    fullName: '',
+    jti: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    iat: now,
+    nbf: now - 5,
+    exp: now + ttlSeconds,
+    iss: config.issuer || 'mylife-app',
+    aud: config.audience || 'mylife-app',
+  }
+
+  const headerB64 = toBase64Url(JSON.stringify(header))
+  const payloadB64 = toBase64Url(JSON.stringify(payload))
+  const unsignedToken = `${headerB64}.${payloadB64}`
+
+  const key = await crypto.subtle.importKey(
+    'raw',
+    textEncoder.encode(config.key),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  )
+
+  const signatureBuffer = await crypto.subtle.sign('HMAC', key, textEncoder.encode(unsignedToken))
+  const signatureB64 = toBase64Url(bytesToBinary(new Uint8Array(signatureBuffer)))
+
+  return `${unsignedToken}.${signatureB64}`
+}
+
+export const getBackendAuthHeader = async (event?: any, userId?: string): Promise<Record<string, string>> => {
+  let token = ''
+  if (event) {
+    token = extractToken(event)
+  }
+
+  if (!token && userId) {
+    try {
+      const config = useRuntimeConfig(event)
+      if (config.jwt?.key) {
+        token = await createBackendJwt(userId, {
+          key: config.jwt.key,
+          issuer: config.jwt.issuer,
+          audience: config.jwt.audience,
+        })
+      }
+    } catch (e) {
+      console.error('Failed to create server backend JWT:', e)
+    }
+  }
+
+  return token ? { Authorization: `Bearer ${token}` } : {}
 }
 
 export const getBackendUserId = async (event: any): Promise<string> => {

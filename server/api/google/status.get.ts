@@ -1,4 +1,4 @@
-import { getBackendUserId } from '../../utils/auth'
+import { getBackendAuthHeader, getBackendUserId } from '../../utils/auth'
 
 export type GoogleCalendarStatus = {
   connected: boolean
@@ -17,7 +17,11 @@ export default defineEventHandler(async (event): Promise<GoogleCalendarStatus> =
   }
 
   const config = useRuntimeConfig(event)
-  const connection = await $fetch<BackendGoogleConnection>(`${config.public.apiBase}/api/GoogleCalendar/${authUserId}`).catch(() => null)
+  const authHeaders = await getBackendAuthHeader(event, authUserId)
+  const connection = await $fetch<BackendGoogleConnection>(
+    `${config.public.apiBase}/api/GoogleCalendar/${authUserId}`,
+    { headers: authHeaders },
+  ).catch(() => null)
 
   return {
     connected: Boolean(connection),

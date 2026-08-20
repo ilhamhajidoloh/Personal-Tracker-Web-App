@@ -1,4 +1,4 @@
-import { requireBackendUserId } from '../../utils/auth'
+import { getBackendAuthHeader, requireBackendUserId } from '../../utils/auth'
 import { getLineConnectionStatus, pushLineTextMessage } from '../../utils/line'
 
 type NotifyBody = {
@@ -26,7 +26,8 @@ export default defineEventHandler(async (event) => {
   }
 
   const config = useRuntimeConfig(event)
-  const connection = await getLineConnectionStatus(config.public.apiBase, authUserId)
+  const authHeaders = await getBackendAuthHeader(event, authUserId)
+  const connection = await getLineConnectionStatus(config.public.apiBase, authUserId, authHeaders)
 
   if (!connection.connected) {
     return {

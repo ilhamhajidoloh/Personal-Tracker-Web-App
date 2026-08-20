@@ -1,4 +1,4 @@
-import { requireBackendUserId } from '../../utils/auth'
+import { getBackendAuthHeader, requireBackendUserId } from '../../utils/auth'
 import { activityToGoogleEventRow, getValidGoogleAccessToken, upsertGoogleCalendarEvent, type BackendActivityForSync } from '../../utils/googleCalendar'
 
 type SyncAllResponse = {
@@ -12,19 +12,23 @@ export default defineEventHandler(async (event): Promise<SyncAllResponse> => {
   const authUserId = await requireBackendUserId(event)
 
   const config = useRuntimeConfig(event)
+  const authHeaders = await getBackendAuthHeader(event, authUserId)
 
   const accessToken = await getValidGoogleAccessToken(config.public.apiBase, authUserId, {
     clientId: config.google.clientId,
     clientSecret: config.google.clientSecret,
     redirectUri: `${config.public.appUrl}/api/google/callback`,
-  })
+  }, authHeaders)
 
   if (!accessToken) {
     return { success: false, processedCount: 0, failedCount: 0, reason: 'not_connected' }
   }
 
   // Fetch all activities for the user that have never been synced to Google
-  const allActivities = await $fetch<BackendActivityForSync[]>(`${config.public.apiBase}/api/Activity/${authUserId}`).catch((err) => {
+  const allActivities = await $fetch<BackendActivityForSync[]>(
+    `${config.public.apiBase}/api/Activity/${authUserId}`,
+    { headers: authHeaders },
+  ).catch((err) => {
     console.error('Google Calendar sync-all fetch error:', err)
     throw createError({ statusCode: 500, statusMessage: 'ไม่สามารถดึงข้อมูลกิจกรรมได้' })
   })
@@ -50,6 +54,7 @@ export default defineEventHandler(async (event): Promise<SyncAllResponse> => {
         try {
           await $fetch(`${config.public.apiBase}/api/Activity/${activity.id}/google-sync`, {
             method: 'PUT',
+            headers: authHeaders,
             body: { googleEventId },
           })
           processedCount++

@@ -1,4 +1,4 @@
-import { requireBackendUserId } from '../../utils/auth'
+import { getBackendAuthHeader, requireBackendUserId } from '../../utils/auth'
 import { getLineConnectionStatus, normalizeLineUserId } from '../../utils/line'
 
 type ConnectLineBody = {
@@ -20,9 +20,11 @@ export default defineEventHandler(async (event) => {
   }
 
   const config = useRuntimeConfig(event)
+  const authHeaders = await getBackendAuthHeader(event, authUserId)
 
   await $fetch(`${config.public.apiBase}/api/Line/${authUserId}/connect`, {
     method: 'POST',
+    headers: authHeaders,
     body: {
       lineUserId,
       notificationsEnabled: body?.notificationsEnabled !== false,
@@ -32,5 +34,5 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 500, statusMessage: 'ไม่สามารถบันทึกข้อมูล LINE ได้' })
   })
 
-  return await getLineConnectionStatus(config.public.apiBase, authUserId)
+  return await getLineConnectionStatus(config.public.apiBase, authUserId, authHeaders)
 })

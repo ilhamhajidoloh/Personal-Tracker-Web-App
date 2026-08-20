@@ -1,3 +1,4 @@
+import { getBackendAuthHeader } from '../../utils/auth'
 import { buildGoogleTokenExpiry, exchangeGoogleCode, verifyGoogleState } from '../../utils/googleCalendar'
 
 export default defineEventHandler(async (event) => {
@@ -36,8 +37,10 @@ export default defineEventHandler(async (event) => {
     }
 
     try {
+      const authHeaders = await getBackendAuthHeader(event, verifiedState.userId)
       await $fetch(`${config.public.apiBase}/api/GoogleCalendar/${verifiedState.userId}`, {
         method: 'PUT',
+        headers: authHeaders,
         body: {
           accessToken: tokens.access_token,
           refreshToken: tokens.refresh_token,

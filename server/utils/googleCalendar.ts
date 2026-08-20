@@ -184,8 +184,11 @@ export const getValidGoogleAccessToken = async (
   apiBase: string,
   userId: string,
   config: GoogleOAuthConfig,
+  authHeaders: Record<string, string> = {},
 ): Promise<string | null> => {
-  const connection = await $fetch<GoogleConnectionRow>(`${apiBase}/api/GoogleCalendar/${userId}`).catch(() => null)
+  const connection = await $fetch<GoogleConnectionRow>(`${apiBase}/api/GoogleCalendar/${userId}`, {
+    headers: authHeaders,
+  }).catch(() => null)
   if (!connection) return null
 
   const expiresAt = new Date(connection.tokenExpiresAt).getTime()
@@ -197,13 +200,17 @@ export const getValidGoogleAccessToken = async (
   const refreshed = await refreshGoogleAccessToken(connection.refreshToken, config)
 
   if (!refreshed) {
-    await $fetch(`${apiBase}/api/GoogleCalendar/${userId}`, { method: 'DELETE' }).catch(() => {})
+    await $fetch(`${apiBase}/api/GoogleCalendar/${userId}`, {
+      method: 'DELETE',
+      headers: authHeaders,
+    }).catch(() => {})
     return null
   }
 
   const newExpiresAt = new Date(Date.now() + refreshed.expires_in * 1000).toISOString()
   await $fetch(`${apiBase}/api/GoogleCalendar/${userId}`, {
     method: 'PUT',
+    headers: authHeaders,
     body: {
       accessToken: refreshed.access_token,
       refreshToken: connection.refreshToken,
