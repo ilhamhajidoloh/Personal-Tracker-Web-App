@@ -1,3 +1,4 @@
+import { createBackendJwt } from '../../utils/auth'
 import {
   extractLineLinkToken,
   replyLineMessages,
@@ -65,6 +66,20 @@ export default defineEventHandler(async (event) => {
   const apiBase = config.public.apiBase
   const accessToken = config.line.channelAccessToken
 
+  const getUserAuthHeaders = async (targetUserId: string): Promise<Record<string, string>> => {
+    if (!config.jwt?.key) return {}
+    try {
+      const token = await createBackendJwt(targetUserId, {
+        key: config.jwt.key,
+        issuer: config.jwt.issuer,
+        audience: config.jwt.audience,
+      })
+      return { Authorization: `Bearer ${token}` }
+    } catch {
+      return {}
+    }
+  }
+
   // ── Helpers ────────────────────────────────────────────────────────────────
 
   const reply = async (replyToken: string | undefined, text: string) => {
@@ -110,13 +125,15 @@ export default defineEventHandler(async (event) => {
       if (!linkPayload) { await reply(replyToken, invalidCodeMessage); continue }
 
       try {
+        const authHeaders = await getUserAuthHeaders(linkPayload.userId)
         await $fetch(`${apiBase}/api/Line/${linkPayload.userId}/connect`, {
           method: 'POST',
+          headers: authHeaders,
           body: { lineUserId, notificationsEnabled: linkPayload.notificationsEnabled },
         })
         await reply(replyToken, successMessage)
-      } catch (err) {
-        console.error('LINE link connect error:', err)
+      } catch (err: any) {
+        console.error('LINE link connect error:', err?.data || err?.message || err)
         await reply(replyToken, 'ไม่พบบัญชี MyLife ที่ต้องการเชื่อม กรุณากลับไปสร้างโค้ดใหม่')
       }
       continue
@@ -124,20 +141,22 @@ export default defineEventHandler(async (event) => {
 
     // ── 2. Find linked MyLife user ───────────────────────────────────────────
 
-    const userInfo = await findUserByLineId(apiBase, lineUserId)
+    const systemHeaders = await getUserAuthHeaders('system-line')
+    const userInfo = await findUserByLineId(apiBase, lineUserId, systemHeaders)
     if (!userInfo) {
       await reply(replyToken, 'ยังไม่ได้เชื่อมต่อ LINE กับ MyLife\nกรุณาเปิดแอปแล้วไปที่ Profile → สร้างโค้ดเชื่อมต่อ')
       continue
     }
 
     const { userId } = userInfo
+    const userHeaders = await getUserAuthHeaders(userId)
     const session = getLineSession(userInfo.sessionStateJson)
 
     // ── 3. Cancel (any state) ───────────────────────────────────────────────
 
     if (isCancelText(text)) {
       if (session) {
-        await setLineSession(apiBase, userId, null)
+        await setLineSession(apiBase, userId, null, userHeaders)
         await reply(replyToken, '❌ ยกเลิกแล้ว\nพิมพ์ "บันทึก" เพื่อเริ่มใหม่')
       } else {
         await reply(replyToken, 'ไม่มีรายการที่กำลังบันทึกอยู่\nพิมพ์ "บันทึก" เพื่อเริ่มต้น')
@@ -149,20 +168,20 @@ export default defineEventHandler(async (event) => {
 
     if (!session) {
       if (isIncomeText(text)) {
-        const categories = await getExistingCategories(apiBase, userId, 'income')
-        await setLineSession(apiBase, userId, newSession('awaiting_category', { type: 'income' }))
+        const categories = await getExistingCategories(apiBase, userId, 'income', userHeaders)
+        await setLineSession(apiBase, userId, newSession('awaiting_category', { type: 'income' }), userHeaders)
         await replyMsgs(replyToken, [makeCategorySelectMsg('income', categories)])
         continue
       }
       if (isExpenseText(text)) {
-        const categories = await getExistingCategories(apiBase, userId, 'expense')
-        await setLineSession(apiBase, userId, newSession('awaiting_category', { type: 'expense' }))
+        const categories = await getExistingCategories(apiBase, userId, 'expense', userHeaders)
+        await setLineSession(apiBase, userId, newSession('awaiting_category', { type: 'expense' }), userHeaders)
         await replyMsgs(replyToken, [makeCategorySelectMsg('expense', categories)])
         continue
       }
       // Trigger word or any unknown text → show menu
       if (isCashflowTrigger(text)) {
-        await setLineSession(apiBase, userId, newSession('awaiting_type'))
+        await setLineSession(apiBase, userId, newSession('awaiting_type'), userHeaders)
       }
       await replyMsgs(replyToken, [makeTypeSelectMsg()])
       continue
@@ -172,14 +191,14 @@ export default defineEventHandler(async (event) => {
 
     if (session.state === 'awaiting_type') {
       if (isIncomeText(text)) {
-        const categories = await getExistingCategories(apiBase, userId, 'income')
-        await setLineSession(apiBase, userId, newSession('awaiting_category', { type: 'income' }))
+        const categories = await getExistingCategories(apiBase, userId, 'income', userHeaders)
+        await setLineSession(apiBase, userId, newSession('awaiting_category', { type: 'income' }), userHeaders)
         await replyMsgs(replyToken, [makeCategorySelectMsg('income', categories)])
         continue
       }
       if (isExpenseText(text)) {
-        const categories = await getExistingCategories(apiBase, userId, 'expense')
-        await setLineSession(apiBase, userId, newSession('awaiting_category', { type: 'expense' }))
+        const categories = await getExistingCategories(apiBase, userId, 'expense', userHeaders)
+        await setLineSession(apiBase, userId, newSession('awaiting_category', { type: 'expense' }), userHeaders)
         await replyMsgs(replyToken, [makeCategorySelectMsg('expense', categories)])
         continue
       }
@@ -192,7 +211,7 @@ export default defineEventHandler(async (event) => {
     if (session.state === 'awaiting_category') {
       const type = session.type!
       const category = text
-      await setLineSession(apiBase, userId, newSession('awaiting_amount', { type, category }))
+      await setLineSession(apiBase, userId, newSession('awaiting_amount', { type, category }), userHeaders)
       await replyMsgs(replyToken, [makeAmountMsg(type, category)])
       continue
     }
@@ -209,14 +228,14 @@ export default defineEventHandler(async (event) => {
       const category = session.category
 
       try {
-        await saveTransaction(apiBase, userId, type, amount, category)
-        const balance = await getBalance(apiBase, userId)
+        await saveTransaction(apiBase, userId, type, amount, category, userHeaders)
+        const balance = await getBalance(apiBase, userId, userHeaders)
         const summary = buildSummaryMessage(type, amount, category, balance)
-        await setLineSession(apiBase, userId, null)
+        await setLineSession(apiBase, userId, null, userHeaders)
         await reply(replyToken, summary)
       } catch (err) {
         console.error('LINE cashflow save error:', err)
-        await setLineSession(apiBase, userId, null)
+        await setLineSession(apiBase, userId, null, userHeaders)
         await reply(replyToken, '❌ บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง\nพิมพ์ "บันทึก" เพื่อเริ่มใหม่')
       }
       continue

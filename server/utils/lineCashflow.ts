@@ -70,9 +70,15 @@ export const getLineSession = (sessionStateJson: string | null | undefined): Lin
   }
 }
 
-export const setLineSession = async (apiBase: string, userId: string, session: LineSession | null) => {
+export const setLineSession = async (
+  apiBase: string,
+  userId: string,
+  session: LineSession | null,
+  authHeaders: Record<string, string> = {},
+) => {
   await $fetch(`${apiBase}/api/Line/${userId}/session`, {
     method: 'PUT',
+    headers: authHeaders,
     body: {
       sessionStateJson: session ? JSON.stringify(session) : null,
       sessionExpiresAt: session ? new Date(session.expires_at).toISOString() : null,
@@ -87,18 +93,33 @@ type BackendLineConnection = {
   sessionStateJson: string | null
 }
 
-export const findUserByLineId = async (apiBase: string, lineUserId: string): Promise<{ userId: string; sessionStateJson: string | null } | null> => {
-  const connection = await $fetch<BackendLineConnection>(`${apiBase}/api/Line/by-line-user/${lineUserId}`).catch(() => null)
+export const findUserByLineId = async (
+  apiBase: string,
+  lineUserId: string,
+  authHeaders: Record<string, string> = {},
+): Promise<{ userId: string; sessionStateJson: string | null } | null> => {
+  const connection = await $fetch<BackendLineConnection>(
+    `${apiBase}/api/Line/by-line-user/${lineUserId}`,
+    { headers: authHeaders },
+  ).catch(() => null)
   if (!connection) return null
   return { userId: connection.userId, sessionStateJson: connection.sessionStateJson }
 }
 
 // ─── Transaction operations ───────────────────────────────────────────────────
 
-export const saveTransaction = async (apiBase: string, userId: string, type: 'income' | 'expense', amount: number, category?: string) => {
+export const saveTransaction = async (
+  apiBase: string,
+  userId: string,
+  type: 'income' | 'expense',
+  amount: number,
+  category?: string,
+  authHeaders: Record<string, string> = {},
+) => {
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' })
   await $fetch(`${apiBase}/api/Finance`, {
     method: 'POST',
+    headers: authHeaders,
     body: {
       userId,
       transactionDate: `${today}T00:00:00`,
@@ -116,8 +137,15 @@ type BackendFinanceSummary = {
   netBalance: number
 }
 
-export const getBalance = async (apiBase: string, userId: string): Promise<{ income: number; expense: number; balance: number }> => {
-  const summary = await $fetch<BackendFinanceSummary>(`${apiBase}/api/Finance/summary/${userId}`).catch(() => null)
+export const getBalance = async (
+  apiBase: string,
+  userId: string,
+  authHeaders: Record<string, string> = {},
+): Promise<{ income: number; expense: number; balance: number }> => {
+  const summary = await $fetch<BackendFinanceSummary>(
+    `${apiBase}/api/Finance/summary/${userId}`,
+    { headers: authHeaders },
+  ).catch(() => null)
   if (!summary) return { income: 0, expense: 0, balance: 0 }
   return { income: summary.totalIncome, expense: summary.totalExpense, balance: summary.netBalance }
 }
@@ -170,8 +198,12 @@ export const getExistingCategories = async (
   apiBase: string,
   userId: string,
   type: 'income' | 'expense',
+  authHeaders: Record<string, string> = {},
 ): Promise<string[]> => {
-  const rows = await $fetch<BackendFinanceRow[]>(`${apiBase}/api/Finance/${userId}`).catch(() => [])
+  const rows = await $fetch<BackendFinanceRow[]>(
+    `${apiBase}/api/Finance/${userId}`,
+    { headers: authHeaders },
+  ).catch(() => [])
   const cats = rows
     .filter(r => r.type === type && r.category)
     .map(r => String(r.category).trim())
