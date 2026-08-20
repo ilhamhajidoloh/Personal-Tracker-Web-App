@@ -235,23 +235,125 @@
 
         <!-- RIGHT column -->
         <div class="space-y-4">
-          <!-- Expense allocation -->
+          <!-- Expense allocation (Donut Chart) -->
           <div class="section-card animate-slide-up delay-100">
             <div class="flex items-center justify-between gap-3 p-5" style="border-bottom: 1px solid var(--border-subtle);">
-              <h2 class="text-sm font-semibold" style="color: var(--text-primary);">สัดส่วนรายจ่ายสูงสุด</h2>
+              <div class="flex items-center gap-2">
+                <div class="w-6 h-6 rounded-md flex items-center justify-center text-xs" style="background: var(--brand-soft); color: var(--brand-ink);">
+                  <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
+                </div>
+                <div>
+                  <h2 class="text-sm font-semibold" style="color: var(--text-primary);">สัดส่วนรายจ่ายสูงสุด</h2>
+                  <p class="text-[10.5px]" style="color: var(--text-muted);">เปรียบเทียบสัดส่วนตามหมวดหมู่</p>
+                </div>
+              </div>
               <NuxtLink to="/cashflow" class="eyebrow" style="color: var(--brand);">ดูทั้งหมด →</NuxtLink>
             </div>
             <div class="p-5">
-              <div v-if="!topExpenseCategories.length" class="text-sm py-6 text-center" style="color: var(--text-muted);">ยังไม่มีข้อมูลรายจ่าย</div>
-              <div v-else class="space-y-4">
-                <div class="flex h-3 rounded-md overflow-hidden gap-0.5" style="background: var(--bg-elevated-2);">
-                  <i v-for="(cat, i) in topExpenseCategories" :key="cat.name" class="block h-full" :style="{ width: (totalExpense > 0 ? (cat.amount / totalExpense * 100) : 0) + '%', background: ['var(--brand)','var(--brand-2)','var(--ink-cyan)'][i] }"></i>
+              <div v-if="!expenseChartData.hasData" class="text-sm py-8 text-center" style="color: var(--text-muted);">
+                <div class="w-10 h-10 mx-auto mb-2 rounded-full flex items-center justify-center" style="background: var(--bg-elevated); color: var(--text-muted);">
+                  <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
                 </div>
-                <div class="space-y-2.5">
-                  <div v-for="(cat, i) in topExpenseCategories" :key="cat.name" class="flex items-center gap-2.5">
-                    <span class="w-2.5 h-2.5 rounded-sm shrink-0" :style="{ background: ['var(--brand)','var(--brand-2)','var(--ink-cyan)'][i] }"></span>
-                    <span class="flex-1 text-[13px] truncate" style="color: var(--text-secondary);">{{ cat.name }}</span>
-                    <span class="num text-[13px] font-semibold" style="color: var(--text-primary);">{{ formatCurrency(cat.amount) }}</span>
+                ยังไม่มีข้อมูลรายจ่าย
+              </div>
+              <div v-else class="flex flex-col sm:flex-row items-center gap-5 sm:gap-6">
+                <!-- SVG Donut / Pie Chart -->
+                <div class="relative shrink-0 flex items-center justify-center">
+                  <svg viewBox="0 0 130 130" class="w-36 h-36 transform -rotate-90">
+                    <!-- Base background track -->
+                    <circle
+                      cx="65"
+                      cy="65"
+                      r="46"
+                      fill="none"
+                      stroke="var(--bg-elevated-2)"
+                      stroke-width="15"
+                    />
+                    <!-- Slices -->
+                    <circle
+                      v-for="slice in expenseChartData.slices"
+                      :key="slice.name"
+                      cx="65"
+                      cy="65"
+                      r="46"
+                      fill="none"
+                      :stroke="slice.stroke"
+                      :stroke-width="hoveredExpenseCategoryIndex === slice.index ? 18 : 15"
+                      :stroke-dasharray="slice.dashArray"
+                      :stroke-dashoffset="slice.dashOffset"
+                      stroke-linecap="round"
+                      class="transition-all duration-300 cursor-pointer"
+                      :style="{
+                        opacity: hoveredExpenseCategoryIndex === null || hoveredExpenseCategoryIndex === slice.index ? '1' : '0.35',
+                        filter: hoveredExpenseCategoryIndex === slice.index ? 'drop-shadow(0 2px 6px rgba(0,0,0,0.3))' : 'none',
+                      }"
+                      @mouseenter="hoveredExpenseCategoryIndex = slice.index"
+                      @mouseleave="hoveredExpenseCategoryIndex = null"
+                    />
+                  </svg>
+
+                  <!-- Center Text Info -->
+                  <div class="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none px-2">
+                    <template v-if="activeExpenseSlice">
+                      <span class="text-[10px] font-semibold truncate max-w-[80px]" style="color: var(--text-muted);">
+                        {{ activeExpenseSlice.name }}
+                      </span>
+                      <span class="num text-base font-extrabold tracking-tight" :style="{ color: activeExpenseSlice.stroke }">
+                        {{ activeExpenseSlice.percentFormatted }}
+                      </span>
+                      <span class="num text-[9.5px] font-medium truncate max-w-[80px]" style="color: var(--text-secondary);">
+                        {{ formatCurrency(activeExpenseSlice.amount) }}
+                      </span>
+                    </template>
+                    <template v-else>
+                      <span class="text-[9.5px] font-medium" style="color: var(--text-muted);">รายจ่ายรวม</span>
+                      <span class="num text-[13px] font-extrabold leading-tight" style="color: var(--text-primary);">
+                        {{ formatCurrency(expenseChartData.total) }}
+                      </span>
+                      <span class="text-[9px] mt-0.5" style="color: var(--text-muted);">{{ expenseChartData.slices.length }} หมวดหมู่</span>
+                    </template>
+                  </div>
+                </div>
+
+                <!-- Legend & Breakdown List -->
+                <div class="flex-1 w-full space-y-2.5 min-w-0">
+                  <div
+                    v-for="slice in expenseChartData.slices"
+                    :key="slice.name"
+                    class="p-2 rounded-xl transition-all duration-200 cursor-pointer"
+                    :style="hoveredExpenseCategoryIndex === slice.index 
+                      ? 'background: var(--bg-elevated); box-shadow: var(--shadow-sm); transform: translateX(2px);' 
+                      : 'background: transparent;'"
+                    @mouseenter="hoveredExpenseCategoryIndex = slice.index"
+                    @mouseleave="hoveredExpenseCategoryIndex = null"
+                  >
+                    <div class="flex items-center justify-between gap-2">
+                      <div class="flex items-center gap-2 min-w-0">
+                        <span class="w-2.5 h-2.5 rounded-full shrink-0" :style="{ background: slice.stroke }"></span>
+                        <span class="text-[12.5px] font-medium truncate" :style="{ color: hoveredExpenseCategoryIndex === slice.index ? 'var(--text-primary)' : 'var(--text-secondary)' }">
+                          {{ slice.name }}
+                        </span>
+                      </div>
+                      <div class="flex items-center gap-2 shrink-0">
+                        <span class="num text-[10.5px] font-bold px-1.5 py-0.5 rounded-md" :style="{ background: slice.bgColor, color: slice.textColor }">
+                          {{ slice.percentFormatted }}
+                        </span>
+                        <span class="num text-[12.5px] font-semibold" style="color: var(--text-primary);">
+                          {{ formatCurrency(slice.amount) }}
+                        </span>
+                      </div>
+                    </div>
+                    <!-- Mini comparison bar -->
+                    <div class="w-full h-1 rounded-full overflow-hidden mt-1.5" style="background: var(--bg-elevated-2);">
+                      <div
+                        class="h-full rounded-full transition-all duration-500"
+                        :style="{
+                          width: slice.percent + '%',
+                          background: slice.stroke,
+                          opacity: hoveredExpenseCategoryIndex === null || hoveredExpenseCategoryIndex === slice.index ? 1 : 0.4
+                        }"
+                      ></div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -479,13 +581,13 @@
 
                 <!-- Next Upcoming variant -->
                 <template v-else>
-                  <div class="flex items-center justify-between text-[11px]">
+                  <div class="flex items-center justify-between text-xs">
                     <span class="font-semibold flex items-center gap-1.5" style="color: var(--brand-ink);">
                       <span>⏰</span>
                       กิจกรรมถัดไป
                     </span>
                     <span class="num text-xs font-mono font-bold" style="color: var(--brand-ink);">
-                      {{ getDashboardUpcomingEventDetails(event).progress }}% • {{ getDashboardUpcomingEventDetails(event).durationText }}
+                      {{ getDashboardUpcomingEventDetails(event).progress }}%
                     </span>
                   </div>
                   <div class="num text-sm font-bold font-mono tracking-tight" style="color: var(--text-primary);">
@@ -494,9 +596,9 @@
                   <div class="w-full h-1.5 rounded-full overflow-hidden" style="background: rgba(59, 78, 240, 0.15);">
                     <div class="h-full rounded-full transition-all duration-1000 ease-linear" :style="{ width: getDashboardUpcomingEventDetails(event).progress + '%', background: 'var(--brand)' }"></div>
                   </div>
-                  <div class="flex items-center justify-between text-[10px]" style="color: var(--text-muted);">
-                    <span>ตอนนี้</span>
-                    <span class="font-semibold" style="color: var(--brand-ink);">{{ getDashboardUpcomingEventDetails(event).progressLabel }}: {{ getDashboardUpcomingEventDetails(event).progress }}%</span>
+                  <div class="flex items-center justify-between text-[10.5px] gap-2" style="color: var(--text-muted);">
+                    <span class="shrink-0">รอบ 30 วัน</span>
+                    <span class="font-medium truncate text-right" style="color: var(--brand-ink);">เริ่ม {{ displayEventDateTimeShort(event) }}</span>
                   </div>
                 </template>
               </div>
@@ -742,18 +844,94 @@ const remainingProgressText = computed(() => {
   return `คงเหลือ ${formatPercent((remainingBalance.value / totalIncome.value) * 100)}% ของรายรับ`
 })
 
+const expenseDonutColors = [
+  { stroke: 'var(--brand)', text: 'var(--brand)', bg: 'rgba(59, 78, 240, 0.12)' },
+  { stroke: 'var(--ink-rose)', text: 'var(--ink-rose)', bg: 'rgba(208, 39, 72, 0.12)' },
+  { stroke: 'var(--ink-amber)', text: 'var(--ink-amber)', bg: 'rgba(182, 133, 42, 0.12)' },
+  { stroke: 'var(--ink-cyan)', text: 'var(--ink-cyan)', bg: 'rgba(13, 139, 164, 0.12)' },
+  { stroke: 'var(--brand-2)', text: 'var(--brand-2)', bg: 'rgba(111, 91, 255, 0.12)' },
+  { stroke: 'var(--text-muted)', text: 'var(--text-muted)', bg: 'rgba(139, 147, 167, 0.12)' },
+]
+
+const hoveredExpenseCategoryIndex = ref<number | null>(null)
+
+const expenseChartData = computed(() => {
+  const expenseList = transactions.value.filter((item) => item.type === 'expense')
+  const total = expenseList.reduce((sum, item) => sum + item.amount, 0)
+  if (total <= 0) {
+    return {
+      slices: [],
+      total: 0,
+      hasData: false,
+    }
+  }
+
+  const categoryTotals = expenseList.reduce<Record<string, number>>((acc, item) => {
+    const key = item.category?.trim() || 'ไม่ระบุหมวดหมู่'
+    acc[key] = (acc[key] || 0) + item.amount
+    return acc
+  }, {})
+
+  const sortedEntries = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1])
+  
+  // Show top 4 categories and group the rest into 'อื่นๆ' if more than 4
+  const topCount = 4
+  let displayCategories: { name: string; amount: number }[] = []
+  if (sortedEntries.length <= topCount) {
+    displayCategories = sortedEntries.map(([name, amount]) => ({ name, amount }))
+  } else {
+    const main = sortedEntries.slice(0, topCount).map(([name, amount]) => ({ name, amount }))
+    const othersAmount = sortedEntries.slice(topCount).reduce((sum, [, amt]) => sum + amt, 0)
+    displayCategories = [...main, { name: 'อื่นๆ', amount: othersAmount }]
+  }
+
+  const radius = 46
+  const circumference = 2 * Math.PI * radius // ≈ 289.0265
+  let currentOffset = 0
+
+  const slices = displayCategories.map((cat, index) => {
+    const percent = (cat.amount / total) * 100
+    const dashLength = (percent / 100) * circumference
+    const colorObj = expenseDonutColors[index % expenseDonutColors.length]!
+
+    // Gap between slices if more than 1 slice
+    const gap = displayCategories.length > 1 ? 2.5 : 0
+    const visualDashLength = Math.max(dashLength - gap, 0.5)
+
+    const sliceInfo = {
+      index,
+      name: cat.name,
+      amount: cat.amount,
+      percent,
+      percentFormatted: `${formatPercent(percent)}%`,
+      stroke: colorObj.stroke,
+      textColor: colorObj.text,
+      bgColor: colorObj.bg,
+      dashArray: `${visualDashLength} ${circumference - visualDashLength}`,
+      dashOffset: -currentOffset,
+    }
+    currentOffset += dashLength
+    return sliceInfo
+  })
+
+  return {
+    slices,
+    total,
+    hasData: true,
+    circumference,
+    radius,
+  }
+})
+
+const activeExpenseSlice = computed(() => {
+  if (hoveredExpenseCategoryIndex.value !== null) {
+    return expenseChartData.value.slices[hoveredExpenseCategoryIndex.value] || null
+  }
+  return null
+})
+
 const topExpenseCategories = computed(() => {
-  const categoryTotals = transactions.value
-    .filter((item) => item.type === 'expense')
-    .reduce<Record<string, number>>((acc, item) => {
-      const key = item.category?.trim() || 'ไม่ระบุหมวดหมู่'
-      acc[key] = (acc[key] || 0) + item.amount
-      return acc
-    }, {})
-  return Object.entries(categoryTotals)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 3)
-    .map(([name, amount]) => ({ name, amount }))
+  return expenseChartData.value.slices.slice(0, 3).map((s) => ({ name: s.name, amount: s.amount }))
 })
 
 const topExpenseCategory = computed(() => topExpenseCategories.value[0] || { name: '-', amount: 0 })
@@ -1192,34 +1370,11 @@ const getDashboardUpcomingEventDetails = (item: DashboardEventRow) => {
     durationText = `${Math.max(1, durationMin)} นาที`
   }
 
-  // Adaptive progress towards start time (Today / 7-Day / 30-Day countdown)
-  const now = new Date(nowMs)
-  const todayStartMs = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0).getTime()
-  let progress = 0
-  let progressLabel = ''
-
-  if (startMs <= todayStartMs + 24 * 60 * 60 * 1000) {
-    // Event is today! Progress of the day towards start time
-    const totalDayWindow = Math.max(1, startMs - todayStartMs)
-    const elapsedToday = Math.max(0, nowMs - todayStartMs)
-    progress = Math.min(99, Math.max(1, (elapsedToday / totalDayWindow) * 100))
-    progressLabel = 'ความคืบหน้าของวันนี้'
-  } else if (remainingMs <= 7 * 24 * 60 * 60 * 1000) {
-    // Within 7 days
-    const window7d = 7 * 24 * 60 * 60 * 1000
-    const elapsed7d = window7d - remainingMs
-    progress = Math.min(99, Math.max(5, (elapsed7d / window7d) * 100))
-    progressLabel = 'นับถอยหลังรอบ 7 วัน'
-  } else if (remainingMs <= 30 * 24 * 60 * 60 * 1000) {
-    // Within 30 days
-    const window30d = 30 * 24 * 60 * 60 * 1000
-    const elapsed30d = window30d - remainingMs
-    progress = Math.min(99, Math.max(5, (elapsed30d / window30d) * 100))
-    progressLabel = 'นับถอยหลังรอบ 30 วัน'
-  } else {
-    progress = 5
-    progressLabel = 'เตรียมการล่วงหน้า'
-  }
+  // Fixed 30-Day countdown cycle
+  const window30d = 30 * 24 * 60 * 60 * 1000
+  const elapsed30d = Math.max(0, window30d - remainingMs)
+  const progress = Math.min(100, Math.max(0, (elapsed30d / window30d) * 100))
+  const progressLabel = 'นับถอยหลังรอบ 30 วัน'
 
   return {
     remainingMs,
@@ -1232,6 +1387,7 @@ const getDashboardUpcomingEventDetails = (item: DashboardEventRow) => {
     progressLabel,
     progress: Number(progress.toFixed(1)),
     isWithin24h: remainingMs <= 24 * 60 * 60 * 1000,
+    isWithin30Days: remainingMs <= window30d,
   }
 }
 
@@ -1272,10 +1428,13 @@ const isNextUpcomingEvent = (item: DashboardEventRow) => {
   // If there are ongoing events, this is not "next upcoming"
   if (ongoingEvents.length > 0) return false
 
-  // Otherwise, check if this is the first upcoming event
+  const maxCountdownMs = 30 * 24 * 60 * 60 * 1000 // Fix รอบ 30 วัน (หากเกิน 30 วัน จะไม่แสดง Countdown)
+
+  // Otherwise, check if this is the first upcoming event within 30 days
   const upcoming = dashboardEvents.value.filter(e => {
     const { startMs } = getDashboardEventDateTimeBounds(e)
-    return startMs > nowMs
+    const remainingMs = startMs - nowMs
+    return remainingMs > 0 && remainingMs <= maxCountdownMs
   }).sort((a, b) => {
     const aStart = getDashboardEventDateTimeBounds(a).startMs
     const bStart = getDashboardEventDateTimeBounds(b).startMs
