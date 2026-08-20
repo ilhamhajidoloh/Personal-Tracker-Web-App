@@ -869,7 +869,10 @@ const importantProfileRows = computed(() => [
 
 const lineStatusLabel = computed(() => {
   if (!lineStatus.value.connected) return 'ยังไม่ได้เชื่อมต่อ'
-  return lineStatus.value.notificationsEnabled ? 'เชื่อมต่อแล้ว · แจ้งเตือนเปิด' : 'เชื่อมต่อแล้ว · แจ้งเตือนปิด'
+  const parts = []
+  if (lineStatus.value.notificationsEnabled) parts.push('แจ้งงาน/กิจกรรม')
+  if (lineStatus.value.classRemindersEnabled) parts.push('แจ้งคาบเรียน')
+  return parts.length > 0 ? `เชื่อมต่อแล้ว · ${parts.join(' + ')}` : 'เชื่อมต่อแล้ว · ปิดการแจ้งเตือน'
 })
 
 const lineStatusBadgeClass = computed(() => {
@@ -953,7 +956,7 @@ const getLineShareUrl = (message: string) => `https://line.me/R/msg/text/?${enco
 const openLineComposer = (message: string) => { if (!import.meta.client) return; window.open(getLineShareUrl(message), '_blank', 'noopener,noreferrer') }
 
 const saveLineConnection = async (lineUserId: string) => {
-  lineStatus.value = await $fetch<LineConnectionStatus>('/api/line/connect', {
+  const updated = await $fetch<LineConnectionStatus>('/api/line/connect', {
     method: 'POST', body: {
       lineUserId,
       notificationsEnabled: lineNotificationsEnabled.value,
@@ -961,9 +964,9 @@ const saveLineConnection = async (lineUserId: string) => {
       classReminderMinutes: lineClassReminderMinutes.value,
     },
   })
-  syncLineForm()
   lineLinkCode.value = null
   stopLineStatusPolling()
+  return updated
 }
 
 const generateLineLinkCode = async (options: { openLine?: boolean } = {}) => {
@@ -1003,7 +1006,12 @@ const connectLine = async () => {
   const lineUserId = normalizeLineUserIdInput(lineUserIdInput.value)
   if (!lineUserId) { toastError('กรุณากรอก LINE User ID ให้ถูกต้อง'); return }
   isSavingLine.value = true
-  try { await saveLineConnection(lineUserId); toastSuccess('บันทึกการเชื่อมต่อ LINE สำเร็จ') }
+  try {
+    const updated = await saveLineConnection(lineUserId)
+    lineStatus.value = updated
+    syncLineForm()
+    toastSuccess('บันทึกการเชื่อมต่อ LINE สำเร็จ')
+  }
   catch (error: any) { console.error('Connect line error:', error); toastError(getRequestErrorMessage(error, 'เชื่อมต่อ LINE ไม่สำเร็จ')) }
   finally { isSavingLine.value = false }
 }
@@ -1011,7 +1019,12 @@ const connectLine = async () => {
 const saveLinePreferences = async () => {
   if (!lineStatus.value.connected || isSavingLine.value || isTestingLine.value) return
   isSavingLine.value = true
-  try { await saveLineConnection(lineStatus.value.lineUserId); toastSuccess('บันทึกการตั้งค่าแจ้งเตือน LINE แล้ว') }
+  try {
+    const updated = await saveLineConnection(lineStatus.value.lineUserId)
+    // อัปเดต lineStatus จากค่าที่บันทึกสำเร็จ แทนที่จะ sync จาก server
+    lineStatus.value = updated
+    toastSuccess('บันทึกการตั้งค่าแจ้งเตือน LINE แล้ว')
+  }
   catch (error: any) { console.error('Save line preferences error:', error); toastError(getRequestErrorMessage(error, 'บันทึกการตั้งค่าแจ้งเตือนไม่สำเร็จ')) }
   finally { isSavingLine.value = false }
 }
