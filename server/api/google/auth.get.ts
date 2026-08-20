@@ -13,7 +13,8 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const redirectUri = `${config.public.appUrl}/api/google/callback`
+  const appUrl = (config.public.appUrl || '').replace(/\/+$/, '')
+  const redirectUri = `${appUrl}/api/google/callback`
   const state = await signGoogleState(authUserId, config.google.clientSecret)
   const authUrl = buildGoogleAuthUrl(state, {
     clientId: config.google.clientId,

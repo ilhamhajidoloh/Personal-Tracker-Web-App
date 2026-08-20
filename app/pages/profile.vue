@@ -610,7 +610,7 @@ const googleStatus = ref<GoogleCalendarStatus>({ connected: false, connectedAt: 
 const isSyncingAllGoogle = ref(false)
 const { syncAllEventsToGoogle } = useGoogleCalendarSync()
 
-let lineStatusPollingTimer: ReturnType<typeof setInterval> | null = null
+let lineStatusPollingTimer: ReturnType<typeof setInterval> | number | null = null
 
 const currentUser = computed(() => user.value)
 const createEmptyLineStatus = (): LineConnectionStatus => ({ connected: false, lineUserId: '', notificationsEnabled: false, connectedAt: null })
@@ -928,10 +928,14 @@ const syncAllEvents = async () => {
 
 const consumeGoogleRedirectStatus = () => {
   const googleQuery = route.query.google
+  const reasonQuery = typeof route.query.reason === 'string' ? route.query.reason : ''
   if (!googleQuery) return
-  if (googleQuery === 'success') toastSuccess('เชื่อมต่อ Google Calendar สำเร็จแล้ว')
-  else if (googleQuery === 'error') toastError('เชื่อมต่อ Google Calendar ไม่สำเร็จ กรุณาลองใหม่')
-  const { google, ...restQuery } = route.query
+  if (googleQuery === 'success') {
+    toastSuccess('เชื่อมต่อ Google Calendar สำเร็จแล้ว')
+  } else if (googleQuery === 'error') {
+    toastError(reasonQuery ? `เชื่อมต่อ Google Calendar ไม่สำเร็จ: ${reasonQuery}` : 'เชื่อมต่อ Google Calendar ไม่สำเร็จ กรุณาลองใหม่')
+  }
+  const { google, reason, ...restQuery } = route.query
   router.replace({ query: restQuery })
 }
 
