@@ -10,6 +10,15 @@
         </div>
         <div class="flex items-center gap-2 shrink-0">
           <button
+            @click="openExportModal"
+            :disabled="transactions.length === 0"
+            class="btn-secondary text-sm inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed tap-scale touch-target"
+            title="Export ข้อมูล (PDF, Excel, CSV)"
+          >
+            <svg class="w-4 h-4 text-violet-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+            <span class="font-semibold">Export</span>
+          </button>
+          <button
             @click="isEntryModalOpen = true"
             class="btn-primary text-sm inline-flex items-center gap-2 tap-scale touch-target"
           >
@@ -1061,6 +1070,224 @@
         </div>
       </Transition>
     </Teleport>
+    <!-- Export Modal -->
+    <Teleport to="body">
+      <Transition name="backdrop">
+        <div
+          v-if="isExportModalOpen"
+          class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+          style="background: rgba(3,5,12,0.62); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);"
+        >
+          <Transition name="modal">
+            <div
+              v-if="isExportModalOpen"
+              class="relative z-10 w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl border shadow-2xl overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[85vh]"
+              style="background: var(--bg-card); border-color: var(--border-default);"
+            >
+              <!-- Modal Header -->
+              <div class="flex items-center justify-between px-5 py-4 border-b shrink-0" style="border-color: var(--border-subtle);">
+                <div class="flex items-center gap-3">
+                  <div class="w-9 h-9 rounded-xl bg-violet-500/20 flex items-center justify-center text-lg shrink-0">
+                    📥
+                  </div>
+                  <div>
+                    <h3 class="text-base font-bold" style="color: var(--text-primary);">Export ไฟล์รายการ</h3>
+                    <p class="text-xs" style="color: var(--text-secondary);">เลือกช่วงเวลาและรูปแบบไฟล์ที่ต้องการ</p>
+                  </div>
+                </div>
+                <button
+                  @click="isExportModalOpen = false"
+                  class="w-8 h-8 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white flex items-center justify-center text-sm transition-all tap-scale touch-target"
+                  aria-label="ปิด"
+                >✕</button>
+              </div>
+
+              <!-- Modal Body -->
+              <div class="p-5 overflow-y-auto space-y-4">
+                <!-- Scope Selection (Tabs) -->
+                <div>
+                  <label class="block text-xs font-semibold uppercase tracking-wider mb-2" style="color: var(--text-secondary);">
+                    1. เลือกช่วงเวลาข้อมูล
+                  </label>
+                  <div class="grid grid-cols-3 gap-1.5 p-1 rounded-xl" style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);">
+                    <button
+                      type="button"
+                      @click="exportScope = 'month'"
+                      class="py-2 px-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5"
+                      :class="exportScope === 'month' ? 'bg-violet-600 text-white shadow-sm' : 'text-gray-400 hover:text-white'"
+                    >
+                      <span>📅</span>
+                      <span>รายเดือน</span>
+                    </button>
+                    <button
+                      type="button"
+                      @click="exportScope = 'year'"
+                      class="py-2 px-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5"
+                      :class="exportScope === 'year' ? 'bg-violet-600 text-white shadow-sm' : 'text-gray-400 hover:text-white'"
+                    >
+                      <span>📆</span>
+                      <span>รายปี</span>
+                    </button>
+                    <button
+                      type="button"
+                      @click="exportScope = 'all'"
+                      class="py-2 px-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5"
+                      :class="exportScope === 'all' ? 'bg-violet-600 text-white shadow-sm' : 'text-gray-400 hover:text-white'"
+                    >
+                      <span>📂</span>
+                      <span>ทั้งหมด</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Scope specific inputs -->
+                <div v-if="exportScope === 'month'" class="space-y-1.5">
+                  <label class="block text-xs font-medium" style="color: var(--text-secondary);">เลือกเดือนที่ต้องการ Export</label>
+                  <input
+                    type="month"
+                    v-model="exportMonth"
+                    class="input-glass w-full text-sm font-medium"
+                  />
+                </div>
+
+                <div v-else-if="exportScope === 'year'" class="space-y-1.5">
+                  <label class="block text-xs font-medium" style="color: var(--text-secondary);">เลือกปีที่ต้องการ Export</label>
+                  <select
+                    v-model="exportYear"
+                    class="input-glass w-full text-sm font-medium"
+                  >
+                    <option v-for="y in availableYears" :key="y" :value="y">
+                      ปี พ.ศ. {{ Number(y) + 543 }} (ค.ศ. {{ y }})
+                    </option>
+                  </select>
+                </div>
+
+                <div v-else class="p-3 rounded-xl flex items-center gap-2.5 text-xs" style="background: var(--bg-elevated); border: 1px solid var(--border-subtle); color: var(--text-secondary);">
+                  <span class="text-base">ℹ️</span>
+                  <span>ระบบจะส่งออกรายการบัญชีทั้งหมดในระบบ ({{ transactions.length }} รายการ)</span>
+                </div>
+
+                <!-- Live Summary Preview Box -->
+                <div class="p-3.5 rounded-xl space-y-2.5" style="background: var(--bg-elevated); border: 1px solid var(--border-default);">
+                  <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold truncate max-w-[220px]" style="color: var(--text-primary);">{{ exportPeriodLabel }}</span>
+                    <span class="text-xs px-2 py-0.5 rounded-full font-bold shrink-0" :class="exportTransactions.length > 0 ? 'bg-violet-500/20 text-violet-300' : 'bg-rose-500/20 text-rose-300'">
+                      {{ exportTransactions.length }} รายการ
+                    </span>
+                  </div>
+
+                  <div class="grid grid-cols-3 gap-2 pt-2 border-t text-center" style="border-color: var(--border-subtle);">
+                    <div>
+                      <p class="text-[10px]" style="color: var(--text-muted);">รายรับรวม</p>
+                      <p class="text-xs font-bold text-emerald-400 mt-0.5 truncate">+{{ formatCurrency(exportTotalIncome) }}</p>
+                    </div>
+                    <div>
+                      <p class="text-[10px]" style="color: var(--text-muted);">รายจ่ายรวม</p>
+                      <p class="text-xs font-bold text-rose-400 mt-0.5 truncate">-{{ formatCurrency(exportTotalExpense) }}</p>
+                    </div>
+                    <div>
+                      <p class="text-[10px]" style="color: var(--text-muted);">คงเหลือสุทธิ</p>
+                      <p class="text-xs font-bold mt-0.5 truncate" :class="exportNetBalance >= 0 ? 'text-emerald-400' : 'text-rose-400'">
+                        {{ formatCurrency(exportNetBalance) }}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Export Action Buttons -->
+                <div class="space-y-2 pt-1">
+                  <label class="block text-xs font-semibold uppercase tracking-wider mb-1" style="color: var(--text-secondary);">
+                    2. ดาวน์โหลดรูปแบบไฟล์
+                  </label>
+
+                  <!-- PDF Button -->
+                  <button
+                    type="button"
+                    @click="exportToPDF"
+                    :disabled="isExporting || exportTransactions.length === 0"
+                    class="w-full p-3 rounded-xl border flex items-center justify-between transition-all group tap-scale disabled:opacity-50 disabled:cursor-not-allowed hover:border-violet-500"
+                    style="background: var(--bg-card); border-color: var(--border-default);"
+                  >
+                    <div class="flex items-center gap-3">
+                      <div class="w-9 h-9 rounded-xl bg-rose-500/15 text-rose-400 border border-rose-500/25 flex items-center justify-center font-bold text-xs shrink-0">
+                        PDF
+                      </div>
+                      <div class="text-left">
+                        <p class="text-sm font-bold group-hover:text-violet-400 transition-colors" style="color: var(--text-primary);">
+                          รายงาน PDF (.pdf)
+                        </p>
+                        <p class="text-[11px]" style="color: var(--text-secondary);">
+                          ภาษาไทยคมชัด ตารางสวยงามพร้อมสรุปยอด
+                        </p>
+                      </div>
+                    </div>
+                    <span class="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-violet-600 text-white shadow-sm flex items-center gap-1 shrink-0">
+                      <span v-if="isExporting" class="inline-block w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                      <span>โหลด PDF</span>
+                    </span>
+                  </button>
+
+                  <!-- Excel Button -->
+                  <button
+                    type="button"
+                    @click="exportToExcel"
+                    :disabled="isExporting || exportTransactions.length === 0"
+                    class="w-full p-3 rounded-xl border flex items-center justify-between transition-all group tap-scale disabled:opacity-50 disabled:cursor-not-allowed hover:border-emerald-500"
+                    style="background: var(--bg-card); border-color: var(--border-default);"
+                  >
+                    <div class="flex items-center gap-3">
+                      <div class="w-9 h-9 rounded-xl bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 flex items-center justify-center font-bold text-xs shrink-0">
+                        XLS
+                      </div>
+                      <div class="text-left">
+                        <p class="text-sm font-bold group-hover:text-emerald-400 transition-colors" style="color: var(--text-primary);">
+                          Excel (.xlsx)
+                        </p>
+                        <p class="text-[11px]" style="color: var(--text-secondary);">
+                          ไฟล์สเปรดชีตพร้อมตารางและสรุปผล
+                        </p>
+                      </div>
+                    </div>
+                    <span class="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-emerald-600 text-white shadow-sm flex items-center gap-1 shrink-0">
+                      <span v-if="isExporting" class="inline-block w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                      <span>โหลด Excel</span>
+                    </span>
+                  </button>
+
+                  <!-- CSV Button -->
+                  <button
+                    type="button"
+                    @click="exportToCSV"
+                    :disabled="isExporting || exportTransactions.length === 0"
+                    class="w-full p-3 rounded-xl border flex items-center justify-between transition-all group tap-scale disabled:opacity-50 disabled:cursor-not-allowed hover:border-sky-500"
+                    style="background: var(--bg-card); border-color: var(--border-default);"
+                  >
+                    <div class="flex items-center gap-3">
+                      <div class="w-9 h-9 rounded-xl bg-sky-500/15 text-sky-400 border border-sky-500/25 flex items-center justify-center font-bold text-xs shrink-0">
+                        CSV
+                      </div>
+                      <div class="text-left">
+                        <p class="text-sm font-bold group-hover:text-sky-400 transition-colors" style="color: var(--text-primary);">
+                          CSV (.csv)
+                        </p>
+                        <p class="text-[11px]" style="color: var(--text-secondary);">
+                          UTF-8 with BOM รองรับ Excel/Sheets
+                        </p>
+                      </div>
+                    </div>
+                    <span class="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-sky-600 text-white shadow-sm flex items-center gap-1 shrink-0">
+                      <span v-if="isExporting" class="inline-block w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                      <span>โหลด CSV</span>
+                    </span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </Transition>
+          <div class="absolute inset-0 z-0 bg-black/70 backdrop-blur-sm" @click="isExportModalOpen = false"></div>
+        </div>
+      </Transition>
+    </Teleport>
   </AppTabsLayout>
 </template>
 
@@ -1351,8 +1578,10 @@ const filteredTransactionsByDate = computed<LedgerDayGroup[]>(() => {
 
   // Group by date
   const grouped = source.reduce<Record<string, TransactionRow[]>>((acc, item) => {
-    if (!acc[item.entry_date]) acc[item.entry_date] = []
-    acc[item.entry_date].push(item)
+    const dateKey = item.entry_date
+    const dayItems = acc[dateKey] ?? []
+    dayItems.push(item)
+    acc[dateKey] = dayItems
     return acc
   }, {})
 
@@ -1363,7 +1592,7 @@ const filteredTransactionsByDate = computed<LedgerDayGroup[]>(() => {
   let runningBalance = openingBalance.value
 
   const result = sortedDates.map(date => {
-    const dayItems = grouped[date]
+    const dayItems = grouped[date] ?? []
 
     // Sort items within the day by created_at (chronological order)
     dayItems.sort((a, b) => {
@@ -1692,6 +1921,12 @@ const editingRecurringId = ref('')
 const isSubmittingRecurring = ref(false)
 const isDeletingRecurring = ref(false)
 
+const isExportModalOpen = ref(false)
+const exportScope = ref<'month' | 'year' | 'all'>('month')
+const exportMonth = ref(getThisMonthTH())
+const exportYear = ref(String(new Date().getFullYear()))
+const isExporting = ref(false)
+
 const recurringForm = reactive({
   title: '',
   amount: '',
@@ -1859,4 +2094,304 @@ onMounted(() => {
 onUnmounted(() => {
   document.removeEventListener('mousedown', handleClickOutsideCombobox)
 })
+
+const availableYears = computed(() => {
+  const years = new Set<string>()
+  const currentYear = String(new Date().getFullYear())
+  years.add(currentYear)
+  for (const t of transactions.value) {
+    if (t.entry_date && t.entry_date.length >= 4) {
+      years.add(t.entry_date.slice(0, 4))
+    }
+  }
+  return [...years].sort((a, b) => b.localeCompare(a))
+})
+
+const exportTransactions = computed(() => {
+  if (exportScope.value === 'month') {
+    return transactions.value.filter(t => t.entry_date.startsWith(exportMonth.value))
+  }
+  if (exportScope.value === 'year') {
+    return transactions.value.filter(t => t.entry_date.startsWith(exportYear.value))
+  }
+  return transactions.value
+})
+
+const exportOpeningBalance = computed(() => {
+  let cutoffDate = ''
+  if (exportScope.value === 'month') {
+    cutoffDate = `${exportMonth.value}-01`
+  } else if (exportScope.value === 'year') {
+    cutoffDate = `${exportYear.value}-01-01`
+  }
+  if (!cutoffDate) return 0
+
+  const previousTransactions = transactions.value.filter(t => t.entry_date < cutoffDate)
+  let balance = 0
+  for (const tx of previousTransactions) {
+    if (tx.type === 'income') balance += tx.amount
+    else balance -= tx.amount
+  }
+  return balance
+})
+
+const exportTotalIncome = computed(() => exportTransactions.value.filter(i => i.type === 'income').reduce((s, i) => s + i.amount, 0))
+const exportTotalExpense = computed(() => exportTransactions.value.filter(i => i.type === 'expense').reduce((s, i) => s + i.amount, 0))
+const exportNetBalance = computed(() => exportTotalIncome.value - exportTotalExpense.value)
+
+const exportPeriodLabel = computed(() => {
+  if (exportScope.value === 'month') {
+    const [yearStr, monthStr] = exportMonth.value.split('-')
+    if (yearStr && monthStr) {
+      const year = Number(yearStr) + 543
+      const monthNames = [
+        'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+        'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
+      ]
+      const monthName = monthNames[Number(monthStr) - 1] || ''
+      return `ประจำเดือน ${monthName} ${year}`
+    }
+    return `ประจำเดือน ${exportMonth.value}`
+  }
+  if (exportScope.value === 'year') {
+    const year = Number(exportYear.value) + 543
+    return `ประจำปี ${year}`
+  }
+  return 'ข้อมูลทั้งหมดทุกช่วงเวลา'
+})
+
+const getExportFilenamePrefix = (ext: string) => {
+  const now = new Date()
+  const thaiYear = now.getFullYear() + 543
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const day = String(now.getDate()).padStart(2, '0')
+
+  if (exportScope.value === 'month') {
+    const [y, m] = exportMonth.value.split('-')
+    const beYear = Number(y) + 543
+    return `รายรับรายจ่าย_เดือน_${beYear}${m}.${ext}`
+  }
+  if (exportScope.value === 'year') {
+    const beYear = Number(exportYear.value) + 543
+    return `รายรับรายจ่าย_ปี_${beYear}.${ext}`
+  }
+  return `รายรับรายจ่าย_ทั้งหมด_${thaiYear}${month}${day}.${ext}`
+}
+
+const openExportModal = () => {
+  if (summaryFilterMonth.value) {
+    exportMonth.value = summaryFilterMonth.value
+  } else if (transactionFilterMonth.value) {
+    exportMonth.value = transactionFilterMonth.value
+  } else {
+    exportMonth.value = getThisMonthTH()
+  }
+
+  if (exportMonth.value) {
+    const [y] = exportMonth.value.split('-')
+    if (y) exportYear.value = y
+  }
+
+  isExportModalOpen.value = true
+}
+
+const exportToCSV = () => {
+  const { toastSuccess, toastError } = useAlert()
+  if (exportTransactions.value.length === 0) {
+    toastError('ไม่มีข้อมูลให้ Export ในช่วงเวลาที่เลือก')
+    return
+  }
+
+  isExporting.value = true
+  try {
+    const headers = ['วันที่', 'ประเภท', 'หมวดหมู่', 'รายละเอียด', 'จำนวนเงิน (บาท)', 'คงเหลือสะสม']
+    const sortedTransactions = [...exportTransactions.value].sort((a, b) => a.entry_date.localeCompare(b.entry_date))
+
+    let runningBalance = exportOpeningBalance.value
+    const rows: string[][] = []
+
+    if (exportOpeningBalance.value !== 0) {
+      rows.push(['ยอดยกมา', '-', '-', 'ยอดยกมาจากงวดก่อนหน้า', '', exportOpeningBalance.value.toFixed(2)])
+    }
+
+    sortedTransactions.forEach(tx => {
+      if (tx.type === 'income') runningBalance += tx.amount
+      else runningBalance -= tx.amount
+
+      rows.push([
+        formatDate(tx.entry_date),
+        tx.type === 'income' ? 'รายรับ' : 'รายจ่าย',
+        tx.category || 'ไม่ระบุหมวดหมู่',
+        tx.description || '-',
+        (tx.type === 'income' ? tx.amount : -tx.amount).toFixed(2),
+        runningBalance.toFixed(2)
+      ])
+    })
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => {
+        const cellStr = String(cell)
+        if (cellStr.includes(',') || cellStr.includes('"') || cellStr.includes('\n')) {
+          return `"${cellStr.replace(/"/g, '""')}"`
+        }
+        return cellStr
+      }).join(','))
+    ].join('\n')
+
+    const BOM = '\uFEFF'
+    const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' })
+    const filename = getExportFilenamePrefix('csv')
+
+    const link = document.createElement('a')
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob)
+      link.setAttribute('href', url)
+      link.setAttribute('download', filename)
+      link.style.visibility = 'hidden'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+
+      toastSuccess(`Export CSV (${exportPeriodLabel.value}) สำเร็จ`)
+      isExportModalOpen.value = false
+    }
+  } catch (error) {
+    console.error('Export CSV error:', error)
+    toastError('เกิดข้อผิดพลาดในการ Export CSV')
+  } finally {
+    isExporting.value = false
+  }
+}
+
+const exportToExcel = async () => {
+  const { toastSuccess, toastError } = useAlert()
+  if (exportTransactions.value.length === 0) {
+    toastError('ไม่มีข้อมูลให้ Export ในช่วงเวลาที่เลือก')
+    return
+  }
+
+  isExporting.value = true
+  try {
+    const XLSX = await import('xlsx')
+    const sortedTransactions = [...exportTransactions.value].sort((a, b) => a.entry_date.localeCompare(b.entry_date))
+
+    let runningBalance = exportOpeningBalance.value
+    const data: Array<Record<string, string | number>> = []
+
+    if (exportOpeningBalance.value !== 0) {
+      data.push({
+        'วันที่': 'ยอดยกมา',
+        'ประเภท': '-',
+        'หมวดหมู่': '-',
+        'รายละเอียด': 'ยอดยกมาจากงวดก่อนหน้า',
+        'จำนวนเงิน (บาท)': '',
+        'คงเหลือสะสม': exportOpeningBalance.value
+      })
+    }
+
+    sortedTransactions.forEach(tx => {
+      if (tx.type === 'income') runningBalance += tx.amount
+      else runningBalance -= tx.amount
+
+      data.push({
+        'วันที่': formatDate(tx.entry_date),
+        'ประเภท': tx.type === 'income' ? 'รายรับ' : 'รายจ่าย',
+        'หมวดหมู่': tx.category || 'ไม่ระบุหมวดหมู่',
+        'รายละเอียด': tx.description || '-',
+        'จำนวนเงิน (บาท)': tx.type === 'income' ? tx.amount : -tx.amount,
+        'คงเหลือสะสม': runningBalance
+      })
+    })
+
+    // Summary at bottom
+    data.push({})
+    data.push({
+      'วันที่': 'สรุปภาพรวม',
+      'ประเภท': exportPeriodLabel.value,
+      'หมวดหมู่': '',
+      'รายละเอียด': '',
+      'จำนวนเงิน (บาท)': '',
+      'คงเหลือสะสม': ''
+    })
+    data.push({
+      'วันที่': 'รายรับรวม (+)',
+      'ประเภท': '',
+      'หมวดหมู่': '',
+      'รายละเอียด': '',
+      'จำนวนเงิน (บาท)': exportTotalIncome.value,
+      'คงเหลือสะสม': ''
+    })
+    data.push({
+      'วันที่': 'รายจ่ายรวม (-)',
+      'ประเภท': '',
+      'หมวดหมู่': '',
+      'รายละเอียด': '',
+      'จำนวนเงิน (บาท)': exportTotalExpense.value,
+      'คงเหลือสะสม': ''
+    })
+    data.push({
+      'วันที่': 'คงเหลือสุทธิ',
+      'ประเภท': '',
+      'หมวดหมู่': '',
+      'รายละเอียด': '',
+      'จำนวนเงิน (บาท)': exportNetBalance.value,
+      'คงเหลือสะสม': ''
+    })
+
+    const ws = XLSX.utils.json_to_sheet(data)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'รายรับรายจ่าย')
+
+    ws['!cols'] = [
+      { wch: 16 }, // วันที่
+      { wch: 12 }, // ประเภท
+      { wch: 22 }, // หมวดหมู่
+      { wch: 34 }, // รายละเอียด
+      { wch: 18 }, // จำนวนเงิน
+      { wch: 18 }  // คงเหลือสะสม
+    ]
+
+    const filename = getExportFilenamePrefix('xlsx')
+    XLSX.writeFile(wb, filename)
+
+    toastSuccess(`Export Excel (${exportPeriodLabel.value}) สำเร็จ`)
+    isExportModalOpen.value = false
+  } catch (error: any) {
+    console.error('Export Excel error:', error)
+    toastError('เกิดข้อผิดพลาดในการ Export Excel')
+  } finally {
+    isExporting.value = false
+  }
+}
+
+const exportToPDF = async () => {
+  const { toastSuccess, toastError } = useAlert()
+  if (exportTransactions.value.length === 0) {
+    toastError('ไม่มีข้อมูลให้ Export ในช่วงเวลาที่เลือก')
+    return
+  }
+
+  isExporting.value = true
+  try {
+    const filename = getExportFilenamePrefix('pdf')
+    await generateCashflowPDF({
+      periodLabel: exportPeriodLabel.value,
+      transactions: exportTransactions.value,
+      openingBalance: exportOpeningBalance.value,
+      formatDate,
+      filename,
+      documentTitle: 'รายงานสรุปรายรับ - รายจ่าย'
+    })
+
+    toastSuccess(`Export PDF (${exportPeriodLabel.value}) สำเร็จ`)
+    isExportModalOpen.value = false
+  } catch (error: any) {
+    console.error('Export PDF error:', error)
+    toastError(error?.message || 'เกิดข้อผิดพลาดในการ Export PDF')
+  } finally {
+    isExporting.value = false
+  }
+}
 </script>

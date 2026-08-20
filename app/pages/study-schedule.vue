@@ -500,34 +500,143 @@
               >
             </div>
 
-            <div>
-              <label class="block text-xs font-medium text-gray-400 mb-1.5">วันเรียน</label>
-              <select
-                v-model.number="form.dayOfWeek"
-                class="w-full bg-gray-800/80 border border-gray-700/60 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 transition-all"
+            <!-- Multi-session toggle (for new schedules) -->
+            <div v-if="!isEditing" class="flex items-center gap-2 p-3 rounded-xl bg-violet-500/10 border border-violet-500/20">
+              <input
+                type="checkbox"
+                id="multiSessionMode"
+                v-model="isMultiSessionMode"
+                class="w-4 h-4 rounded accent-violet-500"
               >
-                <option v-for="day in dayOptions" :key="day.value" :value="day.value">{{ day.label }}</option>
-              </select>
+              <label for="multiSessionMode" class="text-xs font-medium text-violet-300 cursor-pointer select-none">
+                เพิ่มหลายคาบพร้อมกัน (วิชาเดียวกัน หลายวัน/เวลา)
+              </label>
             </div>
 
-            <div class="grid grid-cols-2 gap-3">
-              <div>
-                <label class="block text-xs font-medium text-gray-400 mb-1.5">เวลาเริ่ม <span class="text-rose-400">*</span></label>
-                <input
-                  v-model="form.startTime"
-                  type="time"
-                  class="w-full bg-gray-800/80 border border-gray-700/60 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 transition-all"
-                >
+            <!-- Multi-session toggle (for editing) -->
+            <div v-else-if="isEditing" class="space-y-2">
+              <div v-if="isMultiSessionMode" class="flex items-center gap-2 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+                <span class="text-xs font-medium text-emerald-300">
+                  📚 แก้ไขทั้งหมด {{ multiSessions.length }} คาบของวิชานี้
+                </span>
               </div>
-              <div>
-                <label class="block text-xs font-medium text-gray-400 mb-1.5">เวลาสิ้นสุด <span class="text-rose-400">*</span></label>
+              <div v-else class="flex items-center gap-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
                 <input
-                  v-model="form.endTime"
-                  type="time"
-                  class="w-full bg-gray-800/80 border border-gray-700/60 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 transition-all"
+                  type="checkbox"
+                  id="multiSessionModeEdit"
+                  v-model="isMultiSessionMode"
+                  @change="toggleMultiSessionInEdit"
+                  class="w-4 h-4 rounded accent-amber-500"
                 >
+                <label for="multiSessionModeEdit" class="text-xs font-medium text-amber-300 cursor-pointer select-none">
+                  เปลี่ยนเป็นโหมดแก้ไขหลายคาบพร้อมกัน
+                </label>
               </div>
             </div>
+
+            <!-- Single Session Mode -->
+            <template v-if="!isMultiSessionMode">
+              <div>
+                <label class="block text-xs font-medium text-gray-400 mb-1.5">วันเรียน</label>
+                <select
+                  v-model.number="form.dayOfWeek"
+                  class="w-full bg-gray-800/80 border border-gray-700/60 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 transition-all"
+                >
+                  <option v-for="day in dayOptions" :key="day.value" :value="day.value">{{ day.label }}</option>
+                </select>
+              </div>
+
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs font-medium text-gray-400 mb-1.5">เวลาเริ่ม <span class="text-rose-400">*</span></label>
+                  <input
+                    v-model="form.startTime"
+                    type="time"
+                    class="w-full bg-gray-800/80 border border-gray-700/60 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 transition-all"
+                  >
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-gray-400 mb-1.5">เวลาสิ้นสุด <span class="text-rose-400">*</span></label>
+                  <input
+                    v-model="form.endTime"
+                    type="time"
+                    class="w-full bg-gray-800/80 border border-gray-700/60 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 transition-all"
+                  >
+                </div>
+              </div>
+            </template>
+
+            <!-- Multi-session Mode -->
+            <template v-else>
+              <div class="space-y-3">
+                <div class="flex items-center justify-between">
+                  <label class="block text-xs font-medium text-gray-400">คาบเรียนทั้งหมด ({{ multiSessions.length }} คาบ)</label>
+                  <button
+                    type="button"
+                    @click="addSession"
+                    class="text-xs px-3 py-1.5 rounded-lg bg-violet-500/20 text-violet-300 hover:bg-violet-500/30 border border-violet-500/30 transition-all tap-scale touch-target font-medium"
+                  >+ เพิ่มคาบ</button>
+                </div>
+
+                <div class="space-y-3 max-h-[320px] overflow-y-auto pr-1">
+                  <div
+                    v-for="(session, index) in multiSessions"
+                    :key="index"
+                    class="p-3 rounded-xl bg-gray-800/60 border border-gray-700/40 space-y-2.5"
+                  >
+                    <div class="flex items-center justify-between">
+                      <span class="text-xs font-semibold text-violet-300">คาบที่ {{ index + 1 }}</span>
+                      <button
+                        v-if="multiSessions.length > 1"
+                        type="button"
+                        @click="removeSession(index)"
+                        class="text-xs px-2 py-1 rounded-lg bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 border border-rose-500/30 transition-all tap-scale touch-target"
+                      >ลบ</button>
+                    </div>
+
+                    <div>
+                      <label class="block text-[11px] font-medium text-gray-500 mb-1">วันเรียน</label>
+                      <select
+                        v-model.number="session.dayOfWeek"
+                        class="w-full bg-gray-800/80 border border-gray-700/60 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 transition-all"
+                      >
+                        <option v-for="day in dayOptions" :key="day.value" :value="day.value">{{ day.label }}</option>
+                      </select>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2">
+                      <div>
+                        <label class="block text-[11px] font-medium text-gray-500 mb-1">เวลาเริ่ม</label>
+                        <input
+                          v-model="session.startTime"
+                          type="time"
+                          class="w-full bg-gray-800/80 border border-gray-700/60 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 transition-all"
+                        >
+                      </div>
+                      <div>
+                        <label class="block text-[11px] font-medium text-gray-500 mb-1">เวลาสิ้นสุด</label>
+                        <input
+                          v-model="session.endTime"
+                          type="time"
+                          class="w-full bg-gray-800/80 border border-gray-700/60 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 transition-all"
+                        >
+                      </div>
+                    </div>
+
+                    <div>
+                      <label class="block text-[11px] font-medium text-gray-500 mb-1">สถานที่</label>
+                      <input
+                        v-model="session.location"
+                        type="text"
+                        maxlength="120"
+                        placeholder="เช่น ห้อง 402, อาคาร A..."
+                        class="w-full bg-gray-800/80 border border-gray-700/60 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 transition-all"
+                      >
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </template>
 
             <div>
               <label class="block text-xs font-medium text-gray-400 mb-1.5">สถานที่ (ไม่บังคับ)</label>
@@ -776,6 +885,12 @@ const termForm = reactive({ termName: '', startDate: '', endDate: '' })
 const form = reactive({
   courseName: '', dayOfWeek: 1, startTime: '08:00', endTime: '09:00', location: '',
 })
+
+// Multi-session mode
+const isMultiSessionMode = ref(false)
+const multiSessions = ref<Array<{ id?: string; dayOfWeek: number; startTime: string; endTime: string; location?: string }>>([
+  { dayOfWeek: 1, startTime: '08:00', endTime: '09:00', location: '' }
+])
 
 const getApiErrorMessage = (error: any, fallback: string) => error?.data?.message || error?.message || fallback
 
@@ -1123,10 +1238,77 @@ const schedulePageInfo = computed(() => {
   return `แสดง ${start}-${end} จาก ${total} รายการ`
 })
 
+const addSession = () => {
+  multiSessions.value.push({ dayOfWeek: 1, startTime: '08:00', endTime: '09:00', location: '' })
+}
+
+const removeSession = async (index: number) => {
+  if (multiSessions.value.length <= 1) {
+    const { toastWarning } = useAlert()
+    toastWarning('ต้องมีอย่างน้อย 1 คาบ')
+    return
+  }
+
+  const session = multiSessions.value[index]
+
+  // If session has an id, it exists in database - need to delete it
+  if (session?.id && isEditing.value) {
+    const { confirmDelete, toastSuccess, toastError } = useAlert()
+    const shouldDelete = import.meta.client ? await confirmDelete('ลบคาบเรียนนี้ออกจากฐานข้อมูล?') : true
+    if (!shouldDelete) return
+
+    try {
+      await apiFetch(`/api/Schedule/courses/${session.id}`, { method: 'DELETE' })
+      multiSessions.value.splice(index, 1)
+      toastSuccess('ลบคาบเรียนสำเร็จ')
+      await loadSchedules()
+    } catch (error: any) {
+      console.error('Delete session error:', error)
+      toastError('ลบคาบเรียนไม่สำเร็จ')
+    }
+  } else {
+    // New session not yet saved - just remove from array
+    multiSessions.value.splice(index, 1)
+  }
+}
+
+const toggleMultiSessionInEdit = () => {
+  if (isMultiSessionMode.value && multiSessions.value.length === 0) {
+    // When enabling multi-session mode in edit, load all sessions of the same course
+    const currentCourseName = form.courseName.trim()
+    const sameCourseSchedules = schedules.value.filter(s =>
+      s.course_name.trim() === currentCourseName
+    ).sort((a, b) => {
+      if (a.day_of_week !== b.day_of_week) return a.day_of_week - b.day_of_week
+      return a.start_time.localeCompare(b.start_time)
+    })
+
+    if (sameCourseSchedules.length > 0) {
+      multiSessions.value = sameCourseSchedules.map(s => ({
+        id: s.id,
+        dayOfWeek: s.day_of_week,
+        startTime: s.start_time.slice(0, 5),
+        endTime: s.end_time.slice(0, 5),
+        location: s.location || ''
+      }))
+    } else {
+      // Fallback: use current form data
+      multiSessions.value = [{
+        dayOfWeek: form.dayOfWeek,
+        startTime: form.startTime,
+        endTime: form.endTime,
+        location: form.location
+      }]
+    }
+  }
+}
+
 const resetForm = () => {
   form.courseName = ''; form.dayOfWeek = 1; form.startTime = '08:00'
   form.endTime = '09:00'; form.location = ''
   editingScheduleId.value = ''
+  isMultiSessionMode.value = false
+  multiSessions.value = [{ dayOfWeek: 1, startTime: '08:00', endTime: '09:00', location: '' }]
 }
 
 const openCreateScheduleModal = () => {
@@ -1136,10 +1318,35 @@ const openCreateScheduleModal = () => {
 }
 
 const openEditScheduleModal = (item: ScheduleRow) => {
-  editingScheduleId.value = item.id; form.courseName = item.course_name
-  form.dayOfWeek = item.day_of_week; form.startTime = item.start_time.slice(0, 5)
-  form.endTime = item.end_time.slice(0, 5); form.location = item.location || ''
-  errorMessage.value = ''; isScheduleModalOpen.value = true
+  editingScheduleId.value = item.id
+  form.courseName = item.course_name
+  form.dayOfWeek = item.day_of_week
+  form.startTime = item.start_time.slice(0, 5)
+  form.endTime = item.end_time.slice(0, 5)
+  form.location = item.location || ''
+
+  // Find all other sessions of the same course
+  const sameCourseSchedules = schedules.value.filter(s =>
+    s.course_name.trim() === item.course_name.trim()
+  ).sort((a, b) => {
+    if (a.day_of_week !== b.day_of_week) return a.day_of_week - b.day_of_week
+    return a.start_time.localeCompare(b.start_time)
+  })
+
+  if (sameCourseSchedules.length > 1) {
+    // Multi-session course - enable multi-session mode for editing
+    isMultiSessionMode.value = true
+    multiSessions.value = sameCourseSchedules.map(s => ({
+      id: s.id,
+      dayOfWeek: s.day_of_week,
+      startTime: s.start_time.slice(0, 5),
+      endTime: s.end_time.slice(0, 5),
+      location: s.location || ''
+    }))
+  }
+
+  errorMessage.value = ''
+  isScheduleModalOpen.value = true
 }
 
 const closeScheduleModal = () => { resetForm(); errorMessage.value = ''; isScheduleModalOpen.value = false }
@@ -1232,27 +1439,109 @@ const submitSchedule = async () => {
   const { toastSuccess, toastError, toastWarning } = useAlert()
   if (!selectedTermId.value) { toastWarning('กรุณาเลือกหรือสร้างภาคเรียนก่อน'); return }
   if (!form.courseName.trim()) { toastWarning('กรุณาระบุชื่อวิชา'); return }
-  if (!form.startTime || !form.endTime) { toastWarning('กรุณาระบุเวลาเริ่มและสิ้นสุด'); return }
-  if (toMinutes(form.endTime) <= toMinutes(form.startTime)) { toastWarning('เวลาสิ้นสุดต้องมากกว่าเวลาเริ่ม'); return }
+
+  // Validate sessions based on mode
+  if (isMultiSessionMode.value) {
+    // Validate all sessions
+    for (let i = 0; i < multiSessions.value.length; i++) {
+      const session = multiSessions.value[i]
+      if (!session) continue
+      if (!session.startTime || !session.endTime) {
+        toastWarning(`กรุณาระบุเวลาเริ่มและสิ้นสุดสำหรับคาบที่ ${i + 1}`)
+        return
+      }
+      if (toMinutes(session.endTime) <= toMinutes(session.startTime)) {
+        toastWarning(`เวลาสิ้นสุดต้องมากกว่าเวลาเริ่มสำหรับคาบที่ ${i + 1}`)
+        return
+      }
+    }
+  } else {
+    // Single session mode validation
+    if (!form.startTime || !form.endTime) { toastWarning('กรุณาระบุเวลาเริ่มและสิ้นสุด'); return }
+    if (toMinutes(form.endTime) <= toMinutes(form.startTime)) { toastWarning('เวลาสิ้นสุดต้องมากกว่าเวลาเริ่ม'); return }
+  }
+
   isSubmitting.value = true; errorMessage.value = ''
   try {
-    const body = {
-      termId: selectedTermId.value,
-      courseCode: '',
-      courseName: form.courseName.trim(),
-      room: form.location.trim() || null,
-      instructor: null,
-      dayOfWeek: dayNumberToName[form.dayOfWeek] || 'monday',
-      startTime: `${form.startTime}:00`,
-      endTime: `${form.endTime}:00`,
-      colorHex: null,
-    }
     if (isEditing.value) {
-      await apiFetch(`/api/Schedule/courses/${editingScheduleId.value}`, { method: 'PUT', body })
+      if (isMultiSessionMode.value) {
+        // Edit multiple sessions
+        const promises = multiSessions.value.map(session => {
+          const body = {
+            termId: selectedTermId.value,
+            courseCode: '',
+            courseName: form.courseName.trim(),
+            room: session.location?.trim() || null,
+            instructor: null,
+            dayOfWeek: dayNumberToName[session.dayOfWeek] || 'monday',
+            startTime: `${session.startTime}:00`,
+            endTime: `${session.endTime}:00`,
+            colorHex: null,
+          }
+
+          if (session.id) {
+            // Update existing session
+            return apiFetch(`/api/Schedule/courses/${session.id}`, { method: 'PUT', body })
+          } else {
+            // Create new session (if user added more sessions while editing)
+            return apiFetch('/api/Schedule/courses', { method: 'POST', body })
+          }
+        })
+        await Promise.all(promises)
+        toastSuccess(`แก้ไข ${multiSessions.value.length} คาบเรียนสำเร็จ`)
+      } else {
+        // Edit single session (existing behavior)
+        const body = {
+          termId: selectedTermId.value,
+          courseCode: '',
+          courseName: form.courseName.trim(),
+          room: form.location.trim() || null,
+          instructor: null,
+          dayOfWeek: dayNumberToName[form.dayOfWeek] || 'monday',
+          startTime: `${form.startTime}:00`,
+          endTime: `${form.endTime}:00`,
+          colorHex: null,
+        }
+        await apiFetch(`/api/Schedule/courses/${editingScheduleId.value}`, { method: 'PUT', body })
+        toastSuccess('แก้ไขคาบเรียนสำเร็จ')
+      }
     } else {
-      await apiFetch('/api/Schedule/courses', { method: 'POST', body })
+      // Create new session(s)
+      if (isMultiSessionMode.value) {
+        // Create multiple sessions
+        const promises = multiSessions.value.map(session => {
+          const body = {
+            termId: selectedTermId.value,
+            courseCode: '',
+            courseName: form.courseName.trim(),
+            room: session.location?.trim() || null,
+            instructor: null,
+            dayOfWeek: dayNumberToName[session.dayOfWeek] || 'monday',
+            startTime: `${session.startTime}:00`,
+            endTime: `${session.endTime}:00`,
+            colorHex: null,
+          }
+          return apiFetch('/api/Schedule/courses', { method: 'POST', body })
+        })
+        await Promise.all(promises)
+        toastSuccess(`เพิ่ม ${multiSessions.value.length} คาบเรียนสำเร็จ`)
+      } else {
+        // Create single session
+        const body = {
+          termId: selectedTermId.value,
+          courseCode: '',
+          courseName: form.courseName.trim(),
+          room: form.location.trim() || null,
+          instructor: null,
+          dayOfWeek: dayNumberToName[form.dayOfWeek] || 'monday',
+          startTime: `${form.startTime}:00`,
+          endTime: `${form.endTime}:00`,
+          colorHex: null,
+        }
+        await apiFetch('/api/Schedule/courses', { method: 'POST', body })
+        toastSuccess('เพิ่มคาบเรียนสำเร็จ')
+      }
     }
-    toastSuccess(isEditing.value ? 'แก้ไขคาบเรียนสำเร็จ' : 'เพิ่มคาบเรียนสำเร็จ')
     resetForm(); isScheduleModalOpen.value = false; await loadSchedules()
   } catch (error: any) {
     console.error('Save study schedule error:', error)
