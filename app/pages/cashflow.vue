@@ -2,13 +2,14 @@
   <AppTabsLayout>
     <div class="mx-auto w-full max-w-[1240px] px-4 md:px-6 py-6 md:py-8">
       <!-- Page head -->
+      <!-- Page head -->
       <div class="flex flex-wrap items-end justify-between gap-4">
         <div class="min-w-0">
           <p class="eyebrow">การเงิน · Cashflow</p>
           <h1 class="text-2xl md:text-[30px] font-extrabold tracking-tight mt-1.5" style="color: var(--text-primary);">รายรับ<span class="text-gradient">·</span>รายจ่าย</h1>
-          <p class="text-xs mt-2 text-gray-400 font-medium">{{ currentMonthYearLabel }} &bull; {{ transactions.length }} รายการ</p>
+          <p class="text-xs mt-2 text-gray-400 font-medium">{{ currentMonthYearLabel }} &bull; {{ transactions.length }} รายการ <span v-if="selectedBook" class="text-violet-400">({{ selectedBook.icon }} {{ selectedBook.name }})</span></p>
         </div>
-        <div class="flex items-center gap-2 shrink-0">
+        <div class="flex items-center gap-2 shrink-0 flex-wrap">
           <button
             @click="openExportModal"
             :disabled="transactions.length === 0"
@@ -19,19 +20,78 @@
             <span class="font-semibold">Export</span>
           </button>
           <button
-            @click="isEntryModalOpen = true"
+            @click="openAddTransactionModal"
             class="btn-primary text-sm inline-flex items-center gap-2 tap-scale touch-target"
           >
             <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
             <span class="hidden sm:inline">เพิ่มรายการ</span><span class="sm:hidden">เพิ่ม</span>
           </button>
           <button
-            @click="loadTransactions"
-            :disabled="isLoading"
+            @click="refreshData"
+            :disabled="isLoading || isLoadingBooks"
             class="btn-secondary text-sm inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed tap-scale touch-target"
           >
             <svg class="w-4 h-4" :class="isLoading ? 'animate-spin' : ''" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5M21 12a9 9 0 0 1-15 6.7L3 16M3 21v-5h5"/></svg>
             <span class="hidden sm:inline">{{ isLoading ? 'กำลังโหลด...' : 'รีเฟรช' }}</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Multi-Book Selector Bar -->
+      <div class="mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-2 rounded-2xl border" style="background: var(--bg-surface); border-color: var(--border-subtle);">
+        <div class="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+          <!-- All Books Pill -->
+          <button
+            type="button"
+            @click="selectBook('all')"
+            class="px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all tap-scale flex items-center gap-1.5 shrink-0"
+            :style="selectedBookId === 'all'
+              ? 'background: var(--brand); color: #ffffff; box-shadow: 0 4px 14px rgba(59,78,240,0.35);'
+              : 'background: var(--bg-elevated); border: 1px solid var(--border-subtle); color: var(--text-secondary);'"
+          >
+            <span>📊</span>
+            <span>ทุกสมุด (รวม)</span>
+            <span class="text-[10px] px-1.5 py-0.2 rounded-full opacity-80" :style="selectedBookId === 'all' ? 'background: rgba(255,255,255,0.2);' : 'background: rgba(0,0,0,0.2);'">
+              {{ books.length }}
+            </span>
+          </button>
+
+          <!-- Individual Book Pills -->
+          <button
+            v-for="book in books"
+            :key="book.id"
+            type="button"
+            @click="selectBook(book.id)"
+            class="px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all tap-scale flex items-center gap-1.5 shrink-0"
+            :style="selectedBookId === book.id
+              ? `background: ${book.color}22; border: 1px solid ${book.color}66; color: ${book.color}; box-shadow: 0 2px 10px ${book.color}20;`
+              : 'background: var(--bg-elevated); border: 1px solid var(--border-subtle); color: var(--text-secondary);'"
+          >
+            <span>{{ book.icon || '💼' }}</span>
+            <span>{{ book.name }}</span>
+            <span v-if="book.isDefault" class="text-[9px] px-1.5 py-0.2 rounded-md font-medium" :style="{ background: `${book.color}25`, color: book.color }">หลัก</span>
+          </button>
+        </div>
+
+        <!-- Book Management Controls -->
+        <div class="flex items-center gap-1.5 shrink-0 self-end sm:self-auto">
+          <button
+            type="button"
+            @click="openManageBooksModal"
+            class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-gray-800/80 hover:bg-gray-800 border border-gray-700/60 text-gray-300 hover:text-white transition-all tap-scale flex items-center gap-1.5"
+            title="จัดการสมุดบัญชีทั้งหมด"
+          >
+            <span>⚙️</span>
+            <span>จัดการสมุด</span>
+          </button>
+          <button
+            type="button"
+            @click="openCreateBookModal"
+            class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/30 text-violet-300 transition-all tap-scale flex items-center gap-1"
+            title="เพิ่มสมุดบัญชีใหม่"
+          >
+            <span>+</span>
+            <span>เพิ่มสมุด</span>
           </button>
         </div>
       </div>
@@ -447,7 +507,21 @@
                       style="border-bottom: 1px solid var(--border-subtle);"
                     >
                       <td class="px-4 py-3">
-                        <p class="text-sm font-medium" style="color: var(--text-primary);">{{ item.category || 'ไม่ระบุหมวดหมู่' }}</p>
+                        <div class="flex items-center gap-2 flex-wrap">
+                          <p class="text-sm font-medium" style="color: var(--text-primary);">{{ item.category || 'ไม่ระบุหมวดหมู่' }}</p>
+                          <span
+                            v-if="selectedBookId === 'all' && getBookById(item.book_id)"
+                            class="text-[10px] px-2 py-0.5 rounded-md font-medium shrink-0 flex items-center gap-1"
+                            :style="{
+                              backgroundColor: `${getBookById(item.book_id)?.color}15`,
+                              color: getBookById(item.book_id)?.color,
+                              border: `1px solid ${getBookById(item.book_id)?.color}35`
+                            }"
+                          >
+                            <span>{{ getBookById(item.book_id)?.icon }}</span>
+                            <span>{{ getBookById(item.book_id)?.name }}</span>
+                          </span>
+                        </div>
                         <p v-if="item.description" class="text-xs mt-0.5" style="color: var(--text-muted);">{{ item.description }}</p>
                       </td>
                       <td class="px-4 py-3 text-right">
@@ -531,7 +605,21 @@
                     class="px-4 py-3 flex items-start justify-between gap-3"
                   >
                     <div class="flex-1 min-w-0">
-                      <p class="text-sm font-medium" style="color: var(--text-primary);">{{ item.category || 'ไม่ระบุหมวดหมู่' }}</p>
+                      <div class="flex items-center gap-2 flex-wrap">
+                        <p class="text-sm font-medium" style="color: var(--text-primary);">{{ item.category || 'ไม่ระบุหมวดหมู่' }}</p>
+                        <span
+                          v-if="selectedBookId === 'all' && getBookById(item.book_id)"
+                          class="text-[10px] px-1.5 py-0.2 rounded-md font-medium shrink-0 flex items-center gap-0.5"
+                          :style="{
+                            backgroundColor: `${getBookById(item.book_id)?.color}15`,
+                            color: getBookById(item.book_id)?.color,
+                            border: `1px solid ${getBookById(item.book_id)?.color}35`
+                          }"
+                        >
+                          <span>{{ getBookById(item.book_id)?.icon }}</span>
+                          <span>{{ getBookById(item.book_id)?.name }}</span>
+                        </span>
+                      </div>
                       <p v-if="item.description" class="text-xs mt-0.5" style="color: var(--text-muted);">{{ item.description }}</p>
                       <div class="flex items-center gap-3 mt-2 text-xs">
                         <span v-if="item.type === 'income'" style="color: var(--ink-emerald);">รายรับ: +{{ formatCurrency(item.amount) }}</span>
@@ -800,6 +888,21 @@
 
           <!-- Modal Body -->
           <form class="p-6 space-y-4" @submit.prevent="submitTransaction">
+            <!-- Book selector -->
+            <div v-if="books.length > 0">
+              <label class="block text-xs font-medium text-gray-400 mb-1.5">สมุดบัญชี</label>
+              <div class="relative">
+                <select
+                  v-model="form.bookId"
+                  class="w-full bg-gray-800/80 border border-gray-700/60 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 transition-all cursor-pointer"
+                >
+                  <option v-for="b in books" :key="b.id" :value="b.id">
+                    {{ b.icon }} {{ b.name }} {{ b.isDefault ? '(สมุดหลัก)' : '' }}
+                  </option>
+                </select>
+              </div>
+            </div>
+
             <div class="grid grid-cols-2 gap-4">
               <div>
                 <label class="block text-xs font-medium text-gray-400 mb-1.5">วันที่</label>
@@ -951,6 +1054,19 @@
 
               <!-- Form Body -->
               <form @submit.prevent="submitRecurring" class="p-6 space-y-4">
+                <!-- Book selector -->
+                <div v-if="books.length > 0">
+                  <label class="block text-xs font-semibold text-gray-300 mb-1.5">สมุดบัญชี</label>
+                  <select
+                    v-model="recurringForm.bookId"
+                    class="w-full px-3.5 py-2.5 rounded-xl bg-gray-800/80 border border-gray-700 text-sm text-white focus:outline-none focus:border-amber-500 transition-all cursor-pointer"
+                  >
+                    <option v-for="b in books" :key="b.id" :value="b.id">
+                      {{ b.icon }} {{ b.name }} {{ b.isDefault ? '(สมุดหลัก)' : '' }}
+                    </option>
+                  </select>
+                </div>
+
                 <!-- Title -->
                 <div>
                   <label class="block text-xs font-semibold text-gray-300 mb-1.5">ชื่อรายการ <span class="text-rose-400">*</span></label>
@@ -1288,18 +1404,238 @@
         </div>
       </Transition>
     </Teleport>
+
+    <!-- Manage Books Modal -->
+    <Teleport to="body">
+      <Transition name="backdrop">
+        <div
+          v-if="isManageBooksModalOpen"
+          class="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style="background: rgba(3,5,12,0.62); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);"
+        >
+          <Transition name="modal">
+            <div v-if="isManageBooksModalOpen" class="relative z-10 w-full max-w-lg rounded-2xl border border-gray-700/80 bg-gray-900 shadow-2xl overflow-hidden">
+              <div class="flex items-center justify-between px-6 py-4 border-b border-gray-800/80">
+                <div class="flex items-center gap-3">
+                  <div class="w-9 h-9 rounded-xl bg-violet-500/20 text-violet-300 flex items-center justify-center text-base">
+                    📚
+                  </div>
+                  <div>
+                    <h3 class="text-base font-semibold text-white">จัดการสมุดบัญชี (Finance Books)</h3>
+                    <p class="text-xs text-gray-500">แยกกระเป๋าเงินและสมุดรายรับ-รายจ่ายตามการใช้งาน</p>
+                  </div>
+                </div>
+                <button
+                  @click="isManageBooksModalOpen = false"
+                  class="w-8 h-8 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white flex items-center justify-center text-sm transition-all tap-scale touch-target"
+                >✕</button>
+              </div>
+
+              <div class="p-6 space-y-4">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs text-gray-400 font-medium">สมุดทั้งหมด ({{ books.length }} เล่ม)</span>
+                  <button
+                    type="button"
+                    @click="openCreateBookModal"
+                    class="text-xs font-semibold px-3 py-1.5 rounded-xl bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/30 text-violet-300 transition-all tap-scale flex items-center gap-1"
+                  >
+                    <span>+ เพิ่มสมุดใหม่</span>
+                  </button>
+                </div>
+
+                <div class="space-y-2.5 max-h-[320px] overflow-y-auto pr-1">
+                  <div
+                    v-for="b in books"
+                    :key="b.id"
+                    class="p-3.5 rounded-xl border flex items-center justify-between gap-3 transition-all"
+                    :style="{
+                      background: 'rgba(255, 255, 255, 0.03)',
+                      borderColor: b.isDefault ? `${b.color}66` : 'rgba(255, 255, 255, 0.08)'
+                    }"
+                  >
+                    <div class="flex items-center gap-3 min-w-0">
+                      <div
+                        class="w-10 h-10 rounded-xl flex items-center justify-center text-xl shrink-0"
+                        :style="{ background: `${b.color}22`, border: `1px solid ${b.color}44` }"
+                      >
+                        {{ b.icon || '💼' }}
+                      </div>
+                      <div class="min-w-0">
+                        <div class="flex items-center gap-2">
+                          <h4 class="text-sm font-bold text-white truncate">{{ b.name }}</h4>
+                          <span
+                            v-if="b.isDefault"
+                            class="text-[10px] px-1.5 py-0.2 rounded font-semibold bg-violet-500/20 text-violet-300 border border-violet-500/30 shrink-0"
+                          >
+                            สมุดหลัก
+                          </span>
+                        </div>
+                        <p class="text-[11px] text-gray-500 mt-0.5">
+                          สร้างเมื่อ {{ formatDate(b.createdAt) }}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div class="flex items-center gap-1.5 shrink-0">
+                      <button
+                        type="button"
+                        @click="openEditBookModal(b)"
+                        class="px-2.5 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white text-xs font-medium border border-gray-700 transition-all tap-scale"
+                      >
+                        แก้ไข
+                      </button>
+                      <button
+                        v-if="books.length > 1"
+                        type="button"
+                        @click="handleDeleteBook(b)"
+                        class="px-2.5 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 text-xs font-medium border border-rose-500/30 transition-all tap-scale"
+                      >
+                        ลบ
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="p-3 rounded-xl bg-sky-500/10 border border-sky-500/20 text-xs text-sky-300 leading-relaxed flex items-start gap-2">
+                  <span class="text-base">💡</span>
+                  <span>สมุดบัญชีช่วยแยกประวัติรายรับ-รายจ่าย เช่น การใช้จ่ายส่วนตัว และ ธุรกิจ/งานฟรีแลนซ์ หากลบสมุด รายการข้างในจะถูกย้ายไปยังสมุดหลักโดยอัตโนมัติ</span>
+                </div>
+              </div>
+            </div>
+          </Transition>
+          <div class="absolute inset-0 z-0 bg-black/70 backdrop-blur-sm" @click="isManageBooksModalOpen = false"></div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- Create/Edit Book Form Modal -->
+    <Teleport to="body">
+      <Transition name="backdrop">
+        <div
+          v-if="isBookFormModalOpen"
+          class="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style="background: rgba(3,5,12,0.62); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);"
+        >
+          <Transition name="modal">
+            <div v-if="isBookFormModalOpen" class="relative z-10 w-full max-w-md rounded-2xl border border-gray-700/80 bg-gray-900 shadow-2xl overflow-hidden">
+              <div class="flex items-center justify-between px-6 py-4 border-b border-gray-800/80">
+                <div class="flex items-center gap-3">
+                  <div class="w-9 h-9 rounded-xl flex items-center justify-center text-xl" :style="{ background: `${bookForm.color}25`, border: `1px solid ${bookForm.color}45` }">
+                    {{ bookForm.icon }}
+                  </div>
+                  <div>
+                    <h3 class="text-base font-semibold text-white">{{ editingBookId ? 'แก้ไขสมุดบัญชี' : 'เพิ่มสมุดบัญชีใหม่' }}</h3>
+                    <p class="text-xs text-gray-500">กำหนดชื่อ ไอคอน และสีประจำสมุด</p>
+                  </div>
+                </div>
+                <button
+                  @click="isBookFormModalOpen = false"
+                  class="w-8 h-8 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white flex items-center justify-center text-sm transition-all tap-scale touch-target"
+                >✕</button>
+              </div>
+
+              <form @submit.prevent="submitBookForm" class="p-6 space-y-4">
+                <div>
+                  <label class="block text-xs font-semibold text-gray-300 mb-1.5">ชื่อสมุดบัญชี <span class="text-rose-400">*</span></label>
+                  <input
+                    v-model="bookForm.name"
+                    type="text"
+                    placeholder="เช่น สมุดส่วนตัว, งานฟรีแลนซ์, ท่องเที่ยว"
+                    required
+                    maxlength="50"
+                    class="w-full px-3.5 py-2.5 rounded-xl bg-gray-800/80 border border-gray-700 text-sm text-white focus:outline-none focus:border-violet-500 transition-all"
+                  />
+                </div>
+
+                <!-- Icon presets -->
+                <div>
+                  <label class="block text-xs font-semibold text-gray-300 mb-1.5">ไอคอนประจำสมุด</label>
+                  <div class="grid grid-cols-8 gap-2">
+                    <button
+                      v-for="icon in BOOK_ICON_PRESETS"
+                      :key="icon"
+                      type="button"
+                      @click="bookForm.icon = icon"
+                      class="h-9 rounded-xl flex items-center justify-center text-lg transition-all tap-scale"
+                      :class="bookForm.icon === icon ? 'bg-violet-600/40 border-2 border-violet-400 scale-105' : 'bg-gray-800/80 border border-gray-700/60 hover:bg-gray-700'"
+                    >
+                      {{ icon }}
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Color presets -->
+                <div>
+                  <label class="block text-xs font-semibold text-gray-300 mb-1.5">สีประจำสมุด</label>
+                  <div class="grid grid-cols-5 gap-2">
+                    <button
+                      v-for="color in BOOK_COLOR_PRESETS"
+                      :key="color"
+                      type="button"
+                      @click="bookForm.color = color"
+                      class="h-8 rounded-xl flex items-center justify-center transition-all tap-scale"
+                      :style="{
+                        backgroundColor: color,
+                        boxShadow: bookForm.color === color ? `0 0 12px ${color}` : 'none',
+                        border: bookForm.color === color ? '2px solid #ffffff' : '1px solid rgba(255,255,255,0.2)'
+                      }"
+                    >
+                      <span v-if="bookForm.color === color" class="text-white text-xs font-bold">✓</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Set as default checkbox -->
+                <label class="flex items-center gap-3 p-3 rounded-xl border border-gray-700/60 bg-gray-800/40 cursor-pointer hover:bg-gray-800/70 transition-all">
+                  <input
+                    v-model="bookForm.isDefault"
+                    type="checkbox"
+                    class="accent-violet-500 w-4 h-4 rounded"
+                  />
+                  <div>
+                    <p class="text-xs font-semibold text-white">ตั้งเป็นสมุดหลัก (Default)</p>
+                    <p class="text-[11px] text-gray-400">เมื่อบันทึกรายการใหม่จะเลือกสมุดนี้เป็นค่าเริ่มต้น</p>
+                  </div>
+                </label>
+
+                <div class="flex items-center gap-3 pt-2">
+                  <button
+                    type="button"
+                    @click="isBookFormModalOpen = false"
+                    class="flex-1 py-2.5 rounded-xl bg-gray-800/80 hover:bg-gray-800 border border-gray-700/60 text-sm font-medium text-gray-300 hover:text-white transition-all tap-scale"
+                  >
+                    ยกเลิก
+                  </button>
+                  <button
+                    type="submit"
+                    :disabled="isSubmittingBook"
+                    class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 disabled:opacity-50 text-sm font-semibold text-white shadow-md shadow-violet-500/20 transition-all flex items-center justify-center gap-2 tap-scale"
+                  >
+                    <span v-if="isSubmittingBook" class="inline-block w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
+                    <span>{{ editingBookId ? 'บันทึกการแก้ไข' : 'สร้างสมุด' }}</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          </Transition>
+          <div class="absolute inset-0 z-0 bg-black/70 backdrop-blur-sm" @click="isBookFormModalOpen = false"></div>
+        </div>
+      </Transition>
+    </Teleport>
   </AppTabsLayout>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, reactive, ref, watch, nextTick } from 'vue'
 import { getTodayTH, getThisMonthTH } from '~/utils/date'
+import { useFinanceBooks, BOOK_COLOR_PRESETS, BOOK_ICON_PRESETS, type FinanceBook } from '~/composables/useFinanceBooks'
 
 type TransactionType = 'income' | 'expense'
 
 type TransactionRow = {
   id: string
   user_id: string
+  book_id?: string | null
   entry_date: string
   type: TransactionType
   category: string | null
@@ -1319,6 +1655,113 @@ definePageMeta({ middleware: 'auth' })
 useHead({ title: 'รายรับรายจ่าย' })
 
 const { apiFetch, userId } = useBackendApi()
+
+// Multi-Book Finance System
+const {
+  books,
+  isLoadingBooks,
+  selectedBookId,
+  selectedBook,
+  defaultBook,
+  fetchBooks,
+  selectBook,
+  createBook,
+  updateBook,
+  deleteBook,
+} = useFinanceBooks()
+
+const isManageBooksModalOpen = ref(false)
+const isBookFormModalOpen = ref(false)
+const editingBookId = ref<string | null>(null)
+const isSubmittingBook = ref(false)
+const bookForm = reactive({
+  name: '',
+  icon: '💼',
+  color: '#8b5cf6',
+  isDefault: false,
+})
+
+const getBookById = (bookId?: string | null) => {
+  if (!bookId) return null
+  return books.value.find(b => b.id === bookId) || null
+}
+
+const openManageBooksModal = () => {
+  isManageBooksModalOpen.value = true
+}
+
+const openCreateBookModal = () => {
+  editingBookId.value = null
+  const randomIcon = BOOK_ICON_PRESETS[Math.floor(Math.random() * BOOK_ICON_PRESETS.length)] || '💼'
+  const randomColor = BOOK_COLOR_PRESETS[Math.floor(Math.random() * BOOK_COLOR_PRESETS.length)] || '#8b5cf6'
+  bookForm.name = ''
+  bookForm.icon = randomIcon
+  bookForm.color = randomColor
+  bookForm.isDefault = books.value.length === 0
+  isBookFormModalOpen.value = true
+}
+
+const openEditBookModal = (book: FinanceBook) => {
+  editingBookId.value = book.id
+  bookForm.name = book.name
+  bookForm.icon = book.icon || '💼'
+  bookForm.color = book.color || '#8b5cf6'
+  bookForm.isDefault = book.isDefault
+  isBookFormModalOpen.value = true
+}
+
+const submitBookForm = async () => {
+  if (isSubmittingBook.value) return
+  const { toastSuccess, toastError, toastWarning } = useAlert()
+  if (!bookForm.name.trim()) {
+    toastWarning('กรุณาระบุชื่อสมุดบัญชี')
+    return
+  }
+  isSubmittingBook.value = true
+  try {
+    if (editingBookId.value) {
+      await updateBook(editingBookId.value, {
+        name: bookForm.name,
+        icon: bookForm.icon,
+        color: bookForm.color,
+        isDefault: bookForm.isDefault,
+      })
+      toastSuccess('แก้ไขสมุดบัญชีสำเร็จ')
+    } else {
+      await createBook({
+        name: bookForm.name,
+        icon: bookForm.icon,
+        color: bookForm.color,
+        isDefault: bookForm.isDefault,
+      })
+      toastSuccess('สร้างสมุดบัญชีใหม่สำเร็จ')
+    }
+    isBookFormModalOpen.value = false
+    await refreshData()
+  } catch (err: any) {
+    console.error('Save book error:', err)
+    toastError(getApiErrorMessage(err, 'บันทึกสมุดบัญชีไม่สำเร็จ'))
+  } finally {
+    isSubmittingBook.value = false
+  }
+}
+
+const handleDeleteBook = async (book: FinanceBook) => {
+  const { confirmDelete, toastSuccess, toastError } = useAlert()
+  const confirmed = await confirmDelete(
+    `ลบสมุด "${book.name}"?`,
+    'รายการที่อยู่ในสมุดนี้จะถูกย้ายไปยังสมุดหลักโดยอัตโนมัติ ข้อมูลจะไม่สูญหาย'
+  )
+  if (!confirmed) return
+  try {
+    await deleteBook(book.id)
+    toastSuccess('ลบสมุดบัญชีและย้ายรายการสำเร็จ')
+    await refreshData()
+  } catch (err: any) {
+    console.error('Delete book error:', err)
+    toastError(getApiErrorMessage(err, 'ลบสมุดบัญชีไม่สำเร็จ'))
+  }
+}
 
 const isLoading = ref(true)
 const isSubmitting = ref(false)
@@ -1343,6 +1786,7 @@ const form = reactive({
   category: '',
   description: '',
   amount: '',
+  bookId: '',
 })
 
 const formatCurrency = (amount: number) => new Intl.NumberFormat('th-TH', {
@@ -1686,6 +2130,7 @@ const resetForm = () => {
 type BackendTransaction = {
   id: string
   userId: string
+  bookId?: string | null
   type: string
   amount: number
   category: string | null
@@ -1694,12 +2139,18 @@ type BackendTransaction = {
 }
 
 const normalizeRows = (rows: BackendTransaction[]): TransactionRow[] => rows.map(row => ({
-  id: String(row.id), user_id: String(row.userId), entry_date: String(row.transactionDate).slice(0, 10),
+  id: String(row.id), user_id: String(row.userId), book_id: row.bookId ? String(row.bookId) : null, entry_date: String(row.transactionDate).slice(0, 10),
   type: row.type === 'income' ? 'income' : 'expense',
   category: typeof row.category === 'string' ? row.category : null,
   description: typeof row.note === 'string' ? row.note : null,
   amount: Number(row.amount || 0), created_at: String(row.transactionDate || ''),
 }))
+
+const openAddTransactionModal = () => {
+  resetForm()
+  form.bookId = selectedBookId.value !== 'all' ? selectedBookId.value : (defaultBook.value?.id || books.value[0]?.id || '')
+  isEntryModalOpen.value = true
+}
 
 const openEditTransactionModal = (item: TransactionRow) => {
   editingTransactionId.value = item.id
@@ -1709,6 +2160,7 @@ const openEditTransactionModal = (item: TransactionRow) => {
   categorySearch.value = item.category || ''
   form.description = item.description || ''
   form.amount = String(item.amount)
+  form.bookId = item.book_id || (defaultBook.value?.id || books.value[0]?.id || '')
   errorMessage.value = ''
   isCategoryDropdownOpen.value = false
   isEntryModalOpen.value = true
@@ -1721,7 +2173,8 @@ const loadTransactions = async () => {
   errorMessage.value = ''
   try {
     if (!userId.value) return
-    const data = await apiFetch<BackendTransaction[]>(`/api/Finance/${userId.value}`)
+    const query = selectedBookId.value && selectedBookId.value !== 'all' ? `?bookId=${selectedBookId.value}` : ''
+    const data = await apiFetch<BackendTransaction[]>(`/api/Finance/${userId.value}${query}`)
     const sorted = [...data].sort((a, b) => b.transactionDate.localeCompare(a.transactionDate))
     transactions.value = normalizeRows(sorted)
   } catch (error: any) {
@@ -1742,8 +2195,10 @@ const submitTransaction = async () => {
   errorMessage.value = ''
   try {
     if (!userId.value) return
+    const targetBookId = form.bookId || (selectedBookId.value !== 'all' ? selectedBookId.value : (defaultBook.value?.id || null))
     const body = {
       userId: userId.value,
+      bookId: targetBookId,
       type: form.type,
       amount,
       category: form.category.trim() || 'ทั่วไป',
@@ -1834,6 +2289,7 @@ const deleteTransaction = async (transactionId: string) => {
 export interface BackendRecurringExpense {
   id: string
   userId: string
+  bookId?: string | null
   title: string
   amount: number
   category: string
@@ -1935,6 +2391,7 @@ const recurringForm = reactive({
   startDate: getTodayTH(),
   isIndefinite: true,
   endDate: '',
+  bookId: '',
 })
 
 const fixedRecurringExpenses = computed(() => {
@@ -1948,7 +2405,8 @@ const loadRecurringExpenses = async () => {
   isLoadingRecurring.value = true
   try {
     if (!userId.value) return
-    const data = await apiFetch<BackendRecurringExpense[]>(`/api/Finance/recurring/${userId.value}`)
+    const query = selectedBookId.value && selectedBookId.value !== 'all' ? `?bookId=${selectedBookId.value}` : ''
+    const data = await apiFetch<BackendRecurringExpense[]>(`/api/Finance/recurring/${userId.value}${query}`)
     recurringExpenses.value = data || []
   } catch (error: any) {
     console.error('Load recurring expenses error:', error)
@@ -1966,6 +2424,7 @@ const openAddRecurringModal = () => {
   recurringForm.startDate = getTodayTH()
   recurringForm.isIndefinite = true
   recurringForm.endDate = ''
+  recurringForm.bookId = selectedBookId.value !== 'all' ? selectedBookId.value : (defaultBook.value?.id || books.value[0]?.id || '')
   isRecurringModalOpen.value = true
 }
 
@@ -1978,6 +2437,7 @@ const openEditRecurringModal = (item: BackendRecurringExpense) => {
   recurringForm.startDate = item.startDate ? item.startDate.slice(0, 10) : getTodayTH()
   recurringForm.isIndefinite = item.isIndefinite
   recurringForm.endDate = item.endDate ? item.endDate.slice(0, 10) : ''
+  recurringForm.bookId = item.bookId || (defaultBook.value?.id || books.value[0]?.id || '')
   isRecurringModalOpen.value = true
 }
 
@@ -1990,8 +2450,10 @@ const submitRecurring = async () => {
 
   isSubmittingRecurring.value = true
   try {
+    const targetBookId = recurringForm.bookId || (selectedBookId.value !== 'all' ? selectedBookId.value : (defaultBook.value?.id || null))
     const body = {
       userId: userId.value,
+      bookId: targetBookId,
       title: recurringForm.title.trim(),
       amount,
       category: recurringForm.category.trim() || 'ค่าใช้จ่ายประจำ',
@@ -2053,6 +2515,7 @@ const payRecurring = async (item: BackendRecurringExpense) => {
     // 1. Record expense transaction
     const bodyTx = {
       userId: userId.value,
+      bookId: item.bookId || (defaultBook.value?.id || null),
       type: 'expense',
       amount: item.amount,
       category: item.category || 'ค่าใช้จ่ายประจำ',
@@ -2085,7 +2548,21 @@ const payRecurring = async (item: BackendRecurringExpense) => {
   }
 }
 
-onMounted(() => {
+const refreshData = async () => {
+  await Promise.all([
+    fetchBooks(),
+    loadTransactions(),
+    loadRecurringExpenses(),
+  ])
+}
+
+watch(selectedBookId, () => {
+  loadTransactions()
+  loadRecurringExpenses()
+})
+
+onMounted(async () => {
+  await fetchBooks()
   loadTransactions()
   loadRecurringExpenses()
   document.addEventListener('mousedown', handleClickOutsideCombobox)
