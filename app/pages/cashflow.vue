@@ -2202,7 +2202,7 @@ const submitTransaction = async () => {
       type: form.type,
       amount,
       category: form.category.trim() || 'ทั่วไป',
-      transactionDate: `${form.entryDate}T00:00:00`,
+      transactionDate: form.entryDate ? `${form.entryDate}T00:00:00.000Z` : new Date().toISOString(),
       note: form.description.trim() || null,
     }
     if (isEditing.value) {
@@ -2458,9 +2458,9 @@ const submitRecurring = async () => {
       amount,
       category: recurringForm.category.trim() || 'ค่าใช้จ่ายประจำ',
       dayOfMonthDue: Number(recurringForm.dayOfMonthDue) || 1,
-      startDate: recurringForm.startDate ? `${recurringForm.startDate}T00:00:00` : new Date().toISOString(),
+      startDate: recurringForm.startDate ? `${recurringForm.startDate}T00:00:00.000Z` : new Date().toISOString(),
       isIndefinite: recurringForm.isIndefinite,
-      endDate: (!recurringForm.isIndefinite && recurringForm.endDate) ? `${recurringForm.endDate}T23:59:59` : null,
+      endDate: (!recurringForm.isIndefinite && recurringForm.endDate) ? `${recurringForm.endDate}T23:59:59.000Z` : null,
     }
 
     if (editingRecurringId.value) {
