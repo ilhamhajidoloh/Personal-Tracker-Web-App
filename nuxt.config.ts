@@ -109,13 +109,12 @@ export default defineNuxtConfig({
       ]
     },
     workbox: {
-      navigateFallback: '/',
+      navigateFallback: undefined,
       globPatterns: ['**/*.{js,css,html,png,svg,ico}']
     },
     devOptions: {
-      enabled: true,
+      enabled: false,
       suppressWarnings: true,
-      navigateFallbackAllowlist: [/^\/$/],
       type: 'module',
     }
   },
