@@ -136,16 +136,20 @@
                 <button
                   type="button"
                   @click="handleEnableAllModules"
-                  class="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/30 text-violet-300 transition-all tap-scale touch-target"
+                  class="text-xs font-semibold px-3 py-1.5 rounded-xl transition-all tap-scale flex items-center gap-1"
+                  style="background: rgba(59,78,240,0.15); border: 1px solid rgba(59,78,240,0.35); color: #818cf8;"
                 >
-                  เปิดทั้งหมด
+                  <span>✓</span>
+                  <span>เปิดทั้งหมด</span>
                 </button>
                 <button
                   type="button"
                   @click="handleEnableOnlyCashflow"
-                  class="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 border border-gray-700/60 text-gray-300 transition-all tap-scale touch-target"
+                  class="text-xs font-semibold px-3 py-1.5 rounded-xl transition-all tap-scale flex items-center gap-1"
+                  style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #94a3b8;"
                 >
-                  เฉพาะการเงิน
+                  <span>⚡</span>
+                  <span>เฉพาะการเงิน</span>
                 </button>
               </div>
             </div>
@@ -164,21 +168,22 @@
                 <div
                   v-for="mod in allModules"
                   :key="mod.id"
-                  class="p-4 rounded-xl border transition-all duration-300 flex items-start justify-between gap-3"
-                  :class="isModuleEnabled(mod.id)
-                    ? 'bg-gray-800/40 border-violet-500/30 shadow-sm shadow-violet-500/5'
-                    : 'bg-gray-900/30 border-gray-800/60 opacity-60'"
+                  @click="handleToggleModule(mod.id, mod.shortLabel)"
+                  class="p-4 rounded-2xl border transition-all duration-200 flex items-center justify-between gap-4 cursor-pointer tap-scale select-none"
+                  :style="isModuleEnabled(mod.id)
+                    ? 'background: rgba(59, 78, 240, 0.08); border-color: rgba(59, 78, 240, 0.35); box-shadow: 0 4px 20px -4px rgba(59, 78, 240, 0.12);'
+                    : 'background: rgba(255, 255, 255, 0.02); border-color: rgba(255, 255, 255, 0.08); opacity: 0.55;'"
                 >
-                  <div class="flex items-start gap-3 min-w-0">
+                  <div class="flex items-start gap-3.5 min-w-0">
                     <span class="text-2xl shrink-0 mt-0.5">{{ mod.icon }}</span>
                     <div class="min-w-0">
                       <div class="flex items-center gap-2 flex-wrap">
                         <h4 class="text-sm font-bold text-white">{{ mod.label }}</h4>
                         <span
-                          class="text-[10px] px-2 py-0.5 rounded-full font-semibold"
-                          :class="isModuleEnabled(mod.id)
-                            ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
-                            : 'bg-gray-700/30 text-gray-400 border border-gray-700/50'"
+                          class="text-[10px] px-2 py-0.5 rounded-full font-semibold transition-colors"
+                          :style="isModuleEnabled(mod.id)
+                            ? 'background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid rgba(16,185,129,0.3);'
+                            : 'background: rgba(100,116,139,0.2); color: #94a3b8; border: 1px solid rgba(100,116,139,0.3);'"
                         >
                           {{ isModuleEnabled(mod.id) ? 'เปิดใช้งาน' : 'ปิดอยู่' }}
                         </span>
@@ -187,21 +192,28 @@
                     </div>
                   </div>
 
-                  <!-- iOS-style Switch Toggle -->
-                  <button
-                    type="button"
+                  <!-- Pixel-Perfect iOS Switch Toggle -->
+                  <div
                     role="switch"
                     :aria-checked="isModuleEnabled(mod.id)"
-                    @click="handleToggleModule(mod.id, mod.shortLabel)"
-                    class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none tap-scale touch-target"
-                    :style="isModuleEnabled(mod.id) ? 'background-color: var(--brand);' : 'background-color: #374151;'"
-                    :title="isModuleEnabled(mod.id) ? 'คลิกเพื่อปิด' : 'คลิกเพื่อเปิด'"
+                    class="shrink-0 flex items-center transition-all duration-300 rounded-full"
+                    :style="{
+                      width: '46px',
+                      height: '26px',
+                      padding: '3px',
+                      backgroundColor: isModuleEnabled(mod.id) ? 'var(--brand, #3b4ef0)' : '#334155',
+                      boxShadow: isModuleEnabled(mod.id) ? '0 0 14px rgba(59, 78, 240, 0.45)' : 'none'
+                    }"
                   >
-                    <span
-                      class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out"
-                      :style="isModuleEnabled(mod.id) ? 'transform: translateX(20px);' : 'transform: translateX(0px);'"
+                    <div
+                      class="rounded-full bg-white transition-transform duration-300 pointer-events-none shadow-md"
+                      :style="{
+                        width: '20px',
+                        height: '20px',
+                        transform: isModuleEnabled(mod.id) ? 'translateX(20px)' : 'translateX(0px)'
+                      }"
                     />
-                  </button>
+                  </div>
                 </div>
               </div>
             </div>
