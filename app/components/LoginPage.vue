@@ -147,63 +147,156 @@
           </button>
         </form>
 
-        <!-- Sign Up Form -->
-        <form v-else @submit.prevent="handleSignUp" class="space-y-4">
-          <div>
-            <label class="block text-xs font-medium mb-1.5" style="color: var(--text-secondary);">ชื่อที่แสดง</label>
-            <input
-              v-model="fullName"
-              type="text"
-              placeholder="ชื่อของคุณ"
-              autocomplete="name"
-              class="w-full input-glass text-sm"
-            />
+        <!-- Sign Up Flow (Step 1 & Step 2) -->
+        <div v-else class="space-y-4">
+          <!-- Step 1: Account Information -->
+          <form v-if="signUpStep === 'credentials'" @submit.prevent="proceedToModuleSelection" class="space-y-4">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-xs font-semibold px-2 py-0.5 rounded-full" style="background: var(--brand-soft); color: var(--brand-ink);">
+                ขั้นตอนที่ 1/2: ข้อมูลบัญชี
+              </span>
+            </div>
+            <div>
+              <label class="block text-xs font-medium mb-1.5" style="color: var(--text-secondary);">ชื่อที่แสดง</label>
+              <input
+                v-model="fullName"
+                type="text"
+                placeholder="ชื่อของคุณ"
+                autocomplete="name"
+                class="w-full input-glass text-sm"
+              />
+            </div>
+            <div>
+              <label class="block text-xs font-medium mb-1.5" style="color: var(--text-secondary);">อีเมล</label>
+              <input
+                v-model="email"
+                type="email"
+                placeholder="your@email.com"
+                required
+                autocomplete="email"
+                class="w-full input-glass text-sm"
+              />
+            </div>
+            <div>
+              <label class="block text-xs font-medium mb-1.5" style="color: var(--text-secondary);">รหัสผ่าน</label>
+              <input
+                v-model="password"
+                type="password"
+                placeholder="••••••••"
+                required
+                minlength="6"
+                autocomplete="new-password"
+                class="w-full input-glass text-sm"
+              />
+              <p class="text-[11px] mt-1.5" style="color: var(--text-muted);">อย่างน้อย 6 ตัวอักษร</p>
+            </div>
+            <div>
+              <label class="block text-xs font-medium mb-1.5" style="color: var(--text-secondary);">ยืนยันรหัสผ่าน</label>
+              <input
+                v-model="confirmPassword"
+                type="password"
+                placeholder="••••••••"
+                required
+                minlength="6"
+                autocomplete="new-password"
+                class="w-full input-glass text-sm"
+              />
+            </div>
+            <button
+              type="submit"
+              :disabled="!isCredentialsValid"
+              class="w-full btn-primary text-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none tap-scale touch-target"
+            >
+              <span>ถัดไป: เลือกฟังก์ชันที่ต้องการใช้</span>
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </button>
+          </form>
+
+          <!-- Step 2: Feature Selection (Onboarding) -->
+          <div v-else class="space-y-4 animate-fade-in">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-semibold px-2 py-0.5 rounded-full" style="background: var(--brand-soft); color: var(--brand-ink);">
+                ขั้นตอนที่ 2/2: ปรับแต่งการใช้งาน
+              </span>
+              <div class="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  @click="selectAllModules"
+                  class="text-[11px] font-semibold text-violet-400 hover:underline"
+                >
+                  เลือกทั้งหมด
+                </button>
+                <span class="text-gray-600 text-xs">·</span>
+                <button
+                  type="button"
+                  @click="selectMinimalModules"
+                  class="text-[11px] font-semibold text-gray-400 hover:underline"
+                >
+                  เฉพาะการเงิน
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <h3 class="text-sm font-bold" style="color: var(--text-primary);">คุณต้องการใช้งานฟังก์ชันใดบ้าง?</h3>
+              <p class="text-[11.5px] mt-0.5" style="color: var(--text-muted);">
+                เลือกเฉพาะส่วนที่ต้องใช้เพื่อความเรียบง่าย (เปิด-ปิดเพิ่มภายหลังได้ตลอดเวลา)
+              </p>
+            </div>
+
+            <!-- Module list checkboxes -->
+            <div class="space-y-2 max-h-[260px] overflow-y-auto pr-1">
+              <div
+                v-for="mod in allModules"
+                :key="mod.id"
+                @click="toggleSelectedModule(mod.id)"
+                class="flex items-start gap-3 p-2.5 rounded-xl border transition-all cursor-pointer tap-scale"
+                :style="selectedSignUpModules.includes(mod.id)
+                  ? 'background: var(--brand-soft); border-color: var(--brand);'
+                  : 'background: var(--bg-elevated); border-color: var(--border-subtle); opacity: 0.65;'"
+              >
+                <div class="text-xl shrink-0 mt-0.5">{{ mod.icon }}</div>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center justify-between">
+                    <p class="text-xs font-bold" :style="{ color: selectedSignUpModules.includes(mod.id) ? 'var(--brand-ink)' : 'var(--text-primary)' }">
+                      {{ mod.label }}
+                    </p>
+                    <!-- Checkbox indicator -->
+                    <div
+                      class="w-4 h-4 rounded-md flex items-center justify-center text-white text-[10px] shrink-0 font-bold transition-all"
+                      :style="selectedSignUpModules.includes(mod.id) ? 'background: var(--brand);' : 'border: 1px solid var(--border-default); background: transparent;'"
+                    >
+                      <span v-if="selectedSignUpModules.includes(mod.id)">✓</span>
+                    </div>
+                  </div>
+                  <p class="text-[11px] mt-0.5 leading-tight line-clamp-2" style="color: var(--text-muted);">
+                    {{ mod.description }}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2 pt-1">
+              <button
+                type="button"
+                @click="signUpStep = 'credentials'"
+                class="px-4 py-2.5 rounded-xl text-xs font-bold border transition-all tap-scale"
+                style="background: var(--bg-elevated); border-color: var(--border-subtle); color: var(--text-secondary);"
+              >
+                ← ย้อนกลับ
+              </button>
+              <button
+                type="button"
+                @click="handleSignUp"
+                :disabled="isLoading || selectedSignUpModules.length === 0"
+                class="flex-1 btn-primary text-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none tap-scale touch-target"
+              >
+                <span v-if="isLoading" class="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                <span>{{ isLoading ? 'กำลังสร้างบัญชี...' : 'ยืนยันและสร้างบัญชี ✨' }}</span>
+              </button>
+            </div>
           </div>
-          <div>
-            <label class="block text-xs font-medium mb-1.5" style="color: var(--text-secondary);">อีเมล</label>
-            <input
-              v-model="email"
-              type="email"
-              placeholder="your@email.com"
-              required
-              autocomplete="email"
-              class="w-full input-glass text-sm"
-            />
-          </div>
-          <div>
-            <label class="block text-xs font-medium mb-1.5" style="color: var(--text-secondary);">รหัสผ่าน</label>
-            <input
-              v-model="password"
-              type="password"
-              placeholder="••••••••"
-              required
-              minlength="6"
-              autocomplete="new-password"
-              class="w-full input-glass text-sm"
-            />
-            <p class="text-[11px] mt-1.5" style="color: var(--text-muted);">อย่างน้อย 6 ตัวอักษร</p>
-          </div>
-          <div>
-            <label class="block text-xs font-medium mb-1.5" style="color: var(--text-secondary);">ยืนยันรหัสผ่าน</label>
-            <input
-              v-model="confirmPassword"
-              type="password"
-              placeholder="••••••••"
-              required
-              minlength="6"
-              autocomplete="new-password"
-              class="w-full input-glass text-sm"
-            />
-          </div>
-          <button
-            type="submit"
-            :disabled="isLoading || password !== confirmPassword"
-            class="w-full btn-primary text-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none tap-scale touch-target"
-          >
-            <span v-if="isLoading" class="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-            {{ isLoading ? 'กำลังสร้างบัญชี...' : 'สมัครสมาชิก' }}
-          </button>
-        </form>
+        </div>
 
         <!-- Divider -->
         <div class="flex items-center gap-3">
@@ -241,15 +334,20 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
+import type { AppModuleId } from '~/composables/useUserModules'
 
 const router = useRouter()
 const config = useRuntimeConfig()
 const { login, register, loginWithGoogleIdToken, isSessionValid } = useAuth()
+const { allModules, setModules } = useUserModules()
 
 const features = ['💸 การเงิน', '📅 ตารางเรียน', '✅ งาน & To-do', '🎉 กิจกรรม', '🔔 เตือนผ่าน LINE']
 
 const isSignUp = ref(false)
+const signUpStep = ref<'credentials' | 'modules'>('credentials')
+const selectedSignUpModules = ref<AppModuleId[]>(allModules.map((m) => m.id))
+
 const isLoading = ref(false)
 const isCheckingSession = ref(true)
 const isRedirecting = ref(false)
@@ -261,6 +359,56 @@ const errorMessage = ref('')
 const successMessage = ref('')
 const loadingHint = ref('')
 const sessionCheckHint = ref('กรุณารอสักครู่')
+
+watch(isSignUp, () => {
+  signUpStep.value = 'credentials'
+  errorMessage.value = ''
+  successMessage.value = ''
+})
+
+const isCredentialsValid = computed(() => {
+  return (
+    email.value.trim().length > 0 &&
+    password.value.length >= 6 &&
+    confirmPassword.value.length >= 6 &&
+    password.value === confirmPassword.value
+  )
+})
+
+const proceedToModuleSelection = () => {
+  if (password.value !== confirmPassword.value) {
+    showMessage('รหัสผ่านไม่ตรงกัน', 'error')
+    return
+  }
+  if (password.value.length < 6) {
+    showMessage('รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร', 'error')
+    return
+  }
+  signUpStep.value = 'modules'
+}
+
+const toggleSelectedModule = (id: AppModuleId) => {
+  const list = [...selectedSignUpModules.value]
+  const idx = list.indexOf(id)
+  if (idx >= 0) {
+    if (list.length > 1) {
+      list.splice(idx, 1)
+    } else {
+      showMessage('ต้องเลือกอย่างน้อย 1 ฟังก์ชัน', 'error')
+    }
+  } else {
+    list.push(id)
+  }
+  selectedSignUpModules.value = list
+}
+
+const selectAllModules = () => {
+  selectedSignUpModules.value = allModules.map((m) => m.id)
+}
+
+const selectMinimalModules = () => {
+  selectedSignUpModules.value = ['cashflow']
+}
 
 let loadingTimer: ReturnType<typeof setTimeout> | null = null
 let sessionTimer: ReturnType<typeof setTimeout> | null = null
@@ -455,7 +603,14 @@ const handleSignUp = async () => {
       isLoading.value = false
       return
     }
+    if (selectedSignUpModules.value.length === 0) {
+      showMessage('โปรดเลือกอย่างน้อย 1 ฟังก์ชันที่ต้องการใช้งาน', 'error')
+      isLoading.value = false
+      return
+    }
     await register(email.value, password.value, fullName.value || email.value.split('@')[0] || '')
+    // Persist chosen modules for this new user
+    setModules(selectedSignUpModules.value)
     showMessage('สมัครสมาชิกสำเร็จ กำลังพาไปที่ Dashboard...', 'success')
     await redirectToDashboard()
   } catch (error: unknown) {

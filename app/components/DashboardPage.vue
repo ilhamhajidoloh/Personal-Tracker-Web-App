@@ -8,14 +8,22 @@
           <h1 class="text-2xl md:text-[30px] font-extrabold tracking-tight mt-1.5" style="color: var(--text-primary);">{{ greetingText }}, <em style="font-style: normal; color: var(--brand);">{{ userDisplayName }}</em></h1>
           <p class="num text-xs mt-2" style="color: var(--text-muted);">{{ todayText }} · อัปเดต {{ lastUpdateTime }}</p>
         </div>
-        <div class="flex items-center gap-2">
-          <NuxtLink to="/cashflow" class="btn-primary text-sm inline-flex items-center gap-2">
+        <div class="flex items-center gap-2 flex-wrap">
+          <NuxtLink v-if="isModuleEnabled('cashflow')" to="/cashflow" class="btn-primary text-sm inline-flex items-center gap-2">
             <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
             บันทึกรายการ
           </NuxtLink>
-          <NuxtLink to="/study-schedule" class="btn-secondary text-sm inline-flex items-center gap-2">
+          <NuxtLink v-if="isModuleEnabled('study-schedule')" to="/study-schedule" class="btn-secondary text-sm inline-flex items-center gap-2">
             <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
             ตารางเรียน
+          </NuxtLink>
+          <NuxtLink v-if="isModuleEnabled('todos') && !isModuleEnabled('study-schedule')" to="/todos" class="btn-secondary text-sm inline-flex items-center gap-2">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h11"/></svg>
+            To-do List
+          </NuxtLink>
+          <NuxtLink v-if="isModuleEnabled('tasks') && !isModuleEnabled('cashflow')" to="/tasks" class="btn-secondary text-sm inline-flex items-center gap-2">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+            จัดการงาน
           </NuxtLink>
         </div>
       </div>
@@ -34,9 +42,9 @@
       </Transition>
 
       <!-- Main grid: left (hero + recent) · right (allocation + schedule + todos) -->
-      <section class="grid grid-cols-1 lg:grid-cols-[1.05fr_1fr] gap-4 items-start">
+      <section v-if="hasLeftColumn || hasRightColumn" :class="gridClasses">
         <!-- LEFT column -->
-        <div class="space-y-4">
+        <div v-if="hasLeftColumn" class="space-y-4">
           <!-- Hero balance + chart -->
           <div class="section-card animate-slide-up overflow-hidden">
             <div class="p-5 md:p-6">
@@ -234,9 +242,9 @@
         </div>
 
         <!-- RIGHT column -->
-        <div class="space-y-4">
+        <div v-if="hasRightColumn" class="space-y-4">
           <!-- Expense allocation (Donut Chart) -->
-          <div class="section-card animate-slide-up delay-100">
+          <div v-if="isModuleEnabled('cashflow')" class="section-card animate-slide-up delay-100">
             <div class="flex items-center justify-between gap-3 p-5" style="border-bottom: 1px solid var(--border-subtle);">
               <div class="flex items-center gap-2">
                 <div class="w-6 h-6 rounded-md flex items-center justify-center text-xs" style="background: var(--brand-soft); color: var(--brand-ink);">
@@ -361,7 +369,7 @@
           </div>
 
           <!-- Today's schedule -->
-          <div class="section-card animate-slide-up delay-200">
+          <div v-if="isModuleEnabled('study-schedule')" class="section-card animate-slide-up delay-200">
             <div class="flex items-center justify-between gap-3 p-5" style="border-bottom: 1px solid var(--border-subtle);">
               <h2 class="text-sm font-semibold" style="color: var(--text-primary);">ตารางวันนี้ · {{ todaysStudyClasses.length }} คาบ</h2>
               <NuxtLink to="/study-schedule" class="eyebrow" style="color: var(--brand);">ทั้งสัปดาห์ →</NuxtLink>
@@ -458,7 +466,7 @@
           </div>
 
           <!-- Todos -->
-          <div class="section-card animate-slide-up delay-300">
+          <div v-if="isModuleEnabled('todos')" class="section-card animate-slide-up delay-300">
             <div class="flex items-center justify-between gap-3 p-5" style="border-bottom: 1px solid var(--border-subtle);">
               <h2 class="text-sm font-semibold" style="color: var(--text-primary);">To-do List</h2>
               <NuxtLink to="/todos" class="eyebrow" style="color: var(--brand);">ดูทั้งหมด →</NuxtLink>
@@ -507,7 +515,7 @@
       </section>
 
       <!-- Events Section -->
-      <section class="section-card animate-slide-up delay-400">
+      <section v-if="isModuleEnabled('events')" class="section-card animate-slide-up delay-400">
         <div class="flex items-center justify-between gap-3 p-5" style="border-bottom: 1px solid var(--border-subtle);">
           <div>
             <h2 class="text-sm font-semibold" style="color: var(--text-primary);">กิจกรรมและนัดหมาย</h2>
@@ -606,6 +614,20 @@
           </div>
         </div>
       </section>
+
+      <!-- Feature Customization Notice if some modules are disabled -->
+      <div v-if="enabledModules.length < allModules.length" class="rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 border transition-all" style="background: var(--bg-card); border-color: var(--border-subtle);">
+        <div class="flex items-center gap-3">
+          <span class="text-2xl shrink-0">✨</span>
+          <div>
+            <p class="text-xs font-bold" style="color: var(--text-primary);">คุณกำลังเปิดใช้งาน {{ enabledModules.length }} จาก {{ allModules.length }} ฟังก์ชัน</p>
+            <p class="text-[11px]" style="color: var(--text-muted);">ต้องการใช้งานฟังก์ชันอื่นเพิ่มเติม (การเงิน, ตารางเรียน, To-do, งาน, กิจกรรม) สามารถเปิดได้ตลอดเวลา</p>
+          </div>
+        </div>
+        <NuxtLink to="/profile" class="btn-secondary text-xs shrink-0 py-2 px-3 flex items-center gap-1.5 tap-scale">
+          <span>⚙️ ปรับแต่งฟังก์ชัน</span>
+        </NuxtLink>
+      </div>
     </div>
   </AppTabsLayout>
 </template>
@@ -613,6 +635,21 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { getTodayTH, nowTH } from '~/utils/date'
+
+const { isModuleEnabled, allModules, enabledModules } = useUserModules()
+
+const hasLeftColumn = computed(() => isModuleEnabled('cashflow'))
+const hasRightColumn = computed(() => isModuleEnabled('cashflow') || isModuleEnabled('study-schedule') || isModuleEnabled('todos'))
+
+const gridClasses = computed(() => {
+  if (hasLeftColumn.value && hasRightColumn.value) {
+    return 'grid grid-cols-1 lg:grid-cols-[1.05fr_1fr] gap-4 items-start'
+  }
+  if (hasLeftColumn.value) {
+    return 'grid grid-cols-1 gap-4 items-start'
+  }
+  return 'grid grid-cols-1 md:grid-cols-2 gap-4 items-start'
+})
 
 type TransactionType = 'income' | 'expense'
 
@@ -2005,7 +2042,20 @@ const payDashboardRecurring = async (item: BackendRecurringExpense) => {
 }
 
 const refreshOverview = async () => {
-  await Promise.all([loadTransactions(), loadStudySchedules(), loadTodos(), loadEvents(), loadRecurringExpenses()])
+  const promises: Promise<any>[] = []
+  if (isModuleEnabled('cashflow')) {
+    promises.push(loadTransactions(), loadRecurringExpenses())
+  }
+  if (isModuleEnabled('study-schedule')) {
+    promises.push(loadStudySchedules())
+  }
+  if (isModuleEnabled('todos')) {
+    promises.push(loadTodos())
+  }
+  if (isModuleEnabled('events')) {
+    promises.push(loadEvents())
+  }
+  await Promise.all(promises)
   lastUpdateTime.value = nowTH().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) + ' น.'
 }
 

@@ -122,6 +122,91 @@
             </div>
           </section>
 
+          <!-- App Modules Customization Section -->
+          <section id="modules" class="section-card">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-5 py-4 border-b border-gray-800/60">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-violet-500/15 flex items-center justify-center text-xl shrink-0">✨</div>
+                <div>
+                  <h3 class="text-base font-semibold text-white">จัดการฟังก์ชันการใช้งาน (App Modules)</h3>
+                  <p class="text-xs text-gray-500 mt-0.5">เปิดหรือปิดโมดูลที่คุณต้องการใช้งาน เมนูและแดชบอร์ดจะปรับให้พอดีกับความต้องการ</p>
+                </div>
+              </div>
+              <div class="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  @click="handleEnableAllModules"
+                  class="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/30 text-violet-300 transition-all tap-scale touch-target"
+                >
+                  เปิดทั้งหมด
+                </button>
+                <button
+                  type="button"
+                  @click="handleEnableOnlyCashflow"
+                  class="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 border border-gray-700/60 text-gray-300 transition-all tap-scale touch-target"
+                >
+                  เฉพาะการเงิน
+                </button>
+              </div>
+            </div>
+
+            <div class="p-5">
+              <div class="flex items-center justify-between mb-4 pb-2 border-b border-gray-800/40">
+                <span class="text-xs font-semibold text-gray-400">
+                  สถานะ: เปิดใช้งาน <span class="text-violet-400 font-bold">{{ enabledModules.length }}</span> จาก {{ allModules.length }} ฟังก์ชัน
+                </span>
+                <span class="text-[11px] text-gray-500">
+                  การเปลี่ยนสวิตช์มีผลทันทีต่อแถบเมนูและหน้าจอทั้งหมด
+                </span>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                <div
+                  v-for="mod in allModules"
+                  :key="mod.id"
+                  class="p-4 rounded-xl border transition-all duration-300 flex items-start justify-between gap-3"
+                  :class="isModuleEnabled(mod.id)
+                    ? 'bg-gray-800/40 border-violet-500/30 shadow-sm shadow-violet-500/5'
+                    : 'bg-gray-900/30 border-gray-800/60 opacity-60'"
+                >
+                  <div class="flex items-start gap-3 min-w-0">
+                    <span class="text-2xl shrink-0 mt-0.5">{{ mod.icon }}</span>
+                    <div class="min-w-0">
+                      <div class="flex items-center gap-2 flex-wrap">
+                        <h4 class="text-sm font-bold text-white">{{ mod.label }}</h4>
+                        <span
+                          class="text-[10px] px-2 py-0.5 rounded-full font-semibold"
+                          :class="isModuleEnabled(mod.id)
+                            ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                            : 'bg-gray-700/30 text-gray-400 border border-gray-700/50'"
+                        >
+                          {{ isModuleEnabled(mod.id) ? 'เปิดใช้งาน' : 'ปิดอยู่' }}
+                        </span>
+                      </div>
+                      <p class="text-xs text-gray-400 mt-1 leading-relaxed">{{ mod.description }}</p>
+                    </div>
+                  </div>
+
+                  <!-- iOS-style Switch Toggle -->
+                  <button
+                    type="button"
+                    role="switch"
+                    :aria-checked="isModuleEnabled(mod.id)"
+                    @click="handleToggleModule(mod.id, mod.shortLabel)"
+                    class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none tap-scale touch-target"
+                    :style="isModuleEnabled(mod.id) ? 'background-color: var(--brand);' : 'background-color: #374151;'"
+                    :title="isModuleEnabled(mod.id) ? 'คลิกเพื่อปิด' : 'คลิกเพื่อเปิด'"
+                  >
+                    <span
+                      class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out"
+                      :style="isModuleEnabled(mod.id) ? 'transform: translateX(20px);' : 'transform: translateX(0px);'"
+                    />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
+
           <!-- LINE Integration -->
           <section class="section-card">
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-5 py-4 border-b border-gray-800/60">
@@ -599,6 +684,35 @@ const { currentUser: user, updateProfile, changePassword } = useAuth()
 const { apiFetch } = useBackendApi()
 const { toastSuccess, toastError } = useAlert()
 const config = useRuntimeConfig()
+const { allModules, enabledModules, isModuleEnabled, toggleModule, enableAllModules, setModules } = useUserModules()
+
+const handleToggleModule = (modId: any, label: string) => {
+  const isCurrentlyEnabled = isModuleEnabled(modId)
+  if (isCurrentlyEnabled && enabledModules.value.length <= 1) {
+    toastError('จำเป็นต้องเปิดใช้งานอย่างน้อย 1 ฟังก์ชัน')
+    return
+  }
+  const success = toggleModule(modId)
+  if (success) {
+    if (!isCurrentlyEnabled) {
+      toastSuccess(`เปิดใช้งานฟังก์ชัน "${label}" เรียบร้อยแล้ว`)
+    } else {
+      toastSuccess(`ปิดการใช้งานฟังก์ชัน "${label}" แล้ว`)
+    }
+  } else {
+    toastError('ไม่สามารถปิดฟังก์ชันสุดท้ายได้')
+  }
+}
+
+const handleEnableAllModules = () => {
+  enableAllModules()
+  toastSuccess('เปิดใช้งานทุกฟังก์ชันเรียบร้อยแล้ว')
+}
+
+const handleEnableOnlyCashflow = () => {
+  setModules(['cashflow'])
+  toastSuccess('ตั้งค่าเฉพาะระบบการเงินเรียบร้อยแล้ว')
+}
 
 const userMe = ref<{ userId: string; email: string; fullName: string; hasGoogle: boolean; hasLine: boolean; hasPassword: boolean } | null>(null)
 const userHasPassword = computed(() => userMe.value?.hasPassword ?? true)

@@ -157,6 +157,7 @@ const route = useRoute()
 const router = useRouter()
 const { currentUser: user, signOut } = useAuth()
 const { isLightTheme, initializeTheme, toggleTheme } = useAppTheme()
+const { isModuleEnabled } = useUserModules()
 
 const userMenuOpen = ref(false)
 const isLoggingOut = ref(false)
@@ -165,17 +166,24 @@ const closeMenus = () => {
   userMenuOpen.value = false
 }
 
-const navItems: NavItem[] = [
+const allNavDefinitions: (NavItem & { moduleId?: string })[] = [
   { label: 'ภาพรวม', to: '/dashboard', svg: '<rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/>' },
-  { label: 'การเงิน', to: '/cashflow', svg: '<path d="M4 5v14M4 8h14a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H4"/><circle cx="16" cy="13" r="1.4" fill="currentColor"/>' },
-  { label: 'ตารางเรียน', to: '/study-schedule', svg: '<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/>' },
-  { label: 'To-do List', to: '/todos', svg: '<path d="M9 11l3 3 8-8"/><path d="M20 12v7a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h11"/>' },
-  { label: 'งาน', to: '/tasks', svg: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y1="13"/><line x1="16" y1="17" x2="8" y1="17"/><polyline points="10 9 9 9 8 9"/>' },
-  { label: 'กิจกรรม', to: '/events', svg: '<path d="M4 4h16v3.5l-6 5.5v6l-4 2v-8L4 7.5z"/>' },
+  { moduleId: 'cashflow', label: 'การเงิน', to: '/cashflow', svg: '<path d="M4 5v14M4 8h14a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H4"/><circle cx="16" cy="13" r="1.4" fill="currentColor"/>' },
+  { moduleId: 'study-schedule', label: 'ตารางเรียน', to: '/study-schedule', svg: '<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/>' },
+  { moduleId: 'todos', label: 'To-do List', to: '/todos', svg: '<path d="M9 11l3 3 8-8"/><path d="M20 12v7a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h11"/>' },
+  { moduleId: 'tasks', label: 'งาน', to: '/tasks', svg: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>' },
+  { moduleId: 'events', label: 'กิจกรรม', to: '/events', svg: '<path d="M4 4h16v3.5l-6 5.5v6l-4 2v-8L4 7.5z"/>' },
 ]
 
+const navItems = computed(() => {
+  return allNavDefinitions.filter((item) => {
+    if (!item.moduleId) return true
+    return isModuleEnabled(item.moduleId as any)
+  })
+})
+
 const secondaryNav: NavItem[] = [
-  { label: 'โปรไฟล์', to: '/profile', svg: '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>' },
+  { label: 'โปรไฟล์ & ตั้งค่าฟังก์ชัน', to: '/profile', svg: '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>' },
 ]
 
 const userDisplayName = computed(() => {
