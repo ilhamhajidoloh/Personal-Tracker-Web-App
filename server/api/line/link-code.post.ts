@@ -3,6 +3,8 @@ import { createLineLinkToken, getLineLinkMessage } from '../../utils/line'
 
 type LinkCodeBody = {
   notificationsEnabled?: boolean
+  classRemindersEnabled?: boolean
+  classReminderMinutes?: number
 }
 
 const LINE_LINK_CODE_TTL_MS = 10 * 60 * 1000
@@ -24,6 +26,8 @@ export default defineEventHandler(async (event) => {
   const token = await createLineLinkToken(config.line.channelSecret, {
     userId: authUserId,
     notificationsEnabled: body?.notificationsEnabled !== false,
+    classRemindersEnabled: body?.classRemindersEnabled,
+    classReminderMinutes: body?.classReminderMinutes,
     expiresAt,
   })
 

@@ -4,6 +4,8 @@ import { getLineConnectionStatus, normalizeLineUserId } from '../../utils/line'
 type ConnectLineBody = {
   lineUserId?: string
   notificationsEnabled?: boolean
+  classRemindersEnabled?: boolean
+  classReminderMinutes?: number
 }
 
 export default defineEventHandler(async (event) => {
@@ -28,6 +30,8 @@ export default defineEventHandler(async (event) => {
     body: {
       lineUserId,
       notificationsEnabled: body?.notificationsEnabled !== false,
+      classRemindersEnabled: Boolean(body?.classRemindersEnabled),
+      classReminderMinutes: typeof body?.classReminderMinutes === 'number' ? body.classReminderMinutes : 15,
     },
   }).catch((err) => {
     console.error('LINE connect error:', err)

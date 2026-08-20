@@ -7,6 +7,8 @@ export type LineConnectionStatus = {
   connected: boolean
   lineUserId: string
   notificationsEnabled: boolean
+  classRemindersEnabled: boolean
+  classReminderMinutes: number
   connectedAt: string | null
 }
 
@@ -14,6 +16,8 @@ type LineLinkTokenPayload = {
   version: 1
   userId: string
   notificationsEnabled: boolean
+  classRemindersEnabled?: boolean
+  classReminderMinutes?: number
   expiresAt: number
 }
 
@@ -69,6 +73,8 @@ type BackendLineStatus = {
   connected: boolean
   lineUserId: string | null
   notificationsEnabled: boolean
+  classRemindersEnabled?: boolean
+  classReminderMinutes?: number
   connectedAt: string | null
 }
 
@@ -76,11 +82,13 @@ export const getLineConnectionStatus = async (apiBase: string, userId: string, a
   const data = await $fetch<BackendLineStatus>(`${apiBase}/api/Line/${userId}`, {
     headers: authHeaders,
   }).catch(() => null)
-  if (!data?.connected) return { connected: false, lineUserId: '', notificationsEnabled: false, connectedAt: null }
+  if (!data?.connected) return { connected: false, lineUserId: '', notificationsEnabled: false, classRemindersEnabled: false, classReminderMinutes: 15, connectedAt: null }
   return {
     connected: true,
     lineUserId: data.lineUserId || '',
     notificationsEnabled: data.notificationsEnabled,
+    classRemindersEnabled: Boolean(data.classRemindersEnabled),
+    classReminderMinutes: typeof data.classReminderMinutes === 'number' ? data.classReminderMinutes : 15,
     connectedAt: data.connectedAt,
   }
 }
@@ -97,6 +105,8 @@ export const createLineLinkToken = async (
     version: 1,
     userId: payload.userId.trim(),
     notificationsEnabled: payload.notificationsEnabled,
+    classRemindersEnabled: payload.classRemindersEnabled ?? false,
+    classReminderMinutes: payload.classReminderMinutes ?? 15,
     expiresAt: payload.expiresAt,
   }
 

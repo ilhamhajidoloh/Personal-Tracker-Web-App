@@ -129,7 +129,12 @@ export default defineEventHandler(async (event) => {
         await $fetch(`${apiBase}/api/Line/${linkPayload.userId}/connect`, {
           method: 'POST',
           headers: authHeaders,
-          body: { lineUserId, notificationsEnabled: linkPayload.notificationsEnabled },
+          body: {
+            lineUserId,
+            notificationsEnabled: linkPayload.notificationsEnabled,
+            classRemindersEnabled: linkPayload.classRemindersEnabled ?? false,
+            classReminderMinutes: linkPayload.classReminderMinutes ?? 15,
+          },
         })
         await reply(replyToken, successMessage)
       } catch (err: any) {

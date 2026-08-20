@@ -900,11 +900,46 @@ const normalizeLineUserIdInput = (value: string) => {
 
 const getRequestErrorMessage = (error: any, fallbackMessage: string) => error?.data?.statusMessage || error?.statusMessage || error?.message || fallbackMessage
 
+const getLineSettingsStorageKey = (userId?: string) => {
+  return userId ? `mylife_line_class_settings_${userId}` : 'mylife_line_class_settings'
+}
+
+const loadLocalLineClassSettings = () => {
+  if (typeof window === 'undefined') return { enabled: false, minutes: 15 }
+  try {
+    const key = getLineSettingsStorageKey(currentUser.value?.userId)
+    const raw = localStorage.getItem(key) || localStorage.getItem('mylife_line_class_settings')
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      return {
+        enabled: Boolean(parsed.enabled),
+        minutes: Number(parsed.minutes) || 15,
+      }
+    }
+  } catch (e) {
+    console.error('Failed to read line class settings from localStorage:', e)
+  }
+  return { enabled: false, minutes: 15 }
+}
+
+const saveLocalLineClassSettings = (enabled: boolean, minutes: number) => {
+  if (typeof window === 'undefined') return
+  try {
+    const key = getLineSettingsStorageKey(currentUser.value?.userId)
+    const data = JSON.stringify({ enabled, minutes })
+    localStorage.setItem(key, data)
+    localStorage.setItem('mylife_line_class_settings', data)
+  } catch (e) {
+    console.error('Failed to save line class settings to localStorage:', e)
+  }
+}
+
 const syncLineForm = () => {
+  const localClassSettings = loadLocalLineClassSettings()
   lineUserIdInput.value = lineStatus.value.lineUserId
   lineNotificationsEnabled.value = lineStatus.value.connected ? lineStatus.value.notificationsEnabled : true
-  lineClassRemindersEnabled.value = lineStatus.value.connected ? lineStatus.value.classRemindersEnabled : false
-  lineClassReminderMinutes.value = lineStatus.value.connected ? lineStatus.value.classReminderMinutes : 15
+  lineClassRemindersEnabled.value = lineStatus.value.connected ? (lineStatus.value.classRemindersEnabled ?? localClassSettings.enabled) : false
+  lineClassReminderMinutes.value = lineStatus.value.connected ? (lineStatus.value.classReminderMinutes ?? localClassSettings.minutes) : 15
 }
 
 const stopLineStatusPolling = () => {
@@ -916,7 +951,13 @@ const loadLineStatus = async (options: { silent?: boolean, notifyOnConnect?: boo
   const wasConnected = lineStatus.value.connected
   if (shouldShowLoader) isLineLoading.value = true
   try {
-    lineStatus.value = await $fetch<LineConnectionStatus>('/api/line/status')
+    const res = await $fetch<LineConnectionStatus>('/api/line/status')
+    const localClassSettings = loadLocalLineClassSettings()
+    lineStatus.value = {
+      ...res,
+      classRemindersEnabled: res.classRemindersEnabled ?? (res.connected ? localClassSettings.enabled : false),
+      classReminderMinutes: res.classReminderMinutes ?? (res.connected ? localClassSettings.minutes : 15),
+    }
     syncLineForm()
     if (lineStatus.value.connected) {
       stopLineStatusPolling()
@@ -964,9 +1005,14 @@ const saveLineConnection = async (lineUserId: string) => {
       classReminderMinutes: lineClassReminderMinutes.value,
     },
   })
+  saveLocalLineClassSettings(lineClassRemindersEnabled.value, lineClassReminderMinutes.value)
   lineLinkCode.value = null
   stopLineStatusPolling()
-  return updated
+  return {
+    ...updated,
+    classRemindersEnabled: lineClassRemindersEnabled.value,
+    classReminderMinutes: lineClassReminderMinutes.value,
+  }
 }
 
 const generateLineLinkCode = async (options: { openLine?: boolean } = {}) => {
@@ -1034,6 +1080,7 @@ const disconnectLine = async () => {
   isSavingLine.value = true
   try {
     lineStatus.value = await $fetch<LineConnectionStatus>('/api/line/disconnect', { method: 'POST' })
+    saveLocalLineClassSettings(false, 15)
     syncLineForm()
     toastSuccess('ยกเลิกการเชื่อมต่อ LINE แล้ว')
   }
