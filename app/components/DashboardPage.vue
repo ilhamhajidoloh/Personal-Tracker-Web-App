@@ -263,31 +263,56 @@
             </div>
 
             <div v-else class="p-4 sm:p-5">
-              <div class="p-4 rounded-xl bg-amber-500/10 border border-amber-500/25 flex flex-wrap sm:flex-nowrap items-center justify-between gap-3">
-                <div class="min-w-0 flex-1">
-                  <div class="flex items-center gap-2 flex-wrap mb-1">
-                    <span class="text-sm font-bold text-white truncate">{{ nearestRecurringItemInfo.item.title }}</span>
-                    <span class="text-[10.5px] font-semibold px-2 py-0.5 rounded-md border" :class="nearestRecurringItemInfo.statusClass">
-                      {{ nearestRecurringItemInfo.dueLabel }}
-                    </span>
+              <div class="p-4 rounded-xl bg-amber-500/10 border border-amber-500/25 space-y-3">
+                <div class="flex flex-wrap sm:flex-nowrap items-center justify-between gap-3">
+                  <div class="min-w-0 flex-1">
+                    <div class="flex items-center gap-2 flex-wrap mb-1">
+                      <span class="text-sm font-bold text-white truncate">{{ nearestRecurringItemInfo.item.title }}</span>
+                      <span class="text-[10.5px] font-semibold px-2 py-0.5 rounded-md border" :class="nearestRecurringItemInfo.statusClass">
+                        {{ nearestRecurringItemInfo.dueLabel }}
+                      </span>
+                    </div>
+                    <p class="text-xs text-gray-400">
+                      จ่ายทุกวันที่ {{ nearestRecurringItemInfo.item.dayOfMonthDue }} &bull;
+                      <span class="font-mono text-amber-300 font-semibold">{{ nearestRecurringItemInfo.countdownText }}</span>
+                    </p>
                   </div>
-                  <p class="text-xs text-gray-400">
-                    จ่ายทุกวันที่ {{ nearestRecurringItemInfo.item.dayOfMonthDue }} &bull;
-                    <span class="font-mono text-amber-300 font-semibold">{{ nearestRecurringItemInfo.countdownText }}</span>
-                  </p>
+
+                  <div class="flex items-center gap-3 shrink-0 ml-auto sm:ml-0">
+                    <span class="num text-base font-extrabold text-white">฿{{ formatCurrency(nearestRecurringItemInfo.item.amount) }}</span>
+                    <button
+                      @click="payDashboardRecurring(nearestRecurringItemInfo.item)"
+                      :disabled="isPayingDashboardRecurringId === nearestRecurringItemInfo.item.id"
+                      class="px-3 py-2 rounded-xl text-xs font-bold bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-400 flex items-center gap-1.5 transition-all tap-scale touch-target disabled:opacity-50"
+                    >
+                      <svg v-if="isPayingDashboardRecurringId !== nearestRecurringItemInfo.item.id" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                      <span v-else class="inline-block w-3 h-3 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin"></span>
+                      <span>จ่ายแล้ว</span>
+                    </button>
+                  </div>
                 </div>
 
-                <div class="flex items-center gap-3 shrink-0 ml-auto sm:ml-0">
-                  <span class="num text-base font-extrabold text-white">฿{{ formatCurrency(nearestRecurringItemInfo.item.amount) }}</span>
-                  <button
-                    @click="payDashboardRecurring(nearestRecurringItemInfo.item)"
-                    :disabled="isPayingDashboardRecurringId === nearestRecurringItemInfo.item.id"
-                    class="px-3 py-2 rounded-xl text-xs font-bold bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-400 flex items-center gap-1.5 transition-all tap-scale touch-target disabled:opacity-50"
-                  >
-                    <svg v-if="isPayingDashboardRecurringId !== nearestRecurringItemInfo.item.id" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                    <span v-else class="inline-block w-3 h-3 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin"></span>
-                    <span>จ่ายแล้ว</span>
-                  </button>
+                <!-- Progress bar -->
+                <div class="space-y-1.5">
+                  <div class="flex items-center justify-between text-[10px] font-semibold">
+                    <span class="text-gray-400">ความคืบหน้า</span>
+                    <span :class="nearestRecurringItemInfo.minDays <= 0 ? 'text-rose-400' : 'text-amber-400'">
+                      {{ nearestRecurringItemInfo.progressPercent }}%
+                    </span>
+                  </div>
+                  <div class="h-2 rounded-full bg-gray-800/60 overflow-hidden">
+                    <div
+                      class="h-full rounded-full transition-all duration-300"
+                      :style="{
+                        width: `${nearestRecurringItemInfo.progressPercent}%`,
+                        background: nearestRecurringItemInfo.minDays <= 0
+                          ? 'linear-gradient(90deg, #f43f5e, #fb923c)'
+                          : nearestRecurringItemInfo.progress > 0.7
+                            ? 'linear-gradient(90deg, #fb923c, #f43f5e)'
+                            : 'linear-gradient(90deg, #8b5cf6, #fb923c)'
+                      }"
+                    ></div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1953,6 +1978,10 @@ const recurringExpenses = ref<BackendRecurringExpense[]>([])
 const isRecurringLoading = ref(false)
 const isPayingDashboardRecurringId = ref('')
 
+// Timer for countdown updates
+let recurringCountdownTimer: ReturnType<typeof setInterval> | null = null
+const forceRecurringUpdate = ref(0) // Trigger for reactive updates
+
 const loadRecurringExpenses = async () => {
   isRecurringLoading.value = true
   try {
@@ -1999,6 +2028,9 @@ const calculateNextDue = (r: { dayOfMonthDue?: number; startDate?: string }) => 
 }
 
 const nearestRecurringItemInfo = computed(() => {
+  // Use forceRecurringUpdate to trigger reactive updates
+  forceRecurringUpdate.value // Access to make it reactive
+
   if (!recurringExpenses.value.length) return null
 
   const now = currentTime.value
@@ -2058,6 +2090,15 @@ const nearestRecurringItemInfo = computed(() => {
     statusClass = 'bg-gray-800 text-gray-400 border-gray-700/60'
   }
 
+  // คำนวณ progress bar (จากวันที่เริ่มรอบจนถึงวันครบกำหนด)
+  const startDate = nearestItem.startDate
+    ? new Date(nearestItem.startDate)
+    : new Date(now.getFullYear(), now.getMonth(), 1)
+  const totalDuration = nearestNextDue.getTime() - startDate.getTime()
+  const elapsed = now.getTime() - startDate.getTime()
+  const progress = totalDuration > 0 ? Math.max(0, Math.min(1, elapsed / totalDuration)) : 0
+  const progressPercent = Math.round(progress * 100)
+
   return {
     item: nearestItem,
     nextDue: nearestNextDue,
@@ -2065,6 +2106,8 @@ const nearestRecurringItemInfo = computed(() => {
     countdownText,
     dueLabel,
     statusClass,
+    progress,
+    progressPercent,
   }
 })
 
@@ -2149,10 +2192,21 @@ onMounted(() => {
   clockTimer = setInterval(() => {
     currentTime.value = nowTH()
   }, 1000)
+
+  // Start countdown timer for recurring expenses
+  recurringCountdownTimer = setInterval(() => {
+    if (recurringExpenses.value.length > 0) {
+      forceRecurringUpdate.value++
+    }
+  }, 1000)
 })
 
 onUnmounted(() => {
   if (clockTimer) clearInterval(clockTimer)
+  if (recurringCountdownTimer) {
+    clearInterval(recurringCountdownTimer)
+    recurringCountdownTimer = null
+  }
 })
 </script>
 

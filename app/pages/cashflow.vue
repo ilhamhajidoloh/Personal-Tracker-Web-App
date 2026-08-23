@@ -240,41 +240,69 @@
                   v-for="r in fixedRecurringExpenses"
                   :key="r.id"
                   @click="openEditRecurringModal(r)"
-                  class="group flex flex-wrap sm:flex-nowrap items-center justify-between gap-3 p-3.5 rounded-xl bg-gray-800/40 border border-gray-800 hover:border-gray-700/80 transition-all cursor-pointer"
+                  class="group p-3.5 rounded-xl bg-gray-800/40 border border-gray-800 hover:border-gray-700/80 transition-all cursor-pointer space-y-3"
                 >
-                  <div class="flex items-center gap-3 min-w-0 flex-1">
-                    <div class="w-9 h-9 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center shrink-0">
-                      🗓️
+                  <div class="flex flex-wrap sm:flex-nowrap items-center justify-between gap-3">
+                    <div class="flex items-center gap-3 min-w-0 flex-1">
+                      <div class="w-9 h-9 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center shrink-0">
+                        🗓️
+                      </div>
+                      <div class="min-w-0">
+                        <p class="text-sm font-semibold text-white truncate">{{ r.title }}</p>
+                        <p class="text-xs text-gray-400 mt-0.5 truncate">
+                          จ่ายทุกวันที่ {{ r.dayOfMonthDue }} &bull;
+                          {{ formatShortDate(r.startDate) }} - {{ formatShortDate(r.endDate!) }}
+                        </p>
+                      </div>
                     </div>
-                    <div class="min-w-0">
-                      <p class="text-sm font-semibold text-white truncate">{{ r.title }}</p>
-                      <p class="text-xs text-gray-400 mt-0.5 truncate">
-                        จ่ายทุกวันที่ {{ r.dayOfMonthDue }} &bull;
-                        {{ formatShortDate(r.startDate) }} - {{ formatShortDate(r.endDate!) }}
-                      </p>
+
+                    <div class="flex items-center gap-3 shrink-0 ml-auto sm:ml-0">
+                      <div class="text-right">
+                        <p class="text-sm font-bold text-white">฿{{ formatCurrency(r.amount) }}</p>
+                        <span
+                          class="inline-block mt-0.5 text-[10.5px] font-semibold px-2 py-0.5 rounded-md border"
+                          :class="getDueInfo(r).statusClass"
+                        >
+                          {{ getDueInfo(r).label }}
+                        </span>
+                        <div class="mt-1 text-[10px] font-mono font-semibold text-amber-300">
+                          {{ getDueInfo(r).countdownText }}
+                        </div>
+                      </div>
+
+                      <button
+                        @click.stop="payRecurring(r)"
+                        :disabled="isPayingRecurringId === r.id"
+                        class="px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-400 flex items-center gap-1 transition-all tap-scale touch-target disabled:opacity-50"
+                      >
+                        <svg v-if="isPayingRecurringId !== r.id" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                        <span v-else class="inline-block w-3 h-3 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin"></span>
+                        <span>จ่ายแล้ว</span>
+                      </button>
                     </div>
                   </div>
 
-                  <div class="flex items-center gap-3 shrink-0 ml-auto sm:ml-0">
-                    <div class="text-right">
-                      <p class="text-sm font-bold text-white">฿{{ formatCurrency(r.amount) }}</p>
-                      <span
-                        class="inline-block mt-0.5 text-[10.5px] font-semibold px-2 py-0.5 rounded-md border"
-                        :class="getDueInfo(r).statusClass"
-                      >
-                        {{ getDueInfo(r).label }}
+                  <!-- Progress bar -->
+                  <div class="space-y-1">
+                    <div class="flex items-center justify-between text-[10px] font-semibold">
+                      <span class="text-gray-400">ความคืบหน้า</span>
+                      <span :class="getDueInfo(r).daysUntil <= 0 ? 'text-rose-400' : 'text-amber-400'">
+                        {{ getDueInfo(r).progressPercent }}%
                       </span>
                     </div>
-
-                    <button
-                      @click.stop="payRecurring(r)"
-                      :disabled="isPayingRecurringId === r.id"
-                      class="px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-400 flex items-center gap-1 transition-all tap-scale touch-target disabled:opacity-50"
-                    >
-                      <svg v-if="isPayingRecurringId !== r.id" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                      <span v-else class="inline-block w-3 h-3 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin"></span>
-                      <span>จ่ายแล้ว</span>
-                    </button>
+                    <div class="h-1.5 rounded-full bg-gray-800/60 overflow-hidden">
+                      <div
+                        class="h-full rounded-full transition-all duration-300"
+                        :style="{
+                          width: `${getDueInfo(r).progressPercent}%`,
+                          background: getDueInfo(r).daysUntil <= 0
+                            ? 'linear-gradient(90deg, #f43f5e, #fb923c)'
+                            : getDueInfo(r).progress > 0.7
+                              ? 'linear-gradient(90deg, #fb923c, #f43f5e)'
+                              : 'linear-gradient(90deg, #8b5cf6, #fb923c)'
+                        }"
+                      ></div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -291,40 +319,68 @@
                   v-for="r in indefiniteRecurringExpenses"
                   :key="r.id"
                   @click="openEditRecurringModal(r)"
-                  class="group flex flex-wrap sm:flex-nowrap items-center justify-between gap-3 p-3.5 rounded-xl bg-gray-800/40 border border-gray-800 hover:border-gray-700/80 transition-all cursor-pointer"
+                  class="group p-3.5 rounded-xl bg-gray-800/40 border border-gray-800 hover:border-gray-700/80 transition-all cursor-pointer space-y-3"
                 >
-                  <div class="flex items-center gap-3 min-w-0 flex-1">
-                    <div class="w-9 h-9 rounded-lg bg-sky-500/10 text-sky-400 flex items-center justify-center shrink-0">
-                      ♾️
+                  <div class="flex flex-wrap sm:flex-nowrap items-center justify-between gap-3">
+                    <div class="flex items-center gap-3 min-w-0 flex-1">
+                      <div class="w-9 h-9 rounded-lg bg-sky-500/10 text-sky-400 flex items-center justify-center shrink-0">
+                        ♾️
+                      </div>
+                      <div class="min-w-0">
+                        <p class="text-sm font-semibold text-white truncate">{{ r.title }}</p>
+                        <p class="text-xs text-gray-400 mt-0.5 truncate">
+                          จ่ายทุกวันที่ {{ r.dayOfMonthDue }} &bull; เริ่ม {{ formatShortDate(r.startDate) }}
+                        </p>
+                      </div>
                     </div>
-                    <div class="min-w-0">
-                      <p class="text-sm font-semibold text-white truncate">{{ r.title }}</p>
-                      <p class="text-xs text-gray-400 mt-0.5 truncate">
-                        จ่ายทุกวันที่ {{ r.dayOfMonthDue }} &bull; เริ่ม {{ formatShortDate(r.startDate) }}
-                      </p>
+
+                    <div class="flex items-center gap-3 shrink-0 ml-auto sm:ml-0">
+                      <div class="text-right">
+                        <p class="text-sm font-bold text-white">฿{{ formatCurrency(r.amount) }}</p>
+                        <span
+                          class="inline-block mt-0.5 text-[10.5px] font-semibold px-2 py-0.5 rounded-md border"
+                          :class="getDueInfo(r).statusClass"
+                        >
+                          {{ getDueInfo(r).label }}
+                        </span>
+                        <div class="mt-1 text-[10px] font-mono font-semibold text-amber-300">
+                          {{ getDueInfo(r).countdownText }}
+                        </div>
+                      </div>
+
+                      <button
+                        @click.stop="payRecurring(r)"
+                        :disabled="isPayingRecurringId === r.id"
+                        class="px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-400 flex items-center gap-1 transition-all tap-scale touch-target disabled:opacity-50"
+                      >
+                        <svg v-if="isPayingRecurringId !== r.id" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                        <span v-else class="inline-block w-3 h-3 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin"></span>
+                        <span>จ่ายแล้ว</span>
+                      </button>
                     </div>
                   </div>
 
-                  <div class="flex items-center gap-3 shrink-0 ml-auto sm:ml-0">
-                    <div class="text-right">
-                      <p class="text-sm font-bold text-white">฿{{ formatCurrency(r.amount) }}</p>
-                      <span
-                        class="inline-block mt-0.5 text-[10.5px] font-semibold px-2 py-0.5 rounded-md border"
-                        :class="getDueInfo(r).statusClass"
-                      >
-                        {{ getDueInfo(r).label }}
+                  <!-- Progress bar -->
+                  <div class="space-y-1">
+                    <div class="flex items-center justify-between text-[10px] font-semibold">
+                      <span class="text-gray-400">ความคืบหน้า</span>
+                      <span :class="getDueInfo(r).daysUntil <= 0 ? 'text-rose-400' : 'text-amber-400'">
+                        {{ getDueInfo(r).progressPercent }}%
                       </span>
                     </div>
-
-                    <button
-                      @click.stop="payRecurring(r)"
-                      :disabled="isPayingRecurringId === r.id"
-                      class="px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-400 flex items-center gap-1 transition-all tap-scale touch-target disabled:opacity-50"
-                    >
-                      <svg v-if="isPayingRecurringId !== r.id" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                      <span v-else class="inline-block w-3 h-3 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin"></span>
-                      <span>จ่ายแล้ว</span>
-                    </button>
+                    <div class="h-1.5 rounded-full bg-gray-800/60 overflow-hidden">
+                      <div
+                        class="h-full rounded-full transition-all duration-300"
+                        :style="{
+                          width: `${getDueInfo(r).progressPercent}%`,
+                          background: getDueInfo(r).daysUntil <= 0
+                            ? 'linear-gradient(90deg, #f43f5e, #fb923c)'
+                            : getDueInfo(r).progress > 0.7
+                              ? 'linear-gradient(90deg, #fb923c, #f43f5e)'
+                              : 'linear-gradient(90deg, #8b5cf6, #fb923c)'
+                        }"
+                      ></div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -2341,6 +2397,9 @@ const calculateNextDue = (r: { dayOfMonthDue?: number; startDate?: string }) => 
 }
 
 const getDueInfo = (r: BackendRecurringExpense) => {
+  // Use forceRecurringUpdate to trigger reactive updates
+  forceRecurringUpdate.value // Access to make it reactive
+
   const nextDue = calculateNextDue(r)
   const now = new Date()
   const todayOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate())
@@ -2348,6 +2407,27 @@ const getDueInfo = (r: BackendRecurringExpense) => {
 
   const diffTime = dueOnly.getTime() - todayOnly.getTime()
   const daysUntil = Math.round(diffTime / (1000 * 3600 * 24))
+
+  // คำนวณ countdown แบบละเอียด (วัน ชม:นาที:วินาที)
+  const dueTarget = new Date(nextDue.getFullYear(), nextDue.getMonth(), nextDue.getDate(), 23, 59, 59)
+  const remainingMs = dueTarget.getTime() - now.getTime()
+
+  let countdownText = ''
+  if (remainingMs < 0) {
+    countdownText = 'เลยกำหนด'
+  } else if (daysUntil === 0) {
+    const totalSec = Math.floor(remainingMs / 1000)
+    const h = String(Math.floor(totalSec / 3600)).padStart(2, '0')
+    const m = String(Math.floor((totalSec % 3600) / 60)).padStart(2, '0')
+    const s = String(totalSec % 60).padStart(2, '0')
+    countdownText = `${h}:${m}:${s}`
+  } else {
+    const totalSec = Math.floor(remainingMs / 1000)
+    const h = String(Math.floor((totalSec % (3600 * 24)) / 3600)).padStart(2, '0')
+    const m = String(Math.floor((totalSec % 3600) / 60)).padStart(2, '0')
+    const s = String(totalSec % 60).padStart(2, '0')
+    countdownText = `${daysUntil} วัน ${h}:${m}:${s}`
+  }
 
   let label = ''
   let statusClass = ''
@@ -2366,7 +2446,16 @@ const getDueInfo = (r: BackendRecurringExpense) => {
     statusClass = 'bg-gray-800 text-gray-400 border-gray-700/60'
   }
 
-  return { nextDue, daysUntil, label, statusClass }
+  // คำนวณ progress bar (จากวันที่เริ่มรอบจนถึงวันครบกำหนด)
+  const startDate = r.startDate
+    ? new Date(r.startDate)
+    : new Date(now.getFullYear(), now.getMonth(), 1)
+  const totalDuration = nextDue.getTime() - startDate.getTime()
+  const elapsed = now.getTime() - startDate.getTime()
+  const progress = totalDuration > 0 ? Math.max(0, Math.min(1, elapsed / totalDuration)) : 0
+  const progressPercent = Math.round(progress * 100)
+
+  return { nextDue, daysUntil, label, statusClass, countdownText, progress, progressPercent }
 }
 
 const recurringExpenses = ref<BackendRecurringExpense[]>([])
@@ -2376,6 +2465,10 @@ const isRecurringModalOpen = ref(false)
 const editingRecurringId = ref('')
 const isSubmittingRecurring = ref(false)
 const isDeletingRecurring = ref(false)
+
+// Timer for countdown updates
+let recurringCountdownTimer: ReturnType<typeof setInterval> | null = null
+const forceRecurringUpdate = ref(0) // Trigger for reactive updates
 
 const isExportModalOpen = ref(false)
 const exportScope = ref<'month' | 'year' | 'all'>('month')
@@ -2566,10 +2659,23 @@ onMounted(async () => {
   loadTransactions()
   loadRecurringExpenses()
   document.addEventListener('mousedown', handleClickOutsideCombobox)
+
+  // Start countdown timer for recurring expenses
+  recurringCountdownTimer = setInterval(() => {
+    if (recurringExpenses.value.length > 0) {
+      forceRecurringUpdate.value++
+    }
+  }, 1000)
 })
 
 onUnmounted(() => {
   document.removeEventListener('mousedown', handleClickOutsideCombobox)
+
+  // Clear countdown timer
+  if (recurringCountdownTimer) {
+    clearInterval(recurringCountdownTimer)
+    recurringCountdownTimer = null
+  }
 })
 
 const availableYears = computed(() => {
