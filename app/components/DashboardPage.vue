@@ -1433,7 +1433,8 @@ const getDashboardOngoingEventDetails = (item: DashboardEventRow) => {
   const hours = totalHours % 24
   const days = Math.floor(totalHours / 24)
 
-  const progress = Math.min(100, Math.max(0, ((nowMs - startMs) / totalMs) * 100))
+  // หลอดลดลงตามเวลาที่เหลือ (100% -> 0%)
+  const progress = Math.min(100, Math.max(0, (remainingMs / totalMs) * 100))
 
   const pad = (n: number) => String(n).padStart(2, '0')
   let countdownText = ''

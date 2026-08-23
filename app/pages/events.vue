@@ -88,7 +88,7 @@
                       {{ getEventTypeName(item.event_type) }}
                     </span>
                     <span class="num text-[10px] px-2 py-0.5 rounded-md font-mono font-bold flex items-center gap-1 shadow-sm" style="background: var(--event-status-ongoing-soft); color: var(--event-status-ongoing-ink); border: 1px solid var(--event-status-ongoing-border);">
-                      ⚡ {{ getOngoingEventDetails(item).progress }}%
+                      ⚡ เหลือ {{ getOngoingEventDetails(item).progress }}%
                     </span>
                   </div>
                   <h3 class="text-base md:text-lg font-bold truncate" style="color: var(--text-primary);">{{ item.title }}</h3>
@@ -100,7 +100,7 @@
                 <div class="shrink-0 flex flex-col items-start md:items-end gap-1 min-w-[220px]">
                   <div class="text-xs flex items-center gap-1.5" style="color: var(--text-muted);">
                     <span>⏱️ เหลือเวลาอีก</span>
-                    <span class="num font-mono font-bold text-xs" style="color: var(--event-status-ongoing-ink);">({{ getOngoingEventDetails(item).progress }}% ผ่านไป)</span>
+                    <span class="num font-mono font-bold text-xs" style="color: var(--event-status-ongoing-ink);">(เหลืออีก {{ getOngoingEventDetails(item).progress }}%)</span>
                   </div>
                   <div class="num text-base md:text-lg font-extrabold font-mono tracking-tight px-3.5 py-1.5 rounded-xl border flex items-center gap-1.5 shadow-sm" style="background: var(--bg-elevated); color: var(--event-status-ongoing-ink); border-color: var(--event-status-ongoing-border);">
                     <span class="relative flex h-2 w-2">
@@ -121,7 +121,7 @@
                     เริ่ม: <strong class="num" style="color: var(--text-primary);">{{ getOngoingEventDetails(item).startTimeFormatted }}</strong>
                   </span>
                   <span class="num font-mono font-extrabold text-xs px-2.5 py-0.5 rounded-lg flex items-center gap-1 shadow-sm" style="background: var(--event-status-ongoing-soft); color: var(--event-status-ongoing-ink); border: 1px solid var(--event-status-ongoing-border);">
-                    <span>📊 ความคืบหน้า</span>
+                    <span>⏳ เวลาที่เหลือ</span>
                     <span class="text-sm font-black">{{ getOngoingEventDetails(item).progress }}%</span>
                   </span>
                   <span class="flex items-center gap-1">
@@ -146,7 +146,7 @@
 
                 <!-- Sub-info below bar -->
                 <div class="flex items-center justify-between text-[10.5px] mt-1.5" style="color: var(--text-muted);">
-                  <span>⏳ ผ่านไปแล้ว {{ getOngoingEventDetails(item).elapsedText }} ({{ getOngoingEventDetails(item).progress }}%)</span>
+                  <span>⏱️ ผ่านไปแล้ว {{ getOngoingEventDetails(item).elapsedText }}</span>
                   <span class="num font-semibold" style="color: var(--event-status-ongoing-ink);">เหลืออีก {{ getOngoingEventDetails(item).countdownText }}</span>
                 </div>
               </div>
@@ -896,7 +896,8 @@ const getOngoingEventDetails = (item: EventRow) => {
     elapsedText = `${Math.max(0, elapsedTotalMin)} นาที`
   }
 
-  const progress = Math.min(100, Math.max(0, ((nowMs - startMs) / totalMs) * 100))
+  // หลอดลดลงตามเวลาที่เหลือ (100% -> 0%)
+  const progress = Math.min(100, Math.max(0, (remainingMs / totalMs) * 100))
 
   const pad = (n: number) => String(n).padStart(2, '0')
   let countdownText = ''
