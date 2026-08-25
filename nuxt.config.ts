@@ -28,6 +28,14 @@ export default defineNuxtConfig({
       clientId: '',
       clientSecret: '',
     },
+    smtp: {
+      host: process.env.NUXT_SMTP_HOST || 'smtp.gmail.com',
+      port: process.env.NUXT_SMTP_PORT ? Number(process.env.NUXT_SMTP_PORT) : 465,
+      secure: process.env.NUXT_SMTP_SECURE ? process.env.NUXT_SMTP_SECURE === 'true' : true,
+      user: process.env.NUXT_SMTP_USER || '',
+      pass: process.env.NUXT_SMTP_PASS || '',
+      from: process.env.NUXT_SMTP_FROM || '',
+    },
     public: {
       appUrl: '',
       apiBase: '',
@@ -35,6 +43,9 @@ export default defineNuxtConfig({
       line: {
         botAddFriendUrl: '',
         botDisplayName: 'MyLife Bot',
+      },
+      email: {
+        defaultSenderName: 'MyLife App',
       },
     },
   },

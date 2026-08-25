@@ -301,6 +301,7 @@ useHead({
 
 const { apiFetch, userId } = useBackendApi()
 const { confirmDelete, toastSuccess, toastError, toastWarning } = useAlert()
+const { notify: notifyEmail } = useEmailMessaging()
 
 const tasks = ref<AssignmentTask[]>([])
 const isLoading = ref(true)
@@ -466,6 +467,12 @@ const submitTask = async () => {
 
     closeModal()
     await loadTasks()
+    void notifyEmail('task', {
+      title: form.title.trim(),
+      courseName: form.subject?.trim() || null,
+      deadline: form.deadline,
+      isUrgent: form.isUrgent,
+    })
   } catch (error: any) {
     console.error('Submit task error:', error)
     toastError(error?.data?.message || error?.message || 'บันทึกงานไม่สำเร็จ')

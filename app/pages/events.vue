@@ -646,6 +646,7 @@ useHead({ title: 'กิจกรรม' })
 const { apiFetch, userId } = useBackendApi()
 const { toastSuccess, toastError, confirmDelete } = useAlert()
 const { notify, buildEventSavedMessage } = useLineMessaging()
+const { notify: notifyEmail } = useEmailMessaging()
 const { syncEventToGoogle, deleteEventFromGoogle } = useGoogleCalendarSync()
 
 const isLoading = ref(true)
@@ -1110,6 +1111,15 @@ const submitEvent = async () => {
     if (savedId) await syncEventToGoogle(savedId)
     await loadEvents()
     void notify(lineMessage)
+    void notifyEmail('event', {
+      title: form.title,
+      eventType: form.eventType,
+      startDate: form.startDate,
+      startTime: form.eventType === 'same_day_all_day' ? null : form.startTime,
+      endDate: form.eventType === 'multi_day' ? form.endDate : null,
+      endTime: form.eventType === 'same_day_all_day' ? null : form.endTime,
+      isEditing: isEditing.value,
+    })
   } catch (error: any) {
     console.error('Save event error:', error)
     errorMessage.value = getApiErrorMessage(error, 'บันทึกกิจกรรมไม่สำเร็จ')

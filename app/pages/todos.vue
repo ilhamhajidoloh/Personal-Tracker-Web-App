@@ -333,6 +333,7 @@ useHead({ title: 'To-do List' })
 
 const { apiFetch, userId } = useBackendApi()
 const { toastSuccess, toastError, confirmDelete } = useAlert()
+const { notify: notifyEmail } = useEmailMessaging()
 
 const todos = ref<TodoRow[]>([])
 const isLoading = ref(true)
@@ -567,6 +568,12 @@ const submitTodo = async () => {
     }
     closeModal()
     await loadTodos()
+    void notifyEmail('todo', {
+      title: form.title.trim(),
+      targetDate: form.targetDate,
+      priority: 'medium',
+      isEditing: Boolean(editingId.value),
+    })
   } catch (error: any) {
     console.error('Save todo error:', error)
     toastError(error?.data?.message || error?.message || 'บันทึกไม่สำเร็จ')

@@ -497,6 +497,174 @@
               </div>
             </div>
           </section>
+
+          <!-- Email Notification (Gmail SMTP) Section -->
+          <section class="section-card">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-5 py-4 border-b border-gray-800/60">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-rose-500/15 flex items-center justify-center text-xl shrink-0">✉️</div>
+                <div>
+                  <h3 class="text-base font-semibold text-white">Email Notification (Gmail SMTP)</h3>
+                  <p class="text-xs text-gray-500 mt-0.5">ส่งการแจ้งเตือนตารางเรียน กิจกรรม งาน/การบ้าน และบิลประจำ ผ่าน Gmail SMTP (App Passwords)</p>
+                </div>
+              </div>
+              <span
+                class="inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-semibold shrink-0"
+                :class="emailStatusBadgeClass"
+              >
+                {{ emailStatusLabel }}
+              </span>
+            </div>
+
+            <div class="p-5">
+              <div v-if="isEmailLoading" class="flex items-center gap-2 text-sm text-gray-400 py-4">
+                <span class="inline-block w-4 h-4 border-2 border-violet-400/30 border-t-violet-400 rounded-full animate-spin"></span>
+                กำลังตรวจสอบสถานะ SMTP...
+              </div>
+
+              <div v-else class="grid grid-cols-1 xl:grid-cols-2 gap-5">
+                <!-- Left: Status & Recipient Configuration -->
+                <div class="space-y-4">
+                  <!-- Status info -->
+                  <div class="grid grid-cols-3 gap-3">
+                    <div class="col-span-2 border border-gray-800/70 rounded-xl p-3">
+                      <p class="text-[11px] text-gray-500 uppercase tracking-wide">Gmail Sender</p>
+                      <p class="text-xs text-gray-300 break-all mt-1 font-mono">{{ emailStatus.smtpUserMasked || (smtpCustomUser ? smtpCustomUser : 'ยังไม่ได้ตั้งค่า') }}</p>
+                    </div>
+                    <div class="border border-gray-800/70 rounded-xl p-3">
+                      <p class="text-[11px] text-gray-500 uppercase tracking-wide">สถานะส่ง</p>
+                      <p class="text-xs mt-1 font-semibold" :class="emailPrefs.enabled && isEmailConfigured ? 'text-emerald-400' : 'text-gray-400'">
+                        {{ isEmailConfigured ? (emailPrefs.enabled ? 'เปิดใช้งาน' : 'ปิดอยู่') : 'ยังไม่พร้อม' }}
+                      </p>
+                    </div>
+                  </div>
+
+                  <!-- Recipient Email -->
+                  <div class="rounded-xl border border-gray-800/70 bg-gray-800/20 p-4 space-y-3">
+                    <h4 class="text-sm font-semibold text-white">อีเมลผู้รับการแจ้งเตือน</h4>
+                    <div>
+                      <label class="block text-xs font-medium text-gray-400 mb-1.5">ส่งไปยังอีเมล</label>
+                      <input
+                        v-model="emailPrefs.recipientEmail"
+                        type="email"
+                        :placeholder="currentUser?.email || 'your_email@gmail.com'"
+                        class="w-full bg-gray-800/80 border border-gray-700/60 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-600 outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 transition-all"
+                      >
+                      <p class="text-[11px] text-gray-500 mt-1.5">หากเว้นว่างไว้ ระบบจะส่งไปยังอีเมลบัญชีของคุณ ({{ currentUser?.email || '-' }})</p>
+                    </div>
+
+                    <!-- Master Switch -->
+                    <label class="flex items-start gap-3 p-3 border border-gray-800/60 rounded-xl bg-gray-800/30 cursor-pointer hover:bg-gray-800/50 transition-all">
+                      <input
+                        v-model="emailPrefs.enabled"
+                        type="checkbox"
+                        class="mt-0.5 accent-violet-500"
+                      >
+                      <span class="text-xs text-gray-300 leading-relaxed font-medium">เปิดรับการแจ้งเตือนทาง Email</span>
+                    </label>
+                  </div>
+                </div>
+
+                <!-- Right: Category Toggles & Custom SMTP / Test -->
+                <div class="space-y-4">
+                  <div class="rounded-xl border border-gray-800/70 bg-gray-800/20 p-4 space-y-3">
+                    <h4 class="text-sm font-semibold text-white">หมวดหมู่ที่ต้องการรับแจ้งเตือน</h4>
+
+                    <div class="space-y-2">
+                      <!-- Class Schedule -->
+                      <label class="flex items-start gap-3 p-2.5 border border-gray-800/60 rounded-xl bg-gray-800/30 cursor-pointer hover:bg-gray-800/50 transition-all">
+                        <input
+                          v-model="emailPrefs.classReminders"
+                          type="checkbox"
+                          class="mt-0.5 accent-violet-500"
+                        >
+                        <div class="flex-1">
+                          <span class="text-xs text-gray-200 font-medium">📚 ตารางเรียน (Class Schedule)</span>
+                          <p class="text-[11px] text-gray-500 mt-0.5">แจ้งเตือนก่อนคาบเรียนเริ่ม</p>
+                        </div>
+                      </label>
+
+                      <div v-if="emailPrefs.classReminders" class="pl-4 pr-1 py-1">
+                        <div class="flex items-center justify-between gap-3">
+                          <span class="text-xs text-gray-400">เตือนล่วงหน้า:</span>
+                          <select
+                            v-model.number="emailPrefs.classReminderMinutes"
+                            class="bg-gray-800 border border-gray-700/60 rounded-lg px-2.5 py-1 text-xs text-white outline-none"
+                          >
+                            <option :value="5">5 นาที</option>
+                            <option :value="10">10 นาที</option>
+                            <option :value="15">15 นาที</option>
+                            <option :value="30">30 นาที</option>
+                            <option :value="60">1 ชั่วโมง</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <!-- Events / Activities -->
+                      <label class="flex items-start gap-3 p-2.5 border border-gray-800/60 rounded-xl bg-gray-800/30 cursor-pointer hover:bg-gray-800/50 transition-all">
+                        <input
+                          v-model="emailPrefs.eventReminders"
+                          type="checkbox"
+                          class="mt-0.5 accent-violet-500"
+                        >
+                        <div class="flex-1">
+                          <span class="text-xs text-gray-200 font-medium">📅 กิจกรรม (Activities & Events)</span>
+                          <p class="text-[11px] text-gray-500 mt-0.5">แจ้งเตือนกิจกรรมตามเวลาที่ตั้งไว้ล่วงหน้า</p>
+                        </div>
+                      </label>
+
+                      <!-- Tasks / Todos -->
+                      <label class="flex items-start gap-3 p-2.5 border border-gray-800/60 rounded-xl bg-gray-800/30 cursor-pointer hover:bg-gray-800/50 transition-all">
+                        <input
+                          v-model="emailPrefs.taskReminders"
+                          type="checkbox"
+                          class="mt-0.5 accent-violet-500"
+                        >
+                        <div class="flex-1">
+                          <span class="text-xs text-gray-200 font-medium">✅ งานและการบ้าน (Tasks & Todos)</span>
+                          <p class="text-[11px] text-gray-500 mt-0.5">แจ้งเตือนงานใกล้ครบกำหนดส่ง (Deadline)</p>
+                        </div>
+                      </label>
+
+                      <!-- Recurring Bills -->
+                      <label class="flex items-start gap-3 p-2.5 border border-gray-800/60 rounded-xl bg-gray-800/30 cursor-pointer hover:bg-gray-800/50 transition-all">
+                        <input
+                          v-model="emailPrefs.billReminders"
+                          type="checkbox"
+                          class="mt-0.5 accent-violet-500"
+                        >
+                        <div class="flex-1">
+                          <span class="text-xs text-gray-200 font-medium">💳 บิลและรายจ่ายประจำ (Recurring Bills)</span>
+                          <p class="text-[11px] text-gray-500 mt-0.5">แจ้งเตือนบิลที่ใกล้ถึงรอบชำระประจำเดือน</p>
+                        </div>
+                      </label>
+                    </div>
+
+
+
+                    <div class="flex flex-wrap gap-2 pt-2">
+                      <button
+                        type="button"
+                        @click="handleSaveEmailSettings"
+                        :disabled="isSavingEmail || isTestingEmail"
+                        class="flex-1 px-3 py-2 rounded-xl bg-violet-600/80 hover:bg-violet-600 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-semibold text-white transition-all tap-scale touch-target"
+                      >
+                        {{ isSavingEmail ? 'กำลังบันทึก...' : 'บันทึกการตั้งค่า' }}
+                      </button>
+                      <button
+                        type="button"
+                        @click="handleSendEmailTest"
+                        :disabled="isSavingEmail || isTestingEmail"
+                        class="flex-1 px-3 py-2 rounded-xl bg-gray-800/70 hover:bg-gray-800 border border-gray-700/60 disabled:opacity-50 disabled:cursor-not-allowed text-xs text-gray-300 hover:text-white transition-all tap-scale touch-target"
+                      >
+                        {{ isTestingEmail ? 'กำลังส่งทดสอบ...' : '📧 ส่งอีเมลทดสอบ' }}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
         </template>
       </div>
     </div>
@@ -765,6 +933,95 @@ const isDisconnectingGoogle = ref(false)
 const googleStatus = ref<GoogleCalendarStatus>({ connected: false, connectedAt: null })
 const isSyncingAllGoogle = ref(false)
 const { syncAllEventsToGoogle } = useGoogleCalendarSync()
+
+// Email Messaging (Gmail SMTP) State
+const { getPreferences: getEmailPreferences, savePreferences: saveEmailPreferences, getStatus: getEmailStatus, sendTestEmail: sendEmailTestRequest } = useEmailMessaging()
+const emailPrefs = ref(getEmailPreferences())
+const emailStatus = ref<EmailStatus>({
+  configured: false,
+  smtpHost: 'smtp.gmail.com',
+  smtpPort: 465,
+  smtpUserMasked: '',
+  userEmail: '',
+})
+const isEmailLoading = ref(true)
+const isSavingEmail = ref(false)
+const isTestingEmail = ref(false)
+const smtpCustomUser = ref('')
+const smtpCustomPass = ref('')
+
+const isEmailConfigured = computed(() => emailStatus.value.configured || Boolean(smtpCustomUser.value && smtpCustomPass.value))
+
+const emailStatusLabel = computed(() => {
+  if (isEmailLoading.value) return 'กำลังตรวจสอบ...'
+  if (isEmailConfigured.value) {
+    return emailPrefs.value.enabled ? 'เชื่อมต่อแล้ว (พร้อมส่ง)' : 'ปิดการแจ้งเตือน'
+  }
+  return 'ยังไม่ตั้งค่า'
+})
+
+const emailStatusBadgeClass = computed(() => {
+  if (isEmailLoading.value) return 'bg-gray-800 text-gray-400 border-gray-700'
+  if (isEmailConfigured.value) {
+    return emailPrefs.value.enabled
+      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+      : 'bg-amber-500/10 text-amber-400 border-amber-500/30'
+  }
+  return 'bg-gray-800/80 text-gray-400 border-gray-700/60'
+})
+
+const loadEmailStatus = async () => {
+  isEmailLoading.value = true
+  try {
+    emailStatus.value = await getEmailStatus()
+    if (!emailPrefs.value.recipientEmail && user.value?.email) {
+      emailPrefs.value.recipientEmail = user.value.email
+    }
+  } catch (error) {
+    console.error('Load email status error:', error)
+  } finally {
+    isEmailLoading.value = false
+  }
+}
+
+const handleSaveEmailSettings = async () => {
+  if (isSavingEmail.value) return
+  isSavingEmail.value = true
+  try {
+    saveEmailPreferences(emailPrefs.value)
+    toastSuccess('บันทึกการตั้งค่าการแจ้งเตือนทาง Email เรียบร้อยแล้ว')
+  } catch (error: any) {
+    console.error('Save email settings error:', error)
+    toastError('บันทึกการตั้งค่าไม่สำเร็จ')
+  } finally {
+    isSavingEmail.value = false
+  }
+}
+
+const handleSendEmailTest = async () => {
+  if (isTestingEmail.value) return
+  isTestingEmail.value = true
+  const targetRecipient = emailPrefs.value.recipientEmail || user.value?.email || ''
+  try {
+    const res = await sendEmailTestRequest({
+      to: targetRecipient,
+      smtpUser: smtpCustomUser.value.trim() || undefined,
+      smtpPass: smtpCustomPass.value.trim() || undefined,
+    })
+    if (res.success) {
+      toastSuccess(res.message || `ส่งอีเมลทดสอบไปยัง ${targetRecipient} เรียบร้อยแล้ว`)
+      if (smtpCustomUser.value && smtpCustomPass.value) {
+        emailStatus.value.configured = true
+      }
+    }
+  } catch (error: any) {
+    console.error('Test email error:', error)
+    const msg = error?.data?.statusMessage || error?.message || 'ส่งอีเมลทดสอบไม่สำเร็จ กรุณาตรวจสอบ App Password'
+    toastError(msg)
+  } finally {
+    isTestingEmail.value = false
+  }
+}
 
 let lineStatusPollingTimer: ReturnType<typeof setInterval> | number | null = null
 
@@ -1180,6 +1437,6 @@ const loadProfile = async () => {
   }
 }
 
-onMounted(() => { loadProfile(); loadLineStatus(); loadGoogleStatus(); consumeGoogleRedirectStatus() })
+onMounted(() => { loadProfile(); loadLineStatus(); loadGoogleStatus(); loadEmailStatus(); consumeGoogleRedirectStatus() })
 onBeforeUnmount(() => { stopLineStatusPolling() })
 </script>
