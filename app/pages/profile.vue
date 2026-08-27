@@ -529,7 +529,7 @@
                   <div class="grid grid-cols-3 gap-3">
                     <div class="col-span-2 border border-gray-800/70 rounded-xl p-3">
                       <p class="text-[11px] text-gray-500 uppercase tracking-wide">Gmail Sender</p>
-                      <p class="text-xs text-gray-300 break-all mt-1 font-mono">{{ emailStatus.smtpUserMasked || (smtpCustomUser ? smtpCustomUser : 'ยังไม่ได้ตั้งค่า') }}</p>
+                      <p class="text-xs text-gray-300 break-all mt-1 font-mono">{{ emailStatus.smtpUserMasked || 'ยังไม่ได้ตั้งค่าใน .env' }}</p>
                     </div>
                     <div class="border border-gray-800/70 rounded-xl p-3">
                       <p class="text-[11px] text-gray-500 uppercase tracking-wide">สถานะส่ง</p>
@@ -640,36 +640,7 @@
                       </label>
                     </div>
 
-                    <!-- Custom App Password Accordion -->
-                    <details class="rounded-xl border border-gray-800/70 bg-gray-800/30 overflow-hidden mt-3">
-                      <summary class="cursor-pointer px-3.5 py-2.5 text-xs font-medium text-gray-300 hover:text-white list-none flex items-center justify-between transition-colors">
-                        <span>⚙️ ตั้งค่า Gmail / App Password โดยตรง</span>
-                        <span class="text-gray-500 text-[11px]">คลิกเพื่อปรับแต่ง</span>
-                      </summary>
-                      <div class="p-3.5 space-y-3 border-t border-gray-800/60 text-xs">
-                        <div>
-                          <label class="block text-gray-400 mb-1">Gmail Address (ผู้ส่ง)</label>
-                          <input
-                            v-model="smtpCustomUser"
-                            type="email"
-                            placeholder="your_account@gmail.com"
-                            class="w-full bg-gray-800 border border-gray-700/60 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-600 outline-none"
-                          >
-                        </div>
-                        <div>
-                          <label class="block text-gray-400 mb-1">Gmail App Password (16 หลัก)</label>
-                          <input
-                            v-model="smtpCustomPass"
-                            type="password"
-                            placeholder="xxxx xxxx xxxx xxxx"
-                            class="w-full bg-gray-800 border border-gray-700/60 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-600 outline-none font-mono"
-                          >
-                          <p class="text-[10.5px] text-gray-500 mt-1">
-                            สร้างได้จาก: Google Account > ความปลอดภัย > การยืนยันแบบ 2 ขั้นตอน > รหัสผ่านสำหรับแอป (App passwords)
-                          </p>
-                        </div>
-                      </div>
-                    </details>
+
 
                     <div class="flex flex-wrap gap-2 pt-2">
                       <button
@@ -982,10 +953,8 @@ const emailStatus = ref<EmailStatus>({
 const isEmailLoading = ref(true)
 const isSavingEmail = ref(false)
 const isTestingEmail = ref(false)
-const smtpCustomUser = ref('')
-const smtpCustomPass = ref('')
 
-const isEmailConfigured = computed(() => emailStatus.value.configured || Boolean(smtpCustomUser.value && smtpCustomPass.value))
+const isEmailConfigured = computed(() => emailStatus.value.configured)
 
 const emailStatusLabel = computed(() => {
   if (isEmailLoading.value) return 'กำลังตรวจสอบ...'
@@ -1043,20 +1012,13 @@ const handleSendEmailTest = async () => {
   isTestingEmail.value = true
   const targetRecipient = emailPrefs.value.recipientEmail || user.value?.email || ''
   try {
-    const res = await sendEmailTestRequest({
-      to: targetRecipient,
-      smtpUser: smtpCustomUser.value.trim() || undefined,
-      smtpPass: smtpCustomPass.value.trim() || undefined,
-    })
+    const res = await sendEmailTestRequest({ to: targetRecipient })
     if (res.success) {
       toastSuccess(res.message || `ส่งอีเมลทดสอบไปยัง ${targetRecipient} เรียบร้อยแล้ว`)
-      if (smtpCustomUser.value && smtpCustomPass.value) {
-        emailStatus.value.configured = true
-      }
     }
   } catch (error: any) {
     console.error('Test email error:', error)
-    const msg = error?.data?.statusMessage || error?.message || 'ส่งอีเมลทดสอบไม่สำเร็จ กรุณาตรวจสอบ App Password'
+    const msg = error?.data?.statusMessage || error?.message || 'ส่งอีเมลทดสอบไม่สำเร็จ กรุณาตรวจสอบ App Password ใน .env'
     toastError(msg)
   } finally {
     isTestingEmail.value = false
