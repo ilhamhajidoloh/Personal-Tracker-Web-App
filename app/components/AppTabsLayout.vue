@@ -56,7 +56,10 @@
                 aria-label="เมนูบัญชี"
                 :aria-expanded="userMenuOpen"
               >
-                <span class="w-[30px] h-[30px] rounded-[7px] flex items-center justify-center font-bold text-[13px] text-white shrink-0" style="background: linear-gradient(150deg, var(--brand), var(--brand-2));">{{ userInitial }}</span>
+                <div class="w-[30px] h-[30px] rounded-[7px] overflow-hidden flex items-center justify-center font-bold text-[13px] text-white shrink-0" style="background: linear-gradient(150deg, var(--brand), var(--brand-2));">
+                  <img v-if="userProfileImageUrl" :src="userProfileImageUrl" :alt="userDisplayName" class="w-full h-full object-cover" />
+                  <span v-else>{{ userInitial }}</span>
+                </div>
                 <span class="hidden sm:block text-left leading-tight">
                   <span class="block text-[12.5px] font-semibold max-w-[120px] truncate" style="color: var(--text-primary);">{{ userDisplayName }}</span>
                   <span class="block text-[10.5px] max-w-[120px] truncate num" style="color: var(--text-muted);">{{ userEmail }}</span>
@@ -78,7 +81,10 @@
                   aria-label="เมนูบัญชี"
                 >
                   <div class="flex items-center gap-3 px-4 py-3.5" style="border-bottom: 1px solid var(--border-subtle);">
-                    <span class="w-10 h-10 rounded-[9px] flex items-center justify-center font-bold text-white shrink-0" style="background: linear-gradient(150deg, var(--brand), var(--brand-2));">{{ userInitial }}</span>
+                    <div class="w-10 h-10 rounded-[9px] overflow-hidden flex items-center justify-center font-bold text-white shrink-0" style="background: linear-gradient(150deg, var(--brand), var(--brand-2));">
+                      <img v-if="userProfileImageUrl" :src="userProfileImageUrl" :alt="userDisplayName" class="w-full h-full object-cover" />
+                      <span v-else>{{ userInitial }}</span>
+                    </div>
                     <div class="min-w-0">
                       <p class="text-sm font-bold truncate" style="color: var(--text-primary);">{{ userDisplayName }}</p>
                       <p class="text-[11px] truncate num" style="color: var(--text-muted);">{{ userEmail }}</p>
@@ -192,6 +198,7 @@ const userDisplayName = computed(() => {
 
 const userInitial = computed(() => userDisplayName.value.trim().charAt(0).toUpperCase() || 'U')
 const userEmail = computed(() => user.value?.email || '-')
+const userProfileImageUrl = computed(() => user.value?.profileImageUrl || null)
 
 const isRouteActive = (to?: RouteLocationRaw) => {
   if (typeof to !== 'string') return false

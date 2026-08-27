@@ -3,6 +3,7 @@ export type AuthSession = {
   userId: string
   email: string
   fullName: string
+  profileImageUrl?: string | null
 }
 
 type BackendAuthResponse = {
@@ -11,6 +12,7 @@ type BackendAuthResponse = {
   userId: string
   email: string
   fullName: string
+  profileImageUrl?: string | null
 }
 
 const decodeJwtExpiry = (token: string): number | null => {
@@ -51,6 +53,7 @@ export const useAuth = () => {
       userId: res.userId,
       email: res.email,
       fullName: res.fullName,
+      profileImageUrl: res.profileImageUrl ?? session.value?.profileImageUrl ?? null,
     }
   }
 
@@ -92,7 +95,7 @@ export const useAuth = () => {
   const updateProfile = async (fullName: string) => {
     const token = session.value?.token
     if (!token) throw new Error('ไม่พบข้อมูล session การเข้าสู่ระบบ')
-    const res = await $fetch<{ message: string; userId: string; email: string; fullName: string }>(
+    const res = await $fetch<{ message: string; userId: string; email: string; fullName: string; profileImageUrl?: string | null }>(
       `${config.public.apiBase}/api/Auth/profile`,
       {
         method: 'PUT',
@@ -104,6 +107,51 @@ export const useAuth = () => {
       session.value = {
         ...session.value,
         fullName: res.fullName,
+        profileImageUrl: res.profileImageUrl ?? session.value.profileImageUrl,
+      }
+    }
+    return res
+  }
+
+  const uploadProfileImage = async (file: File) => {
+    const token = session.value?.token
+    if (!token) throw new Error('ไม่พบข้อมูล session การเข้าสู่ระบบ')
+    const formData = new FormData()
+    formData.append('file', file)
+
+    const res = await $fetch<{ message: string; profileImageUrl: string }>(
+      `${config.public.apiBase}/api/Auth/profile-image`,
+      {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      }
+    )
+
+    if (session.value) {
+      session.value = {
+        ...session.value,
+        profileImageUrl: res.profileImageUrl,
+      }
+    }
+    return res
+  }
+
+  const deleteProfileImage = async () => {
+    const token = session.value?.token
+    if (!token) throw new Error('ไม่พบข้อมูล session การเข้าสู่ระบบ')
+    const res = await $fetch<{ message: string; profileImageUrl: string | null }>(
+      `${config.public.apiBase}/api/Auth/profile-image`,
+      {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    )
+
+    if (session.value) {
+      session.value = {
+        ...session.value,
+        profileImageUrl: null,
       }
     }
     return res
@@ -133,6 +181,8 @@ export const useAuth = () => {
     setSession,
     clearSession,
     updateProfile,
+    uploadProfileImage,
+    deleteProfileImage,
     changePassword,
   }
 }

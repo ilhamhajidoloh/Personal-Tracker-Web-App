@@ -57,15 +57,100 @@
             <!-- Avatar Card -->
             <div class="lg:col-span-1 glass-card p-6 flex flex-col items-start justify-between">
               <div class="w-full">
-                <!-- Avatar -->
-                <div class="relative mb-4">
-                  <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-3xl font-bold shadow-xl shadow-violet-500/25">
-                    {{ avatarFallback }}
+                <!-- Avatar with Upload & Delete controls -->
+                <div class="relative mb-4 group inline-block">
+                  <div 
+                    class="w-24 h-24 rounded-2xl overflow-hidden shadow-xl shadow-violet-500/20 relative flex items-center justify-center border-2 border-violet-500/30 bg-gradient-to-br from-violet-600/30 to-indigo-700/30"
+                  >
+                    <!-- Real Avatar Image -->
+                    <img 
+                      v-if="profileImageUrl" 
+                      :src="profileImageUrl" 
+                      :alt="displayName"
+                      class="w-full h-full object-cover"
+                      @error="userMe ? userMe.profileImageUrl = null : null"
+                    />
+                    <!-- Fallback letter avatar -->
+                    <div 
+                      v-else 
+                      class="w-full h-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-3xl font-bold text-white shadow-xl shadow-violet-500/25"
+                    >
+                      {{ avatarFallback }}
+                    </div>
+
+                    <!-- Loading overlay -->
+                    <div 
+                      v-if="isUploadingAvatar || isDeletingAvatar" 
+                      class="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center gap-1 text-white text-[11px] font-medium"
+                    >
+                      <span class="inline-block w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                      <span>{{ isUploadingAvatar ? 'กำลังอัปโหลด...' : 'กำลังลบ...' }}</span>
+                    </div>
+
+                    <!-- Hover Quick Overlay -->
+                    <button 
+                      v-if="!isUploadingAvatar && !isDeletingAvatar"
+                      type="button"
+                      @click="triggerSelectAvatar"
+                      class="absolute inset-0 bg-black/50 backdrop-blur-xs opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1 text-white text-[11px] font-medium cursor-pointer"
+                      title="เปลี่ยนรูปภาพ"
+                    >
+                      <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                      <span>เปลี่ยนรูป</span>
+                    </button>
                   </div>
+
+                  <!-- Quick Camera Button badge -->
+                  <button 
+                    type="button" 
+                    @click="triggerSelectAvatar"
+                    :disabled="isUploadingAvatar || isDeletingAvatar"
+                    class="absolute -bottom-1.5 -right-1.5 w-7 h-7 rounded-xl bg-violet-600 hover:bg-violet-500 text-white shadow-md flex items-center justify-center border-2 border-gray-900 transition-transform active:scale-95 cursor-pointer disabled:opacity-50"
+                    title="อัปโหลดรูปภาพใหม่"
+                  >
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                  </button>
+
+                  <!-- Hidden file input -->
+                  <input 
+                    ref="avatarFileInput" 
+                    type="file" 
+                    accept="image/jpeg,image/png,image/webp,image/gif" 
+                    class="hidden" 
+                    @change="handleAvatarFileChange" 
+                  />
                 </div>
 
-                <h2 class="text-lg font-bold text-white leading-tight">{{ displayName }}</h2>
-                <p class="text-xs text-gray-500 mt-1 break-all">{{ currentUser?.email || '-' }}</p>
+                <div class="flex items-center gap-2 flex-wrap mb-1">
+                  <h2 class="text-lg font-bold text-white leading-tight">{{ displayName }}</h2>
+                  <span v-if="profileImageUrl" class="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-violet-500/15 border border-violet-500/30 text-violet-300 font-medium">
+                    ☁️ Oracle Storage
+                  </span>
+                </div>
+                <p class="text-xs text-gray-500 break-all">{{ currentUser?.email || '-' }}</p>
+
+                <!-- Avatar action buttons -->
+                <div class="mt-3 flex gap-2 w-full">
+                  <button
+                    type="button"
+                    @click="triggerSelectAvatar"
+                    :disabled="isUploadingAvatar || isDeletingAvatar"
+                    class="flex-1 py-2 px-3 rounded-xl bg-gray-800/80 hover:bg-gray-800 border border-gray-700/60 text-xs font-medium text-gray-200 transition-all flex items-center justify-center gap-1.5 tap-scale disabled:opacity-50"
+                  >
+                    <svg class="w-3.5 h-3.5 text-violet-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    <span>{{ profileImageUrl ? 'เปลี่ยนรูป' : 'อัปโหลดรูป' }}</span>
+                  </button>
+                  <button
+                    v-if="profileImageUrl"
+                    type="button"
+                    @click="handleDeleteAvatar"
+                    :disabled="isUploadingAvatar || isDeletingAvatar"
+                    class="py-2 px-3 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-xs font-medium text-rose-400 transition-all flex items-center justify-center gap-1 tap-scale disabled:opacity-50"
+                    title="ลบรูปโปรไฟล์"
+                  >
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                  </button>
+                </div>
 
                 <div class="mt-4 w-full space-y-2">
                   <div class="flex items-center justify-between py-1.5 border-b border-gray-800/60">
@@ -860,9 +945,9 @@ useHead({ title: 'Profile' })
 
 const router = useRouter()
 const route = useRoute()
-const { currentUser: user, updateProfile, changePassword } = useAuth()
+const { currentUser: user, updateProfile, changePassword, uploadProfileImage, deleteProfileImage } = useAuth()
 const { apiFetch } = useBackendApi()
-const { toastSuccess, toastError } = useAlert()
+const { toastSuccess, toastError, toastWarning, confirmDelete } = useAlert()
 const config = useRuntimeConfig()
 const { allModules, enabledModules, isModuleEnabled, toggleModule, enableAllModules, setModules } = useUserModules()
 
@@ -894,8 +979,82 @@ const handleEnableOnlyCashflow = () => {
   toastSuccess('ตั้งค่าเฉพาะระบบการเงินเรียบร้อยแล้ว')
 }
 
-const userMe = ref<{ userId: string; email: string; fullName: string; hasGoogle: boolean; hasLine: boolean; hasPassword: boolean } | null>(null)
+const userMe = ref<{ 
+  userId: string
+  email: string
+  fullName: string
+  profileImageUrl?: string | null
+  hasGoogle: boolean
+  hasLine: boolean
+  hasPassword: boolean
+  oracleStorageConfigured?: boolean 
+} | null>(null)
 const userHasPassword = computed(() => userMe.value?.hasPassword ?? true)
+
+// Avatar State & Handlers
+const avatarFileInput = ref<HTMLInputElement | null>(null)
+const isUploadingAvatar = ref(false)
+const isDeletingAvatar = ref(false)
+const profileImageUrl = computed(() => userMe.value?.profileImageUrl || user.value?.profileImageUrl || null)
+
+const triggerSelectAvatar = () => {
+  if (isUploadingAvatar.value || isDeletingAvatar.value) return
+  avatarFileInput.value?.click()
+}
+
+const handleAvatarFileChange = async (e: Event) => {
+  const target = e.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (!file) return
+
+  const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+  if (!allowedTypes.includes(file.type)) {
+    toastWarning('รองรับเฉพาะไฟล์ภาพนามสกุล JPG, PNG, WEBP, GIF เท่านั้น')
+    target.value = ''
+    return
+  }
+
+  if (file.size > 5 * 1024 * 1024) {
+    toastWarning('ขนาดไฟล์รูปภาพต้องไม่เกิน 5MB')
+    target.value = ''
+    return
+  }
+
+  isUploadingAvatar.value = true
+  try {
+    const res = await uploadProfileImage(file)
+    if (userMe.value) {
+      userMe.value.profileImageUrl = res.profileImageUrl
+    }
+    toastSuccess('อัปเดตรูปโปรไฟล์ไปยัง Oracle Cloud สำเร็จ')
+  } catch (error: any) {
+    console.error('Upload avatar error:', error)
+    toastError(getRequestErrorMessage(error, 'อัปโหลดรูปโปรไฟล์ไม่สำเร็จ'))
+  } finally {
+    isUploadingAvatar.value = false
+    target.value = ''
+  }
+}
+
+const handleDeleteAvatar = async () => {
+  if (isUploadingAvatar.value || isDeletingAvatar.value) return
+  const confirmed = await confirmDelete('ลบรูปโปรไฟล์?', 'รูปภาพจะถูกลบออกจาก Oracle Cloud Storage และเปลี่ยนกลับเป็นรูปตัวอักษรย่อ')
+  if (!confirmed) return
+
+  isDeletingAvatar.value = true
+  try {
+    await deleteProfileImage()
+    if (userMe.value) {
+      userMe.value.profileImageUrl = null
+    }
+    toastSuccess('ลบรูปโปรไฟล์เรียบร้อยแล้ว')
+  } catch (error: any) {
+    console.error('Delete avatar error:', error)
+    toastError(getRequestErrorMessage(error, 'ลบรูปโปรไฟล์ไม่สำเร็จ'))
+  } finally {
+    isDeletingAvatar.value = false
+  }
+}
 
 // Edit Profile state
 const isEditProfileModalOpen = ref(false)
@@ -1429,7 +1588,7 @@ const loadProfile = async () => {
   isLoading.value = true; errorMessage.value = ''
   try {
     if (!user.value) { await router.push('/login'); return }
-    const me = await apiFetch<{ userId: string; email: string; fullName: string; hasGoogle: boolean; hasLine: boolean; hasPassword: boolean }>('/api/Auth/me')
+    const me = await apiFetch<{ userId: string; email: string; fullName: string; profileImageUrl?: string | null; hasGoogle: boolean; hasLine: boolean; hasPassword: boolean; oracleStorageConfigured?: boolean }>('/api/Auth/me')
     userMe.value = me
   } catch (error: any) {
     console.error('Load profile error:', error)
