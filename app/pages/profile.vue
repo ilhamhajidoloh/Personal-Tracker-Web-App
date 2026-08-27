@@ -640,7 +640,36 @@
                       </label>
                     </div>
 
-
+                    <!-- Custom App Password Accordion -->
+                    <details class="rounded-xl border border-gray-800/70 bg-gray-800/30 overflow-hidden mt-3">
+                      <summary class="cursor-pointer px-3.5 py-2.5 text-xs font-medium text-gray-300 hover:text-white list-none flex items-center justify-between transition-colors">
+                        <span>⚙️ ตั้งค่า Gmail / App Password โดยตรง</span>
+                        <span class="text-gray-500 text-[11px]">คลิกเพื่อปรับแต่ง</span>
+                      </summary>
+                      <div class="p-3.5 space-y-3 border-t border-gray-800/60 text-xs">
+                        <div>
+                          <label class="block text-gray-400 mb-1">Gmail Address (ผู้ส่ง)</label>
+                          <input
+                            v-model="smtpCustomUser"
+                            type="email"
+                            placeholder="your_account@gmail.com"
+                            class="w-full bg-gray-800 border border-gray-700/60 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-600 outline-none"
+                          >
+                        </div>
+                        <div>
+                          <label class="block text-gray-400 mb-1">Gmail App Password (16 หลัก)</label>
+                          <input
+                            v-model="smtpCustomPass"
+                            type="password"
+                            placeholder="xxxx xxxx xxxx xxxx"
+                            class="w-full bg-gray-800 border border-gray-700/60 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-600 outline-none font-mono"
+                          >
+                          <p class="text-[10.5px] text-gray-500 mt-1">
+                            สร้างได้จาก: Google Account > ความปลอดภัย > การยืนยันแบบ 2 ขั้นตอน > รหัสผ่านสำหรับแอป (App passwords)
+                          </p>
+                        </div>
+                      </div>
+                    </details>
 
                     <div class="flex flex-wrap gap-2 pt-2">
                       <button
@@ -935,7 +964,13 @@ const isSyncingAllGoogle = ref(false)
 const { syncAllEventsToGoogle } = useGoogleCalendarSync()
 
 // Email Messaging (Gmail SMTP) State
-const { getPreferences: getEmailPreferences, savePreferences: saveEmailPreferences, getStatus: getEmailStatus, sendTestEmail: sendEmailTestRequest } = useEmailMessaging()
+const {
+  getPreferences: getEmailPreferences,
+  loadPreferences: loadEmailPreferences,
+  savePreferences: saveEmailPreferences,
+  getStatus: getEmailStatus,
+  sendTestEmail: sendEmailTestRequest,
+} = useEmailMessaging()
 const emailPrefs = ref(getEmailPreferences())
 const emailStatus = ref<EmailStatus>({
   configured: false,
@@ -973,7 +1008,12 @@ const emailStatusBadgeClass = computed(() => {
 const loadEmailStatus = async () => {
   isEmailLoading.value = true
   try {
-    emailStatus.value = await getEmailStatus()
+    const [status, preferences] = await Promise.all([
+      getEmailStatus(),
+      loadEmailPreferences(),
+    ])
+    emailStatus.value = status
+    emailPrefs.value = preferences
     if (!emailPrefs.value.recipientEmail && user.value?.email) {
       emailPrefs.value.recipientEmail = user.value.email
     }
@@ -988,7 +1028,7 @@ const handleSaveEmailSettings = async () => {
   if (isSavingEmail.value) return
   isSavingEmail.value = true
   try {
-    saveEmailPreferences(emailPrefs.value)
+    emailPrefs.value = await saveEmailPreferences(emailPrefs.value)
     toastSuccess('บันทึกการตั้งค่าการแจ้งเตือนทาง Email เรียบร้อยแล้ว')
   } catch (error: any) {
     console.error('Save email settings error:', error)

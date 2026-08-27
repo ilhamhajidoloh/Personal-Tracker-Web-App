@@ -18,10 +18,18 @@ import {
 
 type ConnectedUser = {
   userId: string
-  lineUserId?: string
   email?: string
-  classRemindersEnabled?: boolean
-  classReminderMinutes?: number
+  lineUserId?: string
+  lineNotificationsEnabled?: boolean
+  lineClassRemindersEnabled?: boolean
+  lineClassReminderMinutes?: number
+  emailNotificationsEnabled?: boolean
+  emailRecipientEmail?: string | null
+  emailClassRemindersEnabled?: boolean
+  emailClassReminderMinutes?: number
+  emailEventRemindersEnabled?: boolean
+  emailTaskRemindersEnabled?: boolean
+  emailBillRemindersEnabled?: boolean
 }
 
 type BackendActivity = ReminderEvent & { reminderSentAt: string | null; location?: string | null; description?: string | null }
@@ -29,10 +37,12 @@ type BackendTodo = ReminderTodo & { reminderSentAt: string | null }
 
 type BackendCourse = {
   id: string
+  name?: string
   courseName: string
-  dayOfWeek: number
+  dayOfWeek: number | string
   startTime: string
   endTime: string
+  location?: string | null
   room?: string | null
   instructor?: string | null
 }
@@ -58,6 +68,14 @@ export default defineEventHandler(async (event) => {
     }
   }
 
+  if (!config.serviceApiKey) {
+    return {
+      sent: 0,
+      checked: 0,
+      message: 'NUXT_SERVICE_API_KEY is not configured for cron reminder user lookup',
+    }
+  }
+
   const getCronAuthHeaders = async (targetUserId: string): Promise<Record<string, string>> => {
     if (!config.jwt?.key) return {}
     try {
@@ -72,29 +90,33 @@ export default defineEventHandler(async (event) => {
     }
   }
 
+  const getServiceHeaders = (): Record<string, string> =>
+    config.serviceApiKey ? { 'X-Service-Key': config.serviceApiKey } : {}
+
   const apiBase = config.public.apiBase
   const appUrl = config.public.appUrl || 'http://localhost:3000'
   const now = getNowTH()
 
-  const systemHeaders = await getCronAuthHeaders('system-cron')
   const connectedUsers = await $fetch<ConnectedUser[]>(
-    `${apiBase}/api/Line/connected`,
-    { headers: systemHeaders },
-  ).catch(() => [])
+    `${apiBase}/api/EmailNotification/reminder-users`,
+    { headers: getServiceHeaders() },
+  ).catch((err) => {
+    console.error('Failed to load reminder users:', err)
+    return []
+  })
 
   let totalSent = 0
   let totalChecked = 0
 
   for (const user of connectedUsers) {
     const userHeaders = await getCronAuthHeaders(user.userId)
-    const [activities, todos, scheduleData, userProfile] = await Promise.all([
+    const [activities, todos, scheduleData] = await Promise.all([
       $fetch<BackendActivity[]>(`${apiBase}/api/Activity/${user.userId}`, { headers: userHeaders }).catch(() => []),
       $fetch<BackendTodo[]>(`${apiBase}/api/Todo/${user.userId}`, { headers: userHeaders }).catch(() => []),
-      $fetch<any>(`${apiBase}/api/Schedule/today/${user.userId}`, { headers: userHeaders }).catch(() => null),
-      $fetch<{ email?: string }>(`${apiBase}/api/Auth/profile`, { headers: userHeaders }).catch(() => null),
+      $fetch<{ allToday?: BackendCourse[] }>(`${apiBase}/api/Schedule/today-classes/${user.userId}`, { headers: userHeaders }).catch(() => null),
     ])
 
-    const userEmail = user.email || userProfile?.email || ''
+    const userEmail = user.emailRecipientEmail?.trim() || user.email || ''
 
     // ── 1. Event reminders ───────────────────────────────────────────────────
     const pendingEvents = activities.filter(a => a.reminderMinutes != null && !a.reminderSentAt)
@@ -107,7 +129,7 @@ export default defineEventHandler(async (event) => {
       let sentAny = false
 
       // Send LINE
-      if (hasLine && user.lineUserId) {
+      if (hasLine && user.lineUserId && user.lineNotificationsEnabled) {
         try {
           const text = buildEventReminderText(ev)
           await pushLineTextMessage(config.line.channelAccessToken, user.lineUserId, text)
@@ -118,7 +140,7 @@ export default defineEventHandler(async (event) => {
       }
 
       // Send Email
-      if (hasSmtp && userEmail) {
+      if (hasSmtp && userEmail && user.emailNotificationsEnabled && user.emailEventRemindersEnabled) {
         try {
           const eventEmailPayload = {
             title: ev.title,
@@ -159,7 +181,7 @@ export default defineEventHandler(async (event) => {
       let sentAny = false
 
       // Send LINE
-      if (hasLine && user.lineUserId) {
+      if (hasLine && user.lineUserId && user.lineNotificationsEnabled) {
         try {
           const text = buildTodoReminderText(todo)
           await pushLineTextMessage(config.line.channelAccessToken, user.lineUserId, text)
@@ -170,7 +192,7 @@ export default defineEventHandler(async (event) => {
       }
 
       // Send Email
-      if (hasSmtp && userEmail) {
+      if (hasSmtp && userEmail && user.emailNotificationsEnabled && user.emailTaskRemindersEnabled) {
         try {
           const email = buildTodoReminderEmail({
             title: todo.title,
@@ -195,11 +217,15 @@ export default defineEventHandler(async (event) => {
     }
 
     // ── 3. Class schedule reminders (Today) ──────────────────────────────────
-    if (scheduleData?.nextList && Array.isArray(scheduleData.nextList) && user.classRemindersEnabled) {
-      const reminderMins = user.classReminderMinutes || 15
+    const todayClasses = Array.isArray(scheduleData?.allToday) ? scheduleData.allToday : []
+    if (todayClasses.length && (user.lineClassRemindersEnabled || (user.emailNotificationsEnabled && user.emailClassRemindersEnabled))) {
+      const lineReminderMins = user.lineClassReminderMinutes || 15
+      const emailReminderMins = user.emailClassReminderMinutes || 15
+      const reminderMins = Math.max(lineReminderMins, emailReminderMins)
       const currentThMinutes = now.getHours() * 60 + now.getMinutes()
+      const classDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
 
-      for (const nextClass of scheduleData.nextList) {
+      for (const nextClass of todayClasses) {
         if (!nextClass.startTime) continue
         const [h, m] = nextClass.startTime.split(':').map(Number)
         const classStartMinutes = h * 60 + m
@@ -218,14 +244,66 @@ export default defineEventHandler(async (event) => {
             minutesBefore: diffMinutes,
           }
 
-          if (hasSmtp && userEmail) {
+          let sentAny = false
+
+          if (hasLine && user.lineUserId && user.lineClassRemindersEnabled && diffMinutes <= lineReminderMins) {
+            const lineSentState = await $fetch<{ sent?: boolean }>(
+              `${apiBase}/api/Schedule/courses/${nextClass.id}/reminder-sent?classDate=${classDate}&channel=line`,
+              { headers: userHeaders },
+            ).catch(() => null)
+
             try {
-              const email = buildClassReminderEmail(classPayload, appUrl)
-              await sendEmail({ to: userEmail, subject: email.subject, html: email.html, text: email.text }, config)
-              totalSent++
+              if (!lineSentState?.sent) {
+                await pushLineTextMessage(
+                  config.line.channelAccessToken,
+                  user.lineUserId,
+                  [
+                    `🔔 แจ้งเตือนคาบเรียน`,
+                    ``,
+                    `📚 วิชา: ${classPayload.courseName}`,
+                    `📅 วัน${dayName}`,
+                    `🕐 เวลา: ${classPayload.startTime.slice(0, 5)} - ${classPayload.endTime.slice(0, 5)} น.`,
+                    classPayload.room ? `📍 ห้องเรียน: ${classPayload.room}` : '',
+                    ``,
+                    `⏰ คาบเรียนจะเริ่มในอีก ${diffMinutes} นาที`,
+                  ].filter(Boolean).join('\n'),
+                )
+                await $fetch(`${apiBase}/api/Schedule/courses/${nextClass.id}/reminder-sent`, {
+                  method: 'PUT',
+                  headers: userHeaders,
+                  body: { classDate, channel: 'line' },
+                }).catch(() => null)
+                sentAny = true
+              }
+            } catch (err) {
+              console.error(`LINE Class reminder failed:`, err)
+            }
+          }
+
+          if (hasSmtp && userEmail && user.emailNotificationsEnabled && user.emailClassRemindersEnabled && diffMinutes <= emailReminderMins) {
+            const emailSentState = await $fetch<{ sent?: boolean }>(
+              `${apiBase}/api/Schedule/courses/${nextClass.id}/reminder-sent?classDate=${classDate}&channel=email`,
+              { headers: userHeaders },
+            ).catch(() => null)
+
+            try {
+              if (!emailSentState?.sent) {
+                const email = buildClassReminderEmail(classPayload, appUrl)
+                await sendEmail({ to: userEmail, subject: email.subject, html: email.html, text: email.text }, config)
+                await $fetch(`${apiBase}/api/Schedule/courses/${nextClass.id}/reminder-sent`, {
+                  method: 'PUT',
+                  headers: userHeaders,
+                  body: { classDate, channel: 'email' },
+                }).catch(() => null)
+                sentAny = true
+              }
             } catch (err) {
               console.error(`Email Class reminder failed:`, err)
             }
+          }
+
+          if (sentAny) {
+            totalSent++
           }
         }
       }

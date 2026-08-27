@@ -15,6 +15,7 @@ export default defineNuxtConfig({
   },
   runtimeConfig: {
     cronSecret: '',
+    serviceApiKey: '',
     jwt: {
       key: '',
       issuer: '',

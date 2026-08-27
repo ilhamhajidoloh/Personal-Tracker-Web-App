@@ -52,6 +52,31 @@ export const useEmailMessaging = () => {
     return updated
   }
 
+  const loadPreferences = async (): Promise<EmailNotificationPreferences> => {
+    if (!import.meta.client) return { ...defaultPreferences }
+
+    try {
+      const serverPrefs = await $fetch<EmailNotificationPreferences>('/api/email/preferences')
+      savePreferences(serverPrefs)
+      return { ...defaultPreferences, ...serverPrefs }
+    } catch (error) {
+      console.error('Failed to load email preferences from server:', error)
+      return getPreferences()
+    }
+  }
+
+  const savePreferencesToServer = async (prefs: Partial<EmailNotificationPreferences>) => {
+    const updated = savePreferences(prefs) || { ...defaultPreferences, ...prefs }
+    if (!import.meta.client) return updated
+
+    const serverPrefs = await $fetch<EmailNotificationPreferences>('/api/email/preferences', {
+      method: 'PUT',
+      body: updated,
+    })
+    savePreferences(serverPrefs)
+    return { ...defaultPreferences, ...serverPrefs }
+  }
+
   const getStatus = async (): Promise<EmailStatus> => {
     if (!import.meta.client) {
       return {
@@ -115,7 +140,8 @@ export const useEmailMessaging = () => {
 
   return {
     getPreferences,
-    savePreferences,
+    loadPreferences,
+    savePreferences: savePreferencesToServer,
     getStatus,
     sendTestEmail,
     notify,
