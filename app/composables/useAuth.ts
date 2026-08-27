@@ -37,7 +37,26 @@ export const useAuth = () => {
     default: () => null,
   })
 
-  const currentUser = computed(() => session.value)
+  const normalizeProfileImageUrl = (userId?: string | null, profileImageUrl?: string | null) => {
+    if (!profileImageUrl) return null
+    if (!userId) return profileImageUrl
+    if (
+      profileImageUrl.startsWith('profiles/') ||
+      profileImageUrl.includes('objectstorage.') ||
+      profileImageUrl.includes('.compat.objectstorage.')
+    ) {
+      return `${config.public.apiBase}/api/Auth/profile-image/${userId}?v=${encodeURIComponent(profileImageUrl)}`
+    }
+    return profileImageUrl
+  }
+
+  const currentUser = computed(() => {
+    if (!session.value) return null
+    return {
+      ...session.value,
+      profileImageUrl: normalizeProfileImageUrl(session.value.userId, session.value.profileImageUrl),
+    }
+  })
 
   const isSessionValid = () => {
     const token = session.value?.token
@@ -53,7 +72,7 @@ export const useAuth = () => {
       userId: res.userId,
       email: res.email,
       fullName: res.fullName,
-      profileImageUrl: res.profileImageUrl ?? session.value?.profileImageUrl ?? null,
+      profileImageUrl: normalizeProfileImageUrl(res.userId, res.profileImageUrl ?? session.value?.profileImageUrl ?? null),
     }
   }
 
@@ -107,7 +126,7 @@ export const useAuth = () => {
       session.value = {
         ...session.value,
         fullName: res.fullName,
-        profileImageUrl: res.profileImageUrl ?? session.value.profileImageUrl,
+        profileImageUrl: normalizeProfileImageUrl(res.userId, res.profileImageUrl ?? session.value.profileImageUrl),
       }
     }
     return res
@@ -131,7 +150,7 @@ export const useAuth = () => {
     if (session.value) {
       session.value = {
         ...session.value,
-        profileImageUrl: res.profileImageUrl,
+        profileImageUrl: normalizeProfileImageUrl(session.value.userId, res.profileImageUrl),
       }
     }
     return res
@@ -180,6 +199,7 @@ export const useAuth = () => {
     signOut,
     setSession,
     clearSession,
+    normalizeProfileImageUrl,
     updateProfile,
     uploadProfileImage,
     deleteProfileImage,

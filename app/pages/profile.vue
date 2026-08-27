@@ -945,7 +945,7 @@ useHead({ title: 'Profile' })
 
 const router = useRouter()
 const route = useRoute()
-const { currentUser: user, updateProfile, changePassword, uploadProfileImage, deleteProfileImage } = useAuth()
+const { currentUser: user, updateProfile, changePassword, uploadProfileImage, deleteProfileImage, setSession, normalizeProfileImageUrl } = useAuth()
 const { apiFetch } = useBackendApi()
 const { toastSuccess, toastError, toastWarning, confirmDelete } = useAlert()
 const config = useRuntimeConfig()
@@ -995,7 +995,10 @@ const userHasPassword = computed(() => userMe.value?.hasPassword ?? true)
 const avatarFileInput = ref<HTMLInputElement | null>(null)
 const isUploadingAvatar = ref(false)
 const isDeletingAvatar = ref(false)
-const profileImageUrl = computed(() => userMe.value?.profileImageUrl || user.value?.profileImageUrl || null)
+const profileImageUrl = computed(() => {
+  const sourceUserId = userMe.value?.userId || user.value?.userId
+  return normalizeProfileImageUrl(sourceUserId, userMe.value?.profileImageUrl || user.value?.profileImageUrl || null)
+})
 
 const triggerSelectAvatar = () => {
   if (isUploadingAvatar.value || isDeletingAvatar.value) return
@@ -1589,7 +1592,20 @@ const loadProfile = async () => {
   try {
     if (!user.value) { await router.push('/login'); return }
     const me = await apiFetch<{ userId: string; email: string; fullName: string; profileImageUrl?: string | null; hasGoogle: boolean; hasLine: boolean; hasPassword: boolean; oracleStorageConfigured?: boolean }>('/api/Auth/me')
-    userMe.value = me
+    userMe.value = {
+      ...me,
+      profileImageUrl: normalizeProfileImageUrl(me.userId, me.profileImageUrl),
+    }
+    if (user.value?.token) {
+      setSession({
+        message: '',
+        token: user.value.token,
+        userId: me.userId,
+        email: me.email,
+        fullName: me.fullName,
+        profileImageUrl: me.profileImageUrl ?? null,
+      })
+    }
   } catch (error: any) {
     console.error('Load profile error:', error)
     errorMessage.value = error?.message || 'โหลดข้อมูลโปรไฟล์ไม่สำเร็จ'
