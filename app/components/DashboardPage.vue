@@ -126,58 +126,126 @@
                 </button>
               </div>
 
-              <!-- Cumulative balance trend chart -->
+              <!-- Bar chart: Income vs Expense comparison -->
               <div class="mt-5 -mx-1.5 relative">
-                <!-- Y-Axis Labels inside the container -->
-                <div v-if="!chartGeom.empty" class="absolute left-2 top-1 text-[9px] font-semibold text-gray-500 pointer-events-none select-none bg-gray-900/60 px-1.5 py-0.5 rounded border border-gray-800/40">
-                  สูงสุด: {{ chartGeom.maxFormatted }}
-                </div>
-                <div v-if="!chartGeom.empty" class="absolute left-2 bottom-6 text-[9px] font-semibold text-gray-500 pointer-events-none select-none bg-gray-900/60 px-1.5 py-0.5 rounded border border-gray-800/40">
-                  ต่ำสุด: {{ chartGeom.minFormatted }}
+                <div v-if="barChartData.empty" class="h-[180px] flex items-center justify-center text-xs mx-1.5 rounded-lg" style="color: var(--text-muted); background: var(--bg-elevated); border: 1px solid var(--border-subtle);">
+                  ยังไม่มีข้อมูลพอสำหรับแสดงกราฟ
                 </div>
 
-                <svg v-if="!chartGeom.empty" viewBox="0 0 600 150" preserveAspectRatio="none" class="w-full" style="height: 130px; display: block;" role="img" aria-label="กราฟยอดเงินคงเหลือสะสม">
-                  <defs>
-                    <linearGradient id="dashBalanceArea" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0" stop-color="var(--brand)" stop-opacity="0.24" />
-                      <stop offset="1" stop-color="var(--brand)" stop-opacity="0" />
-                    </linearGradient>
-                  </defs>
-                  
-                  <!-- Grid lines -->
-                  <line x1="8" y1="12" x2="592" y2="12" stroke="var(--border-subtle)" stroke-width="1" stroke-dasharray="3,3" vector-effect="non-scaling-stroke" />
-                  <line x1="8" y1="75" x2="592" y2="75" stroke="var(--border-subtle)" stroke-width="1" stroke-dasharray="3,3" vector-effect="non-scaling-stroke" />
-                  <line x1="8" y1="138" x2="592" y2="138" stroke="var(--border-subtle)" stroke-width="1" stroke-dasharray="3,3" vector-effect="non-scaling-stroke" />
-                  
-                  <path :d="chartGeom.area" fill="url(#dashBalanceArea)" />
-                  <path :d="chartGeom.line" fill="none" stroke="var(--brand)" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke" />
-                  
-                  <!-- Latest value label on the dot -->
-                  <text 
-                    :x="chartGeom.dotX - 10" 
-                    :y="chartGeom.dotY - 10" 
-                    fill="var(--brand-ink)" 
-                    font-size="11" 
-                    font-weight="bold" 
-                    text-anchor="end" 
-                    class="num"
-                    style="filter: drop-shadow(0px 1px 3px rgba(0,0,0,0.8));"
-                  >
-                    {{ chartGeom.lastFormatted }}
-                  </text>
-                  
-                  <circle :cx="chartGeom.dotX" :cy="chartGeom.dotY" r="4.5" fill="var(--brand)" stroke="#ffffff" stroke-width="1.5" />
-                </svg>
-                
-                <!-- X-Axis Date Labels -->
-                <div v-if="!chartGeom.empty" class="flex justify-between px-3 mt-1.5 text-[10px] font-semibold text-gray-500 border-t border-gray-800/40 pt-1">
-                  <span>{{ chartGeom.startDate }}</span>
-                  <span class="text-gray-600">ระยะเวลาแสดงแนวโน้มยอดเงิน</span>
-                  <span>{{ chartGeom.endDate }}</span>
-                </div>
-                
-                <div v-else class="h-[130px] flex items-center justify-center text-xs mx-1.5 rounded-lg" style="color: var(--text-muted); background: var(--bg-elevated); border: 1px solid var(--border-subtle);">
-                  ยังไม่มีข้อมูลพอสำหรับแสดงกราฟ
+                <div v-else class="space-y-3">
+                  <!-- Legend -->
+                  <div class="flex items-center justify-center gap-5 text-xs">
+                    <div class="flex items-center gap-1.5">
+                      <span class="w-3 h-3 rounded-sm" style="background: var(--ink-emerald);"></span>
+                      <span style="color: var(--text-secondary);">รายรับ</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                      <span class="w-3 h-3 rounded-sm" style="background: var(--ink-rose);"></span>
+                      <span style="color: var(--text-secondary);">รายจ่าย</span>
+                    </div>
+                  </div>
+
+                  <!-- Bar Chart Container -->
+                  <div class="relative px-2 pt-2 pb-1">
+                    <!-- Y-axis max label -->
+                    <div class="flex items-center justify-between text-[9.5px] font-semibold mb-1" style="color: var(--text-muted);">
+                      <span>{{ barChartData.maxFormatted }}</span>
+                    </div>
+
+                    <!-- Chart plotting area -->
+                    <div class="relative w-full h-[150px] flex flex-col justify-end">
+                      <!-- Background horizontal gridlines -->
+                      <div class="absolute inset-0 flex flex-col justify-between pointer-events-none opacity-25">
+                        <div class="w-full border-b border-dashed" style="border-color: var(--text-muted);"></div>
+                        <div class="w-full border-b border-dashed" style="border-color: var(--text-muted);"></div>
+                        <div class="w-full border-b" style="border-color: var(--border-strong);"></div>
+                      </div>
+
+                      <!-- Bars flex row -->
+                      <div class="relative z-10 w-full h-full flex items-end justify-around gap-1.5 sm:gap-3 px-1 pb-[1px]">
+                        <div
+                          v-for="(bar, index) in barChartData.bars"
+                          :key="index"
+                          class="flex-1 h-full flex flex-col justify-end items-center group cursor-pointer relative"
+                          @mouseenter="hoveredBarIndex = index"
+                          @mouseleave="hoveredBarIndex = null"
+                        >
+                          <!-- Bars container -->
+                          <div class="w-full h-full flex items-end justify-center gap-1 sm:gap-1.5">
+                            <!-- Income bar -->
+                            <div
+                              v-if="bar.income > 0"
+                              class="flex-1 max-w-[22px] rounded-t transition-all duration-300 relative"
+                              :style="{
+                                height: `${Math.max(bar.incomeHeight, 3)}%`,
+                                background: 'var(--ink-emerald)',
+                                opacity: hoveredBarIndex === null || hoveredBarIndex === index ? 1 : 0.35,
+                                transform: hoveredBarIndex === index ? 'scaleY(1.04)' : 'scaleY(1)',
+                                transformOrigin: 'bottom'
+                              }"
+                            ></div>
+                            <div v-else class="flex-1 max-w-[22px]"></div>
+
+                            <!-- Expense bar -->
+                            <div
+                              v-if="bar.expense > 0"
+                              class="flex-1 max-w-[22px] rounded-t transition-all duration-300 relative"
+                              :style="{
+                                height: `${Math.max(bar.expenseHeight, 3)}%`,
+                                background: 'var(--ink-rose)',
+                                opacity: hoveredBarIndex === null || hoveredBarIndex === index ? 1 : 0.35,
+                                transform: hoveredBarIndex === index ? 'scaleY(1.04)' : 'scaleY(1)',
+                                transformOrigin: 'bottom'
+                              }"
+                            ></div>
+                            <div v-else class="flex-1 max-w-[22px]"></div>
+                          </div>
+
+                          <!-- Hover tooltip -->
+                          <div
+                            v-if="hoveredBarIndex === index"
+                            class="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 rounded-xl p-3 text-[11px] font-semibold shadow-2xl z-30 pointer-events-none whitespace-nowrap"
+                            style="background: var(--bg-surface); border: 1px solid var(--border-subtle); box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5);"
+                          >
+                            <div class="text-xs font-bold mb-1.5 pb-1 border-b text-center" style="color: var(--text-primary); border-color: var(--border-subtle);">{{ bar.label }}</div>
+                            <div class="flex items-center justify-between gap-4 py-0.5">
+                              <span class="flex items-center gap-1.5" style="color: var(--ink-emerald);">
+                                <span class="w-2 h-2 rounded-full" style="background: var(--ink-emerald);"></span>
+                                รายรับ:
+                              </span>
+                              <span class="num font-bold" style="color: var(--ink-emerald);">{{ formatCurrency(bar.income) }}</span>
+                            </div>
+                            <div class="flex items-center justify-between gap-4 py-0.5">
+                              <span class="flex items-center gap-1.5" style="color: var(--ink-rose);">
+                                <span class="w-2 h-2 rounded-full" style="background: var(--ink-rose);"></span>
+                                รายจ่าย:
+                              </span>
+                              <span class="num font-bold" style="color: var(--ink-rose);">{{ formatCurrency(bar.expense) }}</span>
+                            </div>
+                            <div class="flex items-center justify-between gap-4 border-t mt-1.5 pt-1.5" style="border-color: var(--border-subtle);">
+                              <span style="color: var(--text-secondary);">สุทธิ:</span>
+                              <span class="num font-extrabold" :style="{ color: bar.net >= 0 ? 'var(--ink-emerald)' : 'var(--ink-rose)' }">
+                                {{ bar.net >= 0 ? '+' : '' }}{{ formatCurrency(bar.net) }}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- X-axis labels -->
+                    <div class="flex justify-around text-[9.5px] font-semibold pt-2" style="color: var(--text-muted);">
+                      <span v-for="(bar, index) in barChartData.bars" :key="index" class="flex-1 text-center truncate px-0.5">
+                        {{ bar.labelShort }}
+                      </span>
+                    </div>
+                  </div>
+
+                  <!-- Bottom info -->
+                  <div class="flex justify-between items-center px-2 text-[10.5px] pt-2" style="border-top: 1px solid var(--border-subtle); color: var(--text-muted);">
+                    <span>{{ barChartData.startDate }} - {{ barChartData.endDate }}</span>
+                    <span>เปรียบเทียบรายรับ-รายจ่าย</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1085,28 +1153,14 @@ const latestTransactionSubtitle = computed(() => {
 const recentTransactions = computed(() => transactions.value.slice(0, 5))
 
 const selectedChartRange = ref<'7d' | '30d' | 'this_month' | 'all'>('30d')
+const hoveredBarIndex = ref<number | null>(null)
 
-const chartGeom = computed(() => {
-  const w = 600
-  const h = 150
-  const pad = 12
-
+const barChartData = computed(() => {
   if (!transactions.value.length) {
-    return { line: '', area: '', dotX: 0, dotY: 0, empty: true, min: 0, max: 0, minFormatted: '฿0.00', maxFormatted: '฿0.00', lastFormatted: '฿0.00', startDate: '', endDate: '' }
+    return { bars: [], empty: true, max: 0, maxFormatted: '฿0', startDate: '', endDate: '' }
   }
 
-  // 1. Sort all transactions chronologically
-  const sortedAll = [...transactions.value].sort((a, b) => {
-    if (a.entry_date !== b.entry_date) return a.entry_date.localeCompare(b.entry_date)
-    return (a.created_at || '').localeCompare(b.created_at || '')
-  })
-
-  // 2. Determine date thresholds
-  const today = getTodayTH()
-  let limitStr: string | null = null
   const now = nowTH()
-
-  // Helper to format YYYY-MM-DD
   function formatYYYYMMDD(d: Date): string {
     const y = d.getFullYear()
     const m = String(d.getMonth() + 1).padStart(2, '0')
@@ -1114,104 +1168,133 @@ const chartGeom = computed(() => {
     return `${y}-${m}-${date}`
   }
 
+  let startDate: Date
+  let periodCount: number
+  let groupBy: 'day' | 'week' | 'month' = 'day'
+
   if (selectedChartRange.value === '7d') {
-    const d = new Date(now.getTime())
-    d.setDate(d.getDate() - 6) // Last 7 days including today
-    limitStr = formatYYYYMMDD(d)
+    startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6)
+    periodCount = 7
+    groupBy = 'day'
   } else if (selectedChartRange.value === '30d') {
-    const d = new Date(now.getTime())
-    d.setDate(d.getDate() - 29) // Last 30 days including today
-    limitStr = formatYYYYMMDD(d)
+    startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 29)
+    periodCount = 5
+    groupBy = 'week'
   } else if (selectedChartRange.value === 'this_month') {
-    limitStr = `${formatYYYYMMDD(now).slice(0, 8)}01` // First day of this month
+    startDate = new Date(now.getFullYear(), now.getMonth(), 1)
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+    const daysInMonth = endOfMonth.getDate()
+    periodCount = Math.ceil(daysInMonth / 7)
+    groupBy = 'week'
+  } else {
+    // 'all' - group by month, show last 6 months
+    startDate = new Date(now.getFullYear(), now.getMonth() - 5, 1)
+    periodCount = 6
+    groupBy = 'month'
   }
 
-  // 3. Compute cumulative series and filter
-  let running = 0
-  let balanceBeforeLimit = 0
-  const rangePoints: { date: string; balance: number }[] = []
+  const startDateStr = formatYYYYMMDD(startDate)
+  const filteredTransactions = transactions.value.filter(tx => tx.entry_date >= startDateStr)
 
-  for (const tx of sortedAll) {
-    running += tx.type === 'income' ? tx.amount : -tx.amount
-    if (limitStr && tx.entry_date < limitStr) {
-      balanceBeforeLimit = running
-    } else {
-      rangePoints.push({ date: tx.entry_date, balance: running })
+  type PeriodData = { income: number; expense: number; label: string; labelShort: string }
+  const periods: PeriodData[] = []
+
+  if (groupBy === 'day') {
+    // 7 days view
+    for (let i = 0; i < periodCount; i++) {
+      const d = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate() + i)
+      const dateStr = formatYYYYMMDD(d)
+      const dayTransactions = filteredTransactions.filter(tx => tx.entry_date === dateStr)
+      const income = dayTransactions.filter(tx => tx.type === 'income').reduce((sum, tx) => sum + tx.amount, 0)
+      const expense = dayTransactions.filter(tx => tx.type === 'expense').reduce((sum, tx) => sum + tx.amount, 0)
+      const label = d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })
+      const labelShort = d.toLocaleDateString('th-TH', { day: 'numeric' })
+      periods.push({ income, expense, label, labelShort })
     }
-  }
+  } else if (groupBy === 'week') {
+    if (selectedChartRange.value === 'this_month') {
+      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+      const daysInMonth = endOfMonth.getDate()
+      for (let i = 0; i < periodCount; i++) {
+        const startDay = 1 + (i * 7)
+        const endDay = Math.min((i + 1) * 7, daysInMonth)
+        const weekStart = new Date(now.getFullYear(), now.getMonth(), startDay)
+        const weekEnd = new Date(now.getFullYear(), now.getMonth(), endDay)
+        const weekStartStr = formatYYYYMMDD(weekStart)
+        const weekEndStr = formatYYYYMMDD(weekEnd)
 
-  // 4. Construct final chart series points
-  let finalPoints: { date: string; balance: number }[] = []
-  if (limitStr) {
-    // Prepend starting point at the limit date with the balance just before it
-    finalPoints.push({ date: limitStr, balance: balanceBeforeLimit })
-    finalPoints.push(...rangePoints)
+        const weekTransactions = filteredTransactions.filter(tx => tx.entry_date >= weekStartStr && tx.entry_date <= weekEndStr)
+        const income = weekTransactions.filter(tx => tx.type === 'income').reduce((sum, tx) => sum + tx.amount, 0)
+        const expense = weekTransactions.filter(tx => tx.type === 'expense').reduce((sum, tx) => sum + tx.amount, 0)
+        const label = `${weekStart.getDate()} - ${weekEnd.getDate()} ${weekStart.toLocaleDateString('th-TH', { month: 'short' })}`
+        const labelShort = `สัปดาห์ ${i + 1}`
+        periods.push({ income, expense, label, labelShort })
+      }
+    } else {
+      // 30d view - 5 weeks covering the 30 days up to today
+      for (let i = 0; i < periodCount; i++) {
+        const weekStart = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate() + (i * 7))
+        let weekEnd = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate() + (i * 7) + 6)
+        if (weekEnd > now) {
+          weekEnd = new Date(now.getTime())
+        }
 
-    // If only the starting point exists, add today as the end point
-    if (finalPoints.length === 1) {
-      finalPoints.push({ date: today, balance: balanceBeforeLimit })
+        const weekStartStr = formatYYYYMMDD(weekStart)
+        const weekEndStr = formatYYYYMMDD(weekEnd)
+
+        const weekTransactions = filteredTransactions.filter(tx => tx.entry_date >= weekStartStr && tx.entry_date <= weekEndStr)
+        const income = weekTransactions.filter(tx => tx.type === 'income').reduce((sum, tx) => sum + tx.amount, 0)
+        const expense = weekTransactions.filter(tx => tx.type === 'expense').reduce((sum, tx) => sum + tx.amount, 0)
+        const label = `${weekStart.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })} - ${weekEnd.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}`
+        const labelShort = `สัปดาห์ ${i + 1}`
+        periods.push({ income, expense, label, labelShort })
+      }
     }
   } else {
-    finalPoints = rangePoints
-  }
+    // Group by month (last 6 months)
+    for (let i = 0; i < periodCount; i++) {
+      const monthDate = new Date(startDate.getFullYear(), startDate.getMonth() + i, 1)
+      const year = monthDate.getFullYear()
+      const month = monthDate.getMonth() + 1
+      const monthStr = `${year}-${String(month).padStart(2, '0')}`
 
-  if (finalPoints.length === 1) {
-    finalPoints = [{ date: finalPoints[0]!.date, balance: 0 }, { date: finalPoints[0]!.date, balance: finalPoints[0]!.balance }]
-  }
-
-  if (finalPoints.length < 2) {
-    return { line: '', area: '', dotX: 0, dotY: 0, empty: true, min: 0, max: 0, minFormatted: '฿0.00', maxFormatted: '฿0.00', lastFormatted: '฿0.00', startDate: '', endDate: '' }
-  }
-
-  // 5. Convert to coordinates and path
-  let values = finalPoints.map(p => p.balance)
-  const min = Math.min(...values)
-  const max = Math.max(...values)
-  const span = (max - min) || 1
-
-  const formatDateShort = (dateStr?: string) => {
-    if (!dateStr) return ''
-    const d = new Date(dateStr)
-    return d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })
-  }
-
-  const startDate = formatDateShort(finalPoints[0]!.date)
-  const endDate = formatDateShort(finalPoints[finalPoints.length - 1]!.date)
-
-  // Sample points if too dense (similar to original logic)
-  if (values.length > 48) {
-    const step = values.length / 48
-    const sampledPoints: typeof finalPoints = []
-    for (let i = 0; i < 48; i += 1) {
-      sampledPoints.push(finalPoints[Math.floor(i * step)]!)
+      const monthTransactions = filteredTransactions.filter(tx => tx.entry_date.startsWith(monthStr))
+      const income = monthTransactions.filter(tx => tx.type === 'income').reduce((sum, tx) => sum + tx.amount, 0)
+      const expense = monthTransactions.filter(tx => tx.type === 'expense').reduce((sum, tx) => sum + tx.amount, 0)
+      const label = monthDate.toLocaleDateString('th-TH', { month: 'long', year: 'numeric' })
+      const labelShort = monthDate.toLocaleDateString('th-TH', { month: 'short' })
+      periods.push({ income, expense, label, labelShort })
     }
-    sampledPoints.push(finalPoints[finalPoints.length - 1]!)
-    finalPoints = sampledPoints
-    values = finalPoints.map(p => p.balance)
   }
 
-  const xAt = (i: number) => pad + (i * (w - pad * 2)) / (values.length - 1)
-  const yAt = (v: number) => pad + (h - pad * 2) * (1 - (v - min) / span)
+  // Calculate max value for scaling with 15% headroom
+  const allValues = periods.flatMap(p => [p.income, p.expense])
+  const rawMax = Math.max(...allValues, 0)
+  const max = rawMax > 0 ? rawMax * 1.15 : 100
 
-  const coords = values.map((v, i) => [xAt(i), yAt(v)] as [number, number])
-  const line = coords.map((p, i) => `${i ? 'L' : 'M'}${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(' ')
-  const area = `M${coords[0]![0].toFixed(1)} ${h - pad} ${coords.map((p) => `L${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(' ')} L${coords[coords.length - 1]![0].toFixed(1)} ${h - pad} Z`
-  const last = coords[coords.length - 1]!
-  const lastValue = values[values.length - 1] || 0
+  // Create bar data with heights as percentages
+  const bars = periods.map(period => ({
+    income: period.income,
+    expense: period.expense,
+    net: period.income - period.expense,
+    incomeHeight: rawMax > 0 ? (period.income / max) * 100 : 0,
+    expenseHeight: rawMax > 0 ? (period.expense / max) * 100 : 0,
+    label: period.label,
+    labelShort: period.labelShort
+  }))
+
+  const formatDateShort = (dateStr: string) => {
+    const d = new Date(dateStr)
+    return d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })
+  }
 
   return {
-    line,
-    area,
-    dotX: last[0],
-    dotY: last[1],
+    bars,
     empty: false,
-    min,
     max,
-    minFormatted: formatCurrency(min),
-    maxFormatted: formatCurrency(max),
-    lastFormatted: formatCurrency(lastValue),
-    startDate,
-    endDate
+    maxFormatted: formatCurrency(rawMax > 0 ? rawMax : 0),
+    startDate: formatDateShort(startDateStr),
+    endDate: formatDateShort(formatYYYYMMDD(now))
   }
 })
 
