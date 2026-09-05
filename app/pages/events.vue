@@ -16,7 +16,7 @@
             </span>
             <span v-if="ongoingEventsCount > 0">&bull; </span>
             <span>กำลังจะมาถึง {{ upcomingEventsCount }}</span> &bull; 
-            <span>ที่ผ่านมา {{ pastEventsCount }}</span>
+            <span>สิ้นสุดแล้ว {{ pastEventsCount }}</span>
           </p>
         </div>
         <div class="flex items-center gap-2 shrink-0">
@@ -244,51 +244,103 @@
           </div>
         </div>
 
-        <!-- Events List -->
+        <!-- Events Content Section with Sub-tabs -->
         <section class="section-card">
-          <div class="flex flex-col gap-3 px-5 py-4 border-b border-gray-800/60">
-            <div class="flex items-center justify-between">
-              <h2 class="text-base font-semibold text-white">รายการกิจกรรม</h2>
-              <span class="text-xs px-2.5 py-1 rounded-full" style="background: var(--bg-elevated); color: var(--text-secondary);">{{ eventPageInfo }}</span>
+          <!-- Top Bar: Sub-Tabs & Controls -->
+          <div class="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 p-3.5 sm:px-5 sm:py-4 border-b" style="border-color: var(--border-subtle);">
+            <!-- Segmented Sub-Tab Bar -->
+            <div class="w-full lg:w-auto grid grid-cols-3 p-1 rounded-xl sm:rounded-2xl" style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);">
+              <button
+                v-for="tab in subTabs"
+                :key="tab.value"
+                type="button"
+                @click="activeSubTab = tab.value"
+                class="py-2 px-1.5 sm:px-3 rounded-lg sm:rounded-xl text-xs font-semibold transition-all tap-scale flex items-center justify-center gap-1 sm:gap-1.5 text-center select-none"
+                :style="activeSubTab === tab.value
+                  ? { background: 'var(--brand)', color: '#ffffff', boxShadow: 'var(--brand-glow)' }
+                  : { color: 'var(--text-secondary)' }"
+              >
+                <span class="truncate text-[11.5px] sm:text-xs">
+                  <span class="sm:hidden">{{ tab.shortLabel }}</span>
+                  <span class="hidden sm:inline"><span class="mr-1">{{ tab.icon }}</span>{{ tab.label }}</span>
+                </span>
+                <span
+                  class="num text-[10px] sm:text-[11px] font-bold px-1.5 py-0.5 rounded-full shrink-0 leading-none"
+                  :style="activeSubTab === tab.value
+                    ? { background: 'rgba(255,255,255,0.25)', color: '#ffffff' }
+                    : { background: 'var(--bg-card)', color: 'var(--text-muted)', border: '1px solid var(--border-subtle)' }"
+                >
+                  {{ tab.count }}
+                </span>
+              </button>
             </div>
-            <div class="flex items-center gap-2 flex-wrap justify-end">
+
+            <!-- Search box & Items per page -->
+            <div class="flex items-center gap-2 w-full lg:w-auto">
+              <div class="relative flex-1 lg:w-56">
+                <input
+                  v-model="searchQuery"
+                  type="text"
+                  placeholder="ค้นหากิจกรรม..."
+                  class="w-full text-xs pl-8 pr-3 py-2 rounded-xl transition-all focus:outline-none"
+                  style="background: var(--bg-elevated); border: 1px solid var(--border-default); color: var(--text-primary);"
+                />
+                <svg class="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2" style="color: var(--text-muted);" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+              </div>
               <select
-                v-model.number="eventItemsPerPage"
-                @change="eventCurrentPage = 1"
-                class="text-sm px-3 py-2 rounded-xl focus:outline-none transition-all"
+                v-model.number="itemsPerPage"
+                @change="currentPage = 1"
+                class="text-xs px-2.5 py-2 rounded-xl focus:outline-none transition-all shrink-0"
                 style="background: var(--bg-elevated); border: 1px solid var(--border-default); color: var(--text-primary);"
               >
-                <option value="10">10 รายการ/หน้า</option>
-                <option value="20">20 รายการ/หน้า</option>
-                <option value="50">50 รายการ/หน้า</option>
+                <option :value="10">10 / หน้า</option>
+                <option :value="20">20 / หน้า</option>
+                <option :value="50">50 / หน้า</option>
               </select>
             </div>
           </div>
 
           <!-- Loading -->
           <div v-if="isLoading" class="p-5 space-y-3">
-            <div v-for="i in 3" :key="i" class="h-20 rounded-xl bg-gray-800/60 animate-pulse"></div>
+            <div v-for="i in 3" :key="i" class="h-20 rounded-xl animate-pulse" style="background: var(--bg-elevated);"></div>
           </div>
 
-          <!-- Empty -->
-          <div v-else-if="!events.length" class="flex flex-col items-center justify-center py-16 text-center px-5">
-            <div class="w-16 h-16 rounded-2xl bg-gray-800/70 flex items-center justify-center text-2xl mb-4">🗓️</div>
-            <p class="text-base font-semibold text-gray-300">ยังไม่มีกิจกรรม</p>
-            <p class="text-sm text-gray-500 mt-1">กดปุ่มด้านบนเพื่อเพิ่มกิจกรรมแรก</p>
+          <!-- Empty state -->
+          <div v-else-if="!filteredEvents.length" class="flex flex-col items-center justify-center py-16 text-center px-5">
+            <div class="w-16 h-16 rounded-2xl flex items-center justify-center text-2xl mb-4" style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);">
+              {{ activeSubTab === 'past' ? '🏁' : '🗓️' }}
+            </div>
+            <p class="text-base font-semibold" style="color: var(--text-primary);">
+              {{ activeSubTab === 'past' ? 'ยังไม่มีกิจกรรมที่สิ้นสุดแล้ว' : (searchQuery ? 'ไม่พบกิจกรรมที่ค้นหา' : (activeSubTab === 'upcoming' ? 'ไม่มีกิจกรรมที่ยังไม่ถึง' : 'ยังไม่มีกิจกรรม')) }}
+            </p>
+            <p class="text-sm mt-1" style="color: var(--text-muted);">
+              {{ activeSubTab === 'past' ? 'กิจกรรมที่สิ้นสุดแล้วหรือผ่านเวลามาแล้วจะปรากฏในแท็บนี้' : (searchQuery ? 'ลองเปลี่ยนคำค้นหาใหม่อีกครั้ง' : 'กดปุ่มด้านล่างเพื่อเพิ่มกิจกรรมใหม่') }}
+            </p>
             <button
+              v-if="activeSubTab !== 'past' && !searchQuery"
               @click="isEntryModalOpen = true"
-              class="mt-4 px-4 py-2 rounded-xl bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/30 text-sm font-medium text-violet-300 transition-all tap-scale touch-target"
+              class="mt-4 px-4 py-2 rounded-xl text-sm font-medium transition-all tap-scale touch-target"
+              style="background: var(--brand-soft); border: 1px solid var(--border-strong); color: var(--brand-ink);"
             >
               + เพิ่มกิจกรรม
             </button>
+            <button
+              v-else-if="searchQuery"
+              @click="searchQuery = ''"
+              class="mt-4 px-3.5 py-1.5 rounded-xl text-xs font-medium transition-all tap-scale"
+              style="background: var(--bg-elevated); border: 1px solid var(--border-subtle); color: var(--text-secondary);"
+            >
+              ล้างคำค้นหา
+            </button>
           </div>
 
-          <!-- Event cards -->
+          <!-- Event cards grid -->
           <div v-else class="p-4 grid grid-cols-1 md:grid-cols-2 gap-3">
             <div
               v-for="item in paginatedEvents"
               :key="item.id"
               class="relative rounded-[10px] overflow-hidden p-4 pl-5 tap-scale transition-all"
+              :class="getEventStatusMeta(item).status === 'past' ? 'opacity-85 hover:opacity-100' : ''"
               style="background: var(--bg-card); border: 1px solid var(--border-subtle); box-shadow: var(--shadow-sm);"
             >
               <!-- Status stripe -->
@@ -317,7 +369,7 @@
               <p class="num text-[11px] mt-1.5 font-medium" :style="getEventStatusTextStyle(item)">{{ displayEventDateTime(item) }}</p>
 
               <div v-if="item.reminder_minutes || item.google_event_id" class="flex flex-wrap gap-x-3 gap-y-1 mt-2">
-                <span v-if="item.reminder_minutes" class="num text-[10px]" style="color: var(--event-status-soon-ink);">⏰ เตือนก่อน {{ getReminderLabel(item.reminder_minutes) }}</span>
+                <span v-if="item.reminder_minutes && getEventStatusMeta(item).status !== 'past'" class="num text-[10px]" style="color: var(--event-status-soon-ink);">⏰ เตือนก่อน {{ getReminderLabel(item.reminder_minutes) }}</span>
                 <span v-if="item.google_event_id" class="num text-[10px]" style="color: var(--ink-sky);">ซิงก์ Google แล้ว</span>
               </div>
               <p v-if="item.description" class="text-xs mt-1.5 line-clamp-2" style="color: var(--text-muted);">{{ item.description }}</p>
@@ -350,7 +402,7 @@
               </div>
 
               <!-- Upcoming countdown widget inside card (if soon or next) -->
-              <div v-else-if="getEventStatusMeta(item).status === 'soon' || item.id === nextUpcomingEvent?.id" class="mt-3 p-3 rounded-xl border flex flex-col gap-2 transition-all" style="background: rgba(59, 78, 240, 0.08); border-color: rgba(59, 78, 240, 0.28);">
+              <div v-else-if="getEventStatusMeta(item).status === 'soon' || (item.id === nextUpcomingEvent?.id && getEventStatusMeta(item).status !== 'past')" class="mt-3 p-3 rounded-xl border flex flex-col gap-2 transition-all" style="background: rgba(59, 78, 240, 0.08); border-color: rgba(59, 78, 240, 0.28);">
                 <div class="flex items-center justify-between text-xs">
                   <span class="font-semibold flex items-center gap-1.5" style="color: var(--brand-ink);">
                     <span>⏰</span>
@@ -407,38 +459,43 @@
           </div>
 
           <!-- Pagination Controls -->
-          <div v-if="eventTotalPages > 1" class="flex items-center justify-center gap-2 px-5 py-4 border-t border-gray-800/60">
-            <button
-              @click="eventCurrentPage = Math.max(1, eventCurrentPage - 1)"
-              :disabled="eventCurrentPage === 1"
-              class="px-3 py-2 rounded-lg text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed tap-scale touch-target"
-              style="background: var(--bg-elevated); border: 1px solid var(--border-default); color: var(--text-secondary);"
-              :style="eventCurrentPage === 1 ? {} : { 'cursor': 'pointer', 'color': 'var(--text-primary)' }"
-            >
-              ← ก่อนหน้า
-            </button>
-            <div class="flex items-center gap-1">
+          <div v-if="totalPages > 1" class="flex flex-col sm:flex-row items-center justify-between gap-3 p-3.5 sm:px-5 sm:py-4 border-t" style="border-color: var(--border-subtle);">
+            <span class="text-xs font-medium text-center sm:text-left" style="color: var(--text-muted);">
+              {{ pageInfo }}
+            </span>
+            <div class="flex items-center gap-1.5 flex-wrap justify-center">
               <button
-                v-for="page in eventTotalPages"
-                :key="page"
-                @click="eventCurrentPage = page"
-                class="w-9 h-9 rounded-lg text-sm font-medium transition-all tap-scale touch-target"
-                :style="eventCurrentPage === page
-                  ? { 'background': 'var(--brand)', 'color': 'white', 'border': '1px solid var(--brand)' }
-                  : { 'background': 'var(--bg-elevated)', 'border': '1px solid var(--border-default)', 'color': 'var(--text-secondary)' }"
+                @click="currentPage = Math.max(1, currentPage - 1)"
+                :disabled="currentPage === 1"
+                class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed tap-scale touch-target"
+                style="background: var(--bg-elevated); border: 1px solid var(--border-default); color: var(--text-secondary);"
+                :style="currentPage === 1 ? {} : { 'cursor': 'pointer', 'color': 'var(--text-primary)' }"
               >
-                {{ page }}
+                ← ก่อนหน้า
+              </button>
+              <div class="flex items-center gap-1">
+                <button
+                  v-for="page in totalPages"
+                  :key="page"
+                  @click="currentPage = page"
+                  class="w-8 h-8 rounded-lg text-xs font-semibold transition-all tap-scale touch-target"
+                  :style="currentPage === page
+                    ? { 'background': 'var(--brand)', 'color': 'white', 'border': '1px solid var(--brand)' }
+                    : { 'background': 'var(--bg-elevated)', 'border': '1px solid var(--border-default)', 'color': 'var(--text-secondary)' }"
+                >
+                  {{ page }}
+                </button>
+              </div>
+              <button
+                @click="currentPage = Math.min(totalPages, currentPage + 1)"
+                :disabled="currentPage === totalPages"
+                class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed tap-scale touch-target"
+                style="background: var(--bg-elevated); border: 1px solid var(--border-default); color: var(--text-secondary);"
+                :style="currentPage === totalPages ? {} : { 'cursor': 'pointer', 'color': 'var(--text-primary)' }"
+              >
+                ต่อไป →
               </button>
             </div>
-            <button
-              @click="eventCurrentPage = Math.min(eventTotalPages, eventCurrentPage + 1)"
-              :disabled="eventCurrentPage === eventTotalPages"
-              class="px-3 py-2 rounded-lg text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed tap-scale touch-target"
-              style="background: var(--bg-elevated); border: 1px solid var(--border-default); color: var(--text-secondary);"
-              :style="eventCurrentPage === eventTotalPages ? {} : { 'cursor': 'pointer', 'color': 'var(--text-primary)' }"
-            >
-              ต่อไป →
-            </button>
           </div>
         </section>
       </div>
@@ -603,7 +660,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { getTodayTH } from '~/utils/date'
 
 type EventTypeType = 'same_day_time' | 'same_day_all_day' | 'multi_day'
@@ -657,9 +714,12 @@ const isSyncingId = ref('')
 const editingId = ref('')
 const errorMessage = ref('')
 const events = ref<EventRow[]>([])
+type EventSubTab = 'upcoming' | 'past' | 'all'
+const activeSubTab = ref<EventSubTab>('upcoming')
+const searchQuery = ref('')
+const currentPage = ref(1)
+const itemsPerPage = ref(10)
 const currentTime = ref(new Date())
-const eventItemsPerPage = ref(20)
-const eventCurrentPage = ref(1)
 const soonThresholdMinutes = 7 * 24 * 60
 
 const getApiErrorMessage = (error: any, fallback: string) => error?.data?.message || error?.message || fallback
@@ -765,27 +825,91 @@ const getNextEventCountdown = (item: EventRow) => {
   return formatStatusDuration(minutesUntil)
 }
 
+const activeEventsCount = computed(() => {
+  const nowMs = currentTime.value.getTime()
+  return events.value.filter(item => getEventDateTimeBounds(item).endMs >= nowMs).length
+})
+
 const pastEventsCount = computed(() => {
   const nowMs = currentTime.value.getTime()
-  return events.value.filter(item => {
-    const { endMs } = getEventDateTimeBounds(item)
-    return endMs < nowMs
-  }).length
+  return events.value.filter(item => getEventDateTimeBounds(item).endMs < nowMs).length
 })
 
-const eventTotalPages = computed(() => Math.ceil(events.value.length / eventItemsPerPage.value))
+const subTabs = computed(() => [
+  {
+    value: 'upcoming' as EventSubTab,
+    label: 'กิจกรรมที่ยังไม่ถึง',
+    shortLabel: 'ยังไม่ถึง',
+    icon: '📅',
+    count: activeEventsCount.value,
+  },
+  {
+    value: 'past' as EventSubTab,
+    label: 'กิจกรรมที่สิ้นสุดแล้ว',
+    shortLabel: 'สิ้นสุดแล้ว',
+    icon: '🏁',
+    count: pastEventsCount.value,
+  },
+  {
+    value: 'all' as EventSubTab,
+    label: 'กิจกรรมทั้งหมด',
+    shortLabel: 'ทั้งหมด',
+    icon: '📋',
+    count: events.value.length,
+  },
+])
+
+const filteredEvents = computed(() => {
+  const nowMs = currentTime.value.getTime()
+  let list: EventRow[] = []
+
+  if (activeSubTab.value === 'upcoming') {
+    list = events.value
+      .filter(item => getEventDateTimeBounds(item).endMs >= nowMs)
+      .sort((a, b) => getEventDateTimeBounds(a).startMs - getEventDateTimeBounds(b).startMs)
+  } else if (activeSubTab.value === 'past') {
+    list = events.value
+      .filter(item => getEventDateTimeBounds(item).endMs < nowMs)
+      .sort((a, b) => getEventDateTimeBounds(b).endMs - getEventDateTimeBounds(a).endMs)
+  } else {
+    list = [...events.value].sort((a, b) => getEventDateTimeBounds(a).startMs - getEventDateTimeBounds(b).startMs)
+  }
+
+  if (searchQuery.value.trim()) {
+    const q = searchQuery.value.trim().toLowerCase()
+    list = list.filter(item =>
+      item.title.toLowerCase().includes(q) ||
+      (item.description && item.description.toLowerCase().includes(q))
+    )
+  }
+
+  return list
+})
+
+const totalPages = computed(() => Math.max(1, Math.ceil(filteredEvents.value.length / itemsPerPage.value)))
+
 const paginatedEvents = computed(() => {
-  const start = (eventCurrentPage.value - 1) * eventItemsPerPage.value
-  const end = start + eventItemsPerPage.value
-  return events.value.slice(start, end)
+  const start = (currentPage.value - 1) * itemsPerPage.value
+  const end = start + itemsPerPage.value
+  return filteredEvents.value.slice(start, end)
 })
 
-const eventPageInfo = computed(() => {
-  const total = events.value.length
+const pageInfo = computed(() => {
+  const total = filteredEvents.value.length
   if (total === 0) return 'ไม่มีรายการ'
-  const start = (eventCurrentPage.value - 1) * eventItemsPerPage.value + 1
-  const end = Math.min(eventCurrentPage.value * eventItemsPerPage.value, total)
+  const start = (currentPage.value - 1) * itemsPerPage.value + 1
+  const end = Math.min(currentPage.value * itemsPerPage.value, total)
   return `แสดง ${start}-${end} จาก ${total} รายการ`
+})
+
+watch([activeSubTab, searchQuery], () => {
+  currentPage.value = 1
+})
+
+watch(totalPages, (max) => {
+  if (currentPage.value > max && max > 0) {
+    currentPage.value = max
+  }
 })
 
 const resetForm = () => {
@@ -858,7 +982,7 @@ const getEventStatusMeta = (item: EventRow) => {
   const minutesUntilEnd = (endMs - nowMs) / 60000
 
   if (minutesUntilEnd < 0) {
-    return { status: 'past', text: `ผ่านไปแล้ว (${formatStatusDuration(Math.abs(minutesUntilEnd))}ก่อน)` }
+    return { status: 'past', text: `สิ้นสุดแล้ว (${formatStatusDuration(Math.abs(minutesUntilEnd))}ก่อน)` }
   }
 
   if (startMs <= nowMs && nowMs <= endMs) {
