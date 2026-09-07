@@ -228,7 +228,7 @@ export default defineEventHandler(async (event) => {
       for (const nextClass of todayClasses) {
         if (!nextClass.startTime) continue
         const [h, m] = nextClass.startTime.split(':').map(Number)
-        const classStartMinutes = h * 60 + m
+        const classStartMinutes = (h ?? 0) * 60 + (m ?? 0)
         const diffMinutes = classStartMinutes - currentThMinutes
 
         // Check if class starts within the configured reminder window (e.g. within 0 to reminderMins)
