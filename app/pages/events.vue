@@ -19,7 +19,34 @@
             <span>สิ้นสุดแล้ว {{ pastEventsCount }}</span>
           </p>
         </div>
-        <div class="flex items-center gap-2 shrink-0">
+        <div class="flex flex-wrap items-center gap-2 shrink-0">
+          <input
+            ref="icsFileInput"
+            type="file"
+            accept=".ics,text/calendar"
+            class="hidden"
+            @change="importIcsFile"
+          >
+          <button
+            type="button"
+            @click="icsFileInput?.click()"
+            :disabled="isImporting"
+            class="btn-secondary text-sm inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed tap-scale touch-target"
+            title="นำเข้ากิจกรรมจากไฟล์ปฏิทิน .ics"
+          >
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14"/></svg>
+            {{ isImporting ? 'กำลังนำเข้า...' : 'Import .ics' }}
+          </button>
+          <button
+            type="button"
+            @click="exportIcsFile"
+            :disabled="isExporting || !events.length"
+            class="btn-secondary text-sm inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed tap-scale touch-target"
+            title="ส่งออกกิจกรรมทั้งหมดเป็นไฟล์ปฏิทิน .ics"
+          >
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21V9m0 12-4-4m4 4 4-4M5 3h14"/></svg>
+            {{ isExporting ? 'กำลังส่งออก...' : 'Export .ics' }}
+          </button>
           <button
             @click="isEntryModalOpen = true"
             class="btn-primary text-sm inline-flex items-center gap-2 tap-scale touch-target"
@@ -708,12 +735,15 @@ const { syncEventToGoogle, deleteEventFromGoogle } = useGoogleCalendarSync()
 
 const isLoading = ref(true)
 const isSubmitting = ref(false)
+const isImporting = ref(false)
+const isExporting = ref(false)
 const isEntryModalOpen = ref(false)
 const isDeletingId = ref('')
 const isSyncingId = ref('')
 const editingId = ref('')
 const errorMessage = ref('')
 const events = ref<EventRow[]>([])
+const icsFileInput = ref<HTMLInputElement | null>(null)
 type EventSubTab = 'upcoming' | 'past' | 'all'
 const activeSubTab = ref<EventSubTab>('upcoming')
 const searchQuery = ref('')
@@ -723,6 +753,72 @@ const currentTime = ref(new Date())
 const soonThresholdMinutes = 7 * 24 * 60
 
 const getApiErrorMessage = (error: any, fallback: string) => error?.data?.message || error?.message || fallback
+
+type IcsEvent = {
+  title: string
+  description: string | null
+  startTime: string
+  endTime: string
+  isAllDay: boolean
+  isMultiDay: boolean
+}
+
+const escapeIcsText = (value: string) => value.replace(/\\/g, '\\\\').replace(/\r?\n/g, '\\n').replace(/;/g, '\\;').replace(/,/g, '\\,')
+const unescapeIcsText = (value: string) => value.replace(/\\n/gi, '\n').replace(/\\([\\,;])/g, '$1')
+const formatIcsDate = (date: Date) => `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`
+const formatIcsDateTime = (date: Date) => `${formatIcsDate(date)}T${String(date.getHours()).padStart(2, '0')}${String(date.getMinutes()).padStart(2, '0')}${String(date.getSeconds()).padStart(2, '0')}`
+const localDateTimeParts = (date: Date) => ({
+  date: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`,
+  time: `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:00`,
+})
+
+const unfoldIcsLines = (content: string) => content.replace(/^\uFEFF/, '').replace(/\r?\n[ \t]/g, '').split(/\r?\n/)
+const getIcsProperties = (lines: string[]) => lines.reduce<Record<string, string>>((properties, line) => {
+  const separator = line.indexOf(':')
+  if (separator < 0) return properties
+  const name = line.slice(0, separator).split(';')[0]?.toUpperCase()
+  if (!name) return properties
+  if (!(name in properties)) properties[name] = line.slice(separator + 1)
+  return properties
+}, {})
+
+const parseIcsDate = (value: string) => {
+  const trimmed = value.trim()
+  const match = trimmed.match(/^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})?)?(Z)?$/)
+  if (!match) return null
+  const [, year, month, day, hour = '00', minute = '00', second = '00', isUtc] = match
+  const date = isUtc
+    ? new Date(Date.UTC(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute), Number(second)))
+    : new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute), Number(second))
+  return Number.isNaN(date.getTime()) ? null : date
+}
+
+const parseIcsEvents = (content: string): IcsEvent[] => {
+  const eventBlocks = content.replace(/\r\n/g, '\n').match(/BEGIN:VEVENT\n[\s\S]*?\nEND:VEVENT/gi) || []
+  return eventBlocks.flatMap((block) => {
+    const properties = getIcsProperties(unfoldIcsLines(block))
+    const title = properties.SUMMARY ? unescapeIcsText(properties.SUMMARY).trim() : ''
+    const startRaw = properties.DTSTART
+    if (!title || !startRaw) return []
+    const start = parseIcsDate(startRaw)
+    if (!start) return []
+    const isAllDay = /^\d{8}$/.test(startRaw.trim())
+    const parsedEnd = properties.DTEND ? parseIcsDate(properties.DTEND) : null
+    const end = parsedEnd || new Date(start.getTime() + (isAllDay ? 86_400_000 : 3_600_000))
+    const endForApp = isAllDay && parsedEnd ? new Date(end.getTime() - 86_400_000) : end
+    if (endForApp.getTime() < start.getTime()) return []
+    const startParts = localDateTimeParts(start)
+    const endParts = localDateTimeParts(endForApp)
+    return [{
+      title,
+      description: properties.DESCRIPTION ? unescapeIcsText(properties.DESCRIPTION).trim() || null : null,
+      startTime: `${startParts.date}T${isAllDay ? '00:00:00' : startParts.time}`,
+      endTime: `${endParts.date}T${isAllDay ? '23:59:59' : endParts.time}`,
+      isAllDay,
+      isMultiDay: !isAllDay && startParts.date !== endParts.date,
+    }]
+  })
+}
 
 const toEventRow = (a: BackendActivity): EventRow => {
   const eventType: EventTypeType = a.isAllDay ? 'same_day_all_day' : a.isMultiDay ? 'multi_day' : 'same_day_time'
@@ -1176,6 +1272,101 @@ const loadEvents = async () => {
     errorMessage.value = getApiErrorMessage(error, 'โหลดข้อมูลกิจกรรมไม่สำเร็จ')
   } finally {
     isLoading.value = false
+  }
+}
+
+const exportIcsFile = () => {
+  if (!import.meta.client || !events.value.length || isExporting.value) return
+  isExporting.value = true
+  try {
+    const now = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '')
+    const entries = events.value.map((item) => {
+      const start = new Date(`${item.start_date}T${normalizeEventTime(item.start_time, '00:00:00')}`)
+      const end = new Date(`${item.end_date || item.start_date}T${normalizeEventTime(item.end_time, '23:59:59')}`)
+      const lines = [
+        'BEGIN:VEVENT',
+        `UID:${item.id}@my-life-app`,
+        `DTSTAMP:${now}`,
+        `SUMMARY:${escapeIcsText(item.title)}`,
+      ]
+      if (item.event_type === 'same_day_all_day') {
+        const exclusiveEnd = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 1)
+        lines.push(`DTSTART;VALUE=DATE:${formatIcsDate(start)}`, `DTEND;VALUE=DATE:${formatIcsDate(exclusiveEnd)}`)
+      } else {
+        lines.push(`DTSTART:${formatIcsDateTime(start)}`, `DTEND:${formatIcsDateTime(end)}`)
+      }
+      if (item.description) lines.push(`DESCRIPTION:${escapeIcsText(item.description)}`)
+      lines.push('END:VEVENT')
+      return lines.join('\r\n')
+    })
+    const calendar = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//My Life App//Activities//TH', 'CALSCALE:GREGORIAN', ...entries, 'END:VCALENDAR'].join('\r\n')
+    const url = URL.createObjectURL(new Blob([calendar], { type: 'text/calendar;charset=utf-8' }))
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `my-life-activities-${getTodayTH()}.ics`
+    link.click()
+    URL.revokeObjectURL(url)
+    toastSuccess(`ส่งออกกิจกรรม ${events.value.length} รายการแล้ว`)
+  } catch (error) {
+    console.error('Export ICS error:', error)
+    toastError('ส่งออกไฟล์ปฏิทินไม่สำเร็จ')
+  } finally {
+    isExporting.value = false
+  }
+}
+
+const importIcsFile = async (event: Event) => {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (!file || isImporting.value) return
+  if (!/\.ics$/i.test(file.name) && file.type !== 'text/calendar') {
+    toastError('กรุณาเลือกไฟล์ปฏิทิน .ics')
+    return
+  }
+  isImporting.value = true
+  errorMessage.value = ''
+  try {
+    if (!userId.value) return
+    const imported = parseIcsEvents(await file.text())
+    if (!imported.length) {
+      toastError('ไม่พบกิจกรรมที่นำเข้าได้ในไฟล์นี้')
+      return
+    }
+    let succeeded = 0
+    let failed = 0
+    for (const item of imported) {
+      try {
+        await apiFetch<BackendActivity>('/api/Activity', {
+          method: 'POST',
+          body: {
+            userId: userId.value,
+            title: item.title,
+            description: item.description,
+            startTime: item.startTime,
+            endTime: item.endTime,
+            isAllDay: item.isAllDay,
+            isMultiDay: item.isMultiDay,
+            isIndefinite: false,
+            recurrence: 'none',
+            location: null,
+            reminderMinutes: null,
+          },
+        })
+        succeeded++
+      } catch (error) {
+        console.error('Import ICS event error:', error)
+        failed++
+      }
+    }
+    await loadEvents()
+    if (succeeded) toastSuccess(`นำเข้ากิจกรรม ${succeeded} รายการ${failed ? ` (ไม่สำเร็จ ${failed} รายการ)` : ''}`)
+    else toastError(`นำเข้ากิจกรรมไม่สำเร็จ${failed ? ` ${failed} รายการ` : ''}`)
+  } catch (error) {
+    console.error('Import ICS file error:', error)
+    toastError('อ่านไฟล์ปฏิทินไม่สำเร็จ')
+  } finally {
+    isImporting.value = false
   }
 }
 
