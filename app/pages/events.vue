@@ -48,6 +48,16 @@
             {{ isExporting ? 'กำลังส่งออก...' : 'Export .ics' }}
           </button>
           <button
+            type="button"
+            @click="exportPdfFile"
+            :disabled="isExportingPdf || !events.length"
+            class="btn-secondary text-sm inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed tap-scale touch-target"
+            title="ส่งออกรายงานกิจกรรมเป็นไฟล์ PDF"
+          >
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v5h5M9 16h6M9 12h3"/></svg>
+            {{ isExportingPdf ? 'กำลังส่งออก...' : 'Export PDF' }}
+          </button>
+          <button
             @click="isEntryModalOpen = true"
             class="btn-primary text-sm inline-flex items-center gap-2 tap-scale touch-target"
           >
@@ -689,6 +699,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { getTodayTH } from '~/utils/date'
+import { generateEventsPDF } from '~/utils/eventsPdf'
 
 type EventTypeType = 'same_day_time' | 'same_day_all_day' | 'multi_day'
 
@@ -737,6 +748,7 @@ const isLoading = ref(true)
 const isSubmitting = ref(false)
 const isImporting = ref(false)
 const isExporting = ref(false)
+const isExportingPdf = ref(false)
 const isEntryModalOpen = ref(false)
 const isDeletingId = ref('')
 const isSyncingId = ref('')
@@ -1312,6 +1324,28 @@ const exportIcsFile = () => {
     toastError('ส่งออกไฟล์ปฏิทินไม่สำเร็จ')
   } finally {
     isExporting.value = false
+  }
+}
+
+const exportPdfFile = async () => {
+  if (!import.meta.client || !events.value.length || isExportingPdf.value) return
+  isExportingPdf.value = true
+  try {
+    await generateEventsPDF(events.value.map(item => ({
+      title: item.title,
+      description: item.description,
+      eventType: item.event_type,
+      startDate: item.start_date,
+      startTime: item.start_time,
+      endDate: item.end_date,
+      endTime: item.end_time,
+    })), formatDate)
+    toastSuccess(`ส่งออกรายงาน PDF ${events.value.length} รายการแล้ว`)
+  } catch (error: any) {
+    console.error('Export events PDF error:', error)
+    toastError(error?.message || 'ส่งออกรายงาน PDF ไม่สำเร็จ')
+  } finally {
+    isExportingPdf.value = false
   }
 }
 

@@ -26,7 +26,7 @@ async function fetchFontAsBase64(fontUrl: string): Promise<string> {
 /**
  * Load and register Sarabun Thai fonts in jsPDF
  */
-async function registerThaiFonts(doc: jsPDF): Promise<void> {
+export async function registerThaiFonts(doc: jsPDF): Promise<void> {
   try {
     if (!cachedRegularFontBase64) {
       cachedRegularFontBase64 = await fetchFontAsBase64('/fonts/Sarabun-Regular.ttf')
