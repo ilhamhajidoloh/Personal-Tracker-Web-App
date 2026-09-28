@@ -1031,17 +1031,32 @@
             </div>
 
             <div>
-              <label class="block text-xs font-medium text-gray-400 mb-1.5">จำนวนเงิน (บาท) <span class="text-rose-400">*</span></label>
+              <label class="block text-xs font-medium text-gray-400 mb-1.5">
+                จำนวนเงิน (บาท) <span class="text-rose-400">*</span>
+                <span class="text-[10px] text-gray-500 ml-1">(รองรับ +, -, *, /)</span>
+              </label>
               <div class="relative">
                 <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-medium">฿</span>
                 <input
                   v-model="form.amount"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  placeholder="0.00"
+                  type="text"
+                  placeholder="0.00 หรือ 100+50*2"
+                  @blur="evaluateAmountExpression"
+                  @keydown.enter.prevent="evaluateAmountExpression"
                   class="w-full bg-gray-800/80 border border-gray-700/60 rounded-xl pl-8 pr-4 py-2.5 text-sm text-white placeholder-gray-600 outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 transition-all"
                 >
+              </div>
+              <!-- Live calculation preview -->
+              <div v-if="calculatedAmount !== null && form.amount && !isNaN(Number(form.amount)) === false" class="mt-1.5 flex items-center gap-2 text-xs">
+                <span class="text-gray-500">คำนวณได้:</span>
+                <span class="font-bold text-violet-400">฿{{ formatCurrency(calculatedAmount).replace('฿', '') }}</span>
+                <button
+                  type="button"
+                  @click="applyCalculatedAmount"
+                  class="text-[10px] px-2 py-0.5 rounded bg-violet-600/20 hover:bg-violet-600/30 text-violet-300 transition-all tap-scale"
+                >
+                  ใช้ค่านี้
+                </button>
               </div>
             </div>
 
@@ -1138,15 +1153,31 @@
                 <!-- Amount + Day of Month Due -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label class="block text-xs font-semibold text-gray-300 mb-1.5">จำนวนเงิน (฿) <span class="text-rose-400">*</span></label>
+                    <label class="block text-xs font-semibold text-gray-300 mb-1.5">
+                      จำนวนเงิน (฿) <span class="text-rose-400">*</span>
+                      <span class="text-[10px] text-gray-500 ml-1">(รองรับ +, -, *, /)</span>
+                    </label>
                     <input
                       v-model="recurringForm.amount"
-                      type="number"
-                      step="any"
-                      placeholder="0.00"
+                      type="text"
+                      placeholder="0.00 หรือ 100+50"
                       required
+                      @blur="evaluateRecurringAmountExpression"
+                      @keydown.enter.prevent="evaluateRecurringAmountExpression"
                       class="w-full px-3.5 py-2.5 rounded-xl bg-gray-800/80 border border-gray-700 text-sm text-white focus:outline-none focus:border-amber-500 transition-all"
                     />
+                    <!-- Live calculation preview for recurring -->
+                    <div v-if="calculatedRecurringAmount !== null && recurringForm.amount && !isNaN(Number(recurringForm.amount)) === false" class="mt-1 flex items-center gap-2 text-xs">
+                      <span class="text-gray-500">คำนวณได้:</span>
+                      <span class="font-bold text-amber-400">฿{{ formatCurrency(calculatedRecurringAmount).replace('฿', '') }}</span>
+                      <button
+                        type="button"
+                        @click="applyCalculatedRecurringAmount"
+                        class="text-[10px] px-1.5 py-0.5 rounded bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 transition-all tap-scale"
+                      >
+                        ใช้
+                      </button>
+                    </div>
                   </div>
                   <div>
                     <label class="block text-xs font-semibold text-gray-300 mb-1.5">กำหนดจ่ายทุกวันที่ <span class="text-rose-400">*</span></label>
@@ -1845,6 +1876,97 @@ const form = reactive({
   bookId: '',
 })
 
+// Calculator feature for amount input
+const calculatedAmount = ref<number | null>(null)
+const calculatedRecurringAmount = ref<number | null>(null)
+
+// Safe math expression evaluator
+const evaluateMathExpression = (expr: string): number | null => {
+  try {
+    // Remove all whitespace
+    const cleaned = expr.trim().replace(/\s+/g, '')
+
+    // Allow only numbers and operators +, -, *, /, ., (, )
+    if (!/^[\d+\-*/.()]+$/.test(cleaned)) {
+      return null
+    }
+
+    // Prevent dangerous patterns
+    if (cleaned.includes('**') || cleaned.length > 100) {
+      return null
+    }
+
+    // Use Function constructor for safe evaluation (better than eval)
+    const result = new Function('return ' + cleaned)()
+
+    if (typeof result === 'number' && isFinite(result) && result >= 0) {
+      return Math.round(result * 100) / 100 // Round to 2 decimals
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
+// Watch for amount changes to show live calculation
+watch(() => form.amount, (newVal) => {
+  if (!newVal || newVal.trim() === '') {
+    calculatedAmount.value = null
+    return
+  }
+
+  // If it's already a simple number, no need to calculate
+  const asNumber = Number(newVal)
+  if (!isNaN(asNumber)) {
+    calculatedAmount.value = null
+    return
+  }
+
+  // Try to evaluate expression
+  const result = evaluateMathExpression(newVal)
+  calculatedAmount.value = result
+})
+
+const evaluateAmountExpression = () => {
+  if (!form.amount || form.amount.trim() === '') return
+
+  const asNumber = Number(form.amount)
+  if (!isNaN(asNumber)) return // Already a number
+
+  const result = evaluateMathExpression(form.amount)
+  if (result !== null) {
+    form.amount = String(result)
+    calculatedAmount.value = null
+  }
+}
+
+const evaluateRecurringAmountExpression = () => {
+  if (!recurringForm.amount || String(recurringForm.amount).trim() === '') return
+
+  const asNumber = Number(recurringForm.amount)
+  if (!isNaN(asNumber)) return
+
+  const result = evaluateMathExpression(String(recurringForm.amount))
+  if (result !== null) {
+    recurringForm.amount = String(result)
+    calculatedRecurringAmount.value = null
+  }
+}
+
+const applyCalculatedAmount = () => {
+  if (calculatedAmount.value !== null) {
+    form.amount = String(calculatedAmount.value)
+    calculatedAmount.value = null
+  }
+}
+
+const applyCalculatedRecurringAmount = () => {
+  if (calculatedRecurringAmount.value !== null) {
+    recurringForm.amount = String(calculatedRecurringAmount.value)
+    calculatedRecurringAmount.value = null
+  }
+}
+
 const formatCurrency = (amount: number) => new Intl.NumberFormat('th-TH', {
   style: 'currency', currency: 'THB', minimumFractionDigits: 2, maximumFractionDigits: 2,
 }).format(amount)
@@ -2485,6 +2607,23 @@ const recurringForm = reactive({
   isIndefinite: true,
   endDate: '',
   bookId: '',
+})
+
+// Watch for recurring amount changes to show live calculation
+watch(() => recurringForm.amount, (newVal) => {
+  if (!newVal || String(newVal).trim() === '') {
+    calculatedRecurringAmount.value = null
+    return
+  }
+
+  const asNumber = Number(newVal)
+  if (!isNaN(asNumber)) {
+    calculatedRecurringAmount.value = null
+    return
+  }
+
+  const result = evaluateMathExpression(String(newVal))
+  calculatedRecurringAmount.value = result
 })
 
 const fixedRecurringExpenses = computed(() => {

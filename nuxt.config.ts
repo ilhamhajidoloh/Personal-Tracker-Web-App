@@ -6,6 +6,16 @@ export default defineNuxtConfig({
     appManifest: false,
   },
   vite: {
+    optimizeDeps: {
+      include: [
+        '@vue/devtools-core',
+        '@vue/devtools-kit',
+        'jspdf',
+        'jspdf-autotable',
+        'sweetalert2',
+        'xlsx',
+      ]
+    },
     server: {
       allowedHosts: true,
       fs: {
