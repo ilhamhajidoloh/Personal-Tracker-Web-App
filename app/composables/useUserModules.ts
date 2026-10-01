@@ -68,9 +68,15 @@ const DEFAULT_MODULE_IDS: AppModuleId[] = ALL_APP_MODULES.map((m) => m.id)
 
 const enabledModulesState = ref<AppModuleId[]>([...DEFAULT_MODULE_IDS])
 const isInitialized = ref(false)
+const activeUserId = ref<string | null>(null)
 
-const getStorageKey = (userId?: string) => {
-  return userId ? `mylife_enabled_modules_${userId}` : 'mylife_enabled_modules'
+const getStorageKey = (userId: string) => `mylife_enabled_modules_${userId}`
+
+const getValidModuleIds = (modules: unknown): AppModuleId[] => {
+  if (!Array.isArray(modules)) return []
+  return modules.filter((id): id is AppModuleId =>
+    typeof id === 'string' && DEFAULT_MODULE_IDS.includes(id as AppModuleId)
+  )
 }
 
 export const useUserModules = () => {
@@ -78,42 +84,64 @@ export const useUserModules = () => {
 
   const initModules = () => {
     if (typeof window === 'undefined') return
+    const userId = currentUser.value?.userId
+
+    // Module preferences belong to an authenticated account only. In particular,
+    // do not use a shared fallback key: that would leak one account's choice to
+    // the next account that signs in on the same browser.
+    if (!userId) {
+      activeUserId.value = null
+      enabledModulesState.value = [...DEFAULT_MODULE_IDS]
+      isInitialized.value = false
+      return
+    }
+
     try {
-      const userKey = getStorageKey(currentUser.value?.userId)
-      const stored = localStorage.getItem(userKey) || localStorage.getItem('mylife_enabled_modules')
+      const stored = localStorage.getItem(getStorageKey(userId))
       if (stored) {
-        const parsed = JSON.parse(stored)
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          enabledModulesState.value = parsed.filter((id: any) =>
-            DEFAULT_MODULE_IDS.includes(id as AppModuleId)
-          ) as AppModuleId[]
+        const modules = getValidModuleIds(JSON.parse(stored))
+        if (modules.length > 0) {
+          enabledModulesState.value = modules
+          activeUserId.value = userId
           isInitialized.value = true
           return
         }
       }
       enabledModulesState.value = [...DEFAULT_MODULE_IDS]
+      activeUserId.value = userId
       isInitialized.value = true
     } catch (e) {
       console.error('Failed to parse saved modules:', e)
       enabledModulesState.value = [...DEFAULT_MODULE_IDS]
+      activeUserId.value = userId
       isInitialized.value = true
     }
   }
 
-  const saveModules = (modules: AppModuleId[]) => {
-    enabledModulesState.value = [...modules]
-    if (typeof window === 'undefined') return
+  const saveModules = (modules: AppModuleId[]): boolean => {
+    const userId = currentUser.value?.userId
+    if (typeof window === 'undefined' || !userId) return false
+
     try {
-      const userKey = getStorageKey(currentUser.value?.userId)
-      localStorage.setItem(userKey, JSON.stringify(modules))
-      localStorage.setItem('mylife_enabled_modules', JSON.stringify(modules))
+      const validModules = getValidModuleIds(modules)
+      if (validModules.length === 0) return false
+
+      localStorage.setItem(getStorageKey(userId), JSON.stringify(validModules))
+      enabledModulesState.value = validModules
+      activeUserId.value = userId
+      isInitialized.value = true
+      return true
     } catch (e) {
       console.error('Failed to save modules to localStorage:', e)
+      return false
     }
   }
 
   const isModuleEnabled = (id: AppModuleId): boolean => {
-    if (!isInitialized.value && typeof window !== 'undefined') {
+    if (
+      (!isInitialized.value || activeUserId.value !== currentUser.value?.userId) &&
+      typeof window !== 'undefined'
+    ) {
       initModules()
     }
     return enabledModulesState.value.includes(id)
@@ -131,34 +159,33 @@ export const useUserModules = () => {
     } else {
       current.push(id)
     }
-    saveModules(current)
-    return true
+    return saveModules(current)
   }
 
   const enableModule = (id: AppModuleId) => {
     if (!enabledModulesState.value.includes(id)) {
-      saveModules([...enabledModulesState.value, id])
+      return saveModules([...enabledModulesState.value, id])
     }
+    return true
   }
 
   const disableModule = (id: AppModuleId): boolean => {
     if (enabledModulesState.value.length <= 1) {
       return false
     }
-    saveModules(enabledModulesState.value.filter((m) => m !== id))
-    return true
+    return saveModules(enabledModulesState.value.filter((m) => m !== id))
   }
 
   const setModules = (modules: AppModuleId[]) => {
     if (modules.length === 0) {
-      saveModules([...DEFAULT_MODULE_IDS])
+      return saveModules([...DEFAULT_MODULE_IDS])
     } else {
-      saveModules(modules)
+      return saveModules(modules)
     }
   }
 
   const enableAllModules = () => {
-    saveModules([...DEFAULT_MODULE_IDS])
+    return saveModules([...DEFAULT_MODULE_IDS])
   }
 
   // Watch user change to reload user-specific preferences
