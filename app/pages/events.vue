@@ -392,24 +392,30 @@
                       }"
                     >
                       <div class="text-[10px] font-bold uppercase tracking-wider" :style="getEventStatusTextStyle(item)">
-                        {{ getMonthShort(item.start_date) }}
+                        {{ getMonthShort(getTimelineDate(item)) }}
                       </div>
                       <div class="num text-2xl font-black leading-none mt-1" style="color: var(--text-primary);">
-                        {{ getDay(item.start_date) }}
+                        {{ getDay(getTimelineDate(item)) }}
                       </div>
                       <div class="text-[10px] font-medium mt-1" style="color: var(--text-muted);">
-                        {{ getDayOfWeek(item.start_date) }}
+                        {{ getDayOfWeek(getTimelineDate(item)) }}
                       </div>
                     </div>
                     <span class="mt-1 text-[10px] font-medium px-1" style="color: var(--text-muted);">
-                      {{ getYearThai(item.start_date) }}
+                      {{ getYearThai(getTimelineDate(item)) }}
                     </span>
                   </div>
 
                   <!-- Spine Track & Node Dot -->
                   <div class="relative flex flex-col items-center shrink-0 w-8 self-stretch timeline-track">
                     <!-- Continuous vertical spine line -->
-                    <div class="timeline-track-line"></div>
+                    <div
+                      class="timeline-track-line"
+                      :class="[
+                        `timeline-track-line--${getEventStatusMeta(item).status}`,
+                        { 'timeline-track-line--active': isActiveTimelineConnector(item) },
+                      ]"
+                    ></div>
 
                     <!-- Node dot with status icon/animation -->
                     <div
@@ -457,14 +463,14 @@
                           class="px-2 py-0.5 rounded-lg border text-center flex items-center gap-1.5"
                           :style="{ background: 'var(--bg-elevated)', borderColor: 'var(--border-subtle)' }"
                         >
-                          <span class="text-[10px] font-bold" :style="getEventStatusTextStyle(item)">{{ getMonthShort(item.start_date) }}</span>
-                          <span class="num text-xs font-black" style="color: var(--text-primary);">{{ getDay(item.start_date) }}</span>
+                          <span class="text-[10px] font-bold" :style="getEventStatusTextStyle(item)">{{ getMonthShort(getTimelineDate(item)) }}</span>
+                          <span class="num text-xs font-black" style="color: var(--text-primary);">{{ getDay(getTimelineDate(item)) }}</span>
                         </div>
                         <span class="text-[11px] font-medium" style="color: var(--text-secondary);">
-                          {{ formatDate(item.start_date) }}
+                          {{ formatDate(getTimelineDate(item)) }}
                         </span>
                         <span class="text-[10.5px] ml-auto font-medium" style="color: var(--text-muted);">
-                          {{ getDayOfWeek(item.start_date) }}
+                          {{ getDayOfWeek(getTimelineDate(item)) }}
                         </span>
                       </div>
 
@@ -1111,9 +1117,26 @@ const filteredEvents = computed(() => {
   } else if (activeSubTab.value === 'past') {
     list = events.value
       .filter(item => getEventDateTimeBounds(item).endMs < nowMs)
-      .sort((a, b) => getEventDateTimeBounds(b).endMs - getEventDateTimeBounds(a).endMs)
+      .sort((a, b) => getEventDateTimeBounds(a).endMs - getEventDateTimeBounds(b).endMs)
   } else {
-    list = [...events.value].sort((a, b) => getEventDateTimeBounds(a).startMs - getEventDateTimeBounds(b).startMs)
+    list = [...events.value].sort((a, b) => {
+      const aStatus = getEventStatusMeta(a).status
+      const bStatus = getEventStatusMeta(b).status
+      const rank = (status: string) => status === 'past' ? 0 : status === 'ongoing' ? 1 : 2
+      const aRank = rank(aStatus)
+      const bRank = rank(bStatus)
+
+      // In the All tab: completed, then ongoing, then upcoming.
+      if (aRank !== bRank) return aRank - bRank
+
+      const aBounds = getEventDateTimeBounds(a)
+      const bBounds = getEventDateTimeBounds(b)
+      // Completed events use the end date shown in the leading date block;
+      // active/upcoming events use their displayed start date.
+      return aRank === 0
+        ? aBounds.endMs - bBounds.endMs
+        : aBounds.startMs - bBounds.startMs
+    })
   }
 
   if (searchQuery.value.trim()) {
@@ -1134,6 +1157,23 @@ const paginatedEvents = computed(() => {
   const end = start + itemsPerPage.value
   return filteredEvents.value.slice(start, end)
 })
+
+// Animate only the connector beneath the lowest currently-running activity.
+// It points to the next visible activity in the timeline.
+const isActiveTimelineConnector = (item: EventRow) => {
+  const visibleItems = paginatedEvents.value
+  const itemIndex = visibleItems.findIndex(visibleItem => visibleItem.id === item.id)
+  if (itemIndex < 0 || itemIndex === visibleItems.length - 1) return false
+
+  let lowestOngoingIndex = -1
+  visibleItems.forEach((visibleItem, index) => {
+    if (getEventStatusMeta(visibleItem).status === 'ongoing') {
+      lowestOngoingIndex = index
+    }
+  })
+
+  return itemIndex === lowestOngoingIndex
+}
 
 const pageInfo = computed(() => {
   const total = filteredEvents.value.length
@@ -1238,6 +1278,13 @@ const getEventStatusMeta = (item: EventRow) => {
 
   return { status: 'future', text: `ยังไม่ถึง (อีก ${formatStatusDuration(minutesUntilStart)})` }
 }
+
+// Show an event at its start date until it ends, then at its end date.
+// For single-day events both values are naturally the same.
+const getTimelineDate = (item: EventRow) =>
+  getEventStatusMeta(item).status === 'past'
+    ? item.end_date || item.start_date
+    : item.start_date
 
 const getOngoingEventDetails = (item: EventRow) => {
   const { startMs, endMs } = getEventDateTimeBounds(item)
@@ -1401,6 +1448,12 @@ const getEventTypeName = (type: EventTypeType) => {
 }
 
 const displayEventDateTime = (item: EventRow) => {
+  if (getEventStatusMeta(item).status === 'past') {
+    const startTime = item.event_type === 'same_day_all_day'
+      ? 'ตลอดวัน'
+      : formatTime(item.start_time)
+    return `เริ่มเมื่อ ${formatDate(item.start_date)} ${startTime}`
+  }
   if (item.event_type === 'same_day_all_day') return `ตลอดวัน`
   if (item.event_type === 'same_day_time') return `${formatTime(item.start_time)} - ${formatTime(item.end_time)}`
   if (item.event_type === 'multi_day') return `${formatTime(item.start_time)}  ถึง  ${formatDate(item.end_date || '')} ${formatTime(item.end_time)}`
@@ -1675,7 +1728,7 @@ onUnmounted(() => {
 
 .timeline-track-line {
   position: absolute;
-  top: 0;
+  top: 1.875rem;
   bottom: -1.75rem;
   width: 2px;
   background: linear-gradient(180deg, var(--border-default) 0%, var(--border-strong) 50%, var(--border-default) 100%);
@@ -1684,13 +1737,87 @@ onUnmounted(() => {
   z-index: 1;
 }
 
-.timeline-item:first-child .timeline-track-line {
-  top: 1.15rem;
+/* Keep elapsed and upcoming sections visually distinct on the timeline. */
+.timeline-track-line--past {
+  background: linear-gradient(180deg, var(--event-status-past-border) 0%, var(--event-status-past-ink) 50%, var(--event-status-past-border) 100%);
+  opacity: 0.55;
+}
+
+.timeline-track-line--ongoing {
+  background: linear-gradient(180deg, var(--event-status-ongoing-border) 0%, var(--event-status-ongoing-ink) 50%, var(--event-status-ongoing-border) 100%);
+}
+
+.timeline-track-line--soon {
+  background: linear-gradient(180deg, var(--event-status-soon-border) 0%, var(--event-status-soon-ink) 50%, var(--event-status-soon-border) 100%);
+}
+
+.timeline-track-line--future {
+  background: linear-gradient(180deg, var(--event-status-future-border) 0%, var(--event-status-future-ink) 50%, var(--event-status-future-border) 100%);
+}
+
+.timeline-track-line--active {
+  width: 5px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: linear-gradient(
+    180deg,
+    var(--event-status-ongoing-border) 0%,
+    var(--event-status-ongoing-ink) 50%,
+    var(--event-status-ongoing-border) 100%
+  );
+  box-shadow: 0 0 10px var(--event-status-ongoing-ink), 0 0 18px var(--event-status-ongoing-soft);
+}
+
+.timeline-track-line--active::after {
+  content: '';
+  position: absolute;
+  top: -42%;
+  left: 0;
+  width: 100%;
+  height: 42%;
+  border-radius: inherit;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    var(--event-status-ongoing-ink) 35%,
+    var(--brand) 60%,
+    transparent 100%
+  );
+  box-shadow: 0 0 12px var(--event-status-ongoing-ink), 0 0 20px var(--brand);
+  animation: timeline-flow-down 2.6s ease-in-out infinite;
+  will-change: transform;
+}
+
+@keyframes timeline-flow-down {
+  from { transform: translateY(0); }
+  to { transform: translateY(342%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .timeline-track-line--active::after {
+    animation: none;
+    transform: translateY(160%);
+  }
 }
 
 .timeline-item:last-child .timeline-track-line {
   bottom: auto;
   height: 1.5rem;
+}
+
+/* Active connector begins beneath the larger ongoing-status node. */
+.timeline-item .timeline-track-line--active {
+  top: 2.375rem;
+}
+
+@media (max-width: 767px) {
+  .timeline-track-line {
+    top: 1.75rem;
+  }
+
+  .timeline-item .timeline-track-line--active {
+    top: 2.25rem;
+  }
 }
 
 .timeline-card {
