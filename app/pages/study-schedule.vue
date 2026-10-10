@@ -18,6 +18,12 @@
             <option v-for="t in terms" :key="t.id" :value="t.id">{{ t.termName }}</option>
           </select>
           <button
+            v-if="selectedTermId"
+            type="button"
+            @click="openEditTermModal"
+            class="btn-secondary text-sm inline-flex items-center gap-2 tap-scale touch-target"
+          >แก้ไขภาคเรียน</button>
+          <button
             type="button"
             @click="openCreateTermModal"
             class="btn-secondary text-sm inline-flex items-center gap-2 tap-scale touch-target"
@@ -67,25 +73,42 @@
         </div>
 
         <!-- Today's Schedule Countdown Live Box -->
-        <section v-if="schedules.length" class="section-card p-5 animate-slide-up">
+        <section v-if="terms.length" class="section-card p-5 animate-slide-up">
           <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
             <div>
               <h2 class="text-base font-bold text-white flex items-center gap-2">
                 📅 คาบเรียนวันนี้
-                <span class="text-xs px-2.5 py-0.5 rounded-full font-bold bg-violet-500/20 text-violet-300 border border-violet-500/30">
+                <span v-if="isInActiveTerm" class="text-xs px-2.5 py-0.5 rounded-full font-bold bg-violet-500/20 text-violet-300 border border-violet-500/30">
                   {{ todaysClasses.length }} คาบ
                 </span>
               </h2>
-              <p class="text-xs text-gray-500 mt-1">สถานะการเรียนและเวลานับถอยหลังแบบเรียลไทม์</p>
+              <p class="text-xs text-gray-500 mt-1">
+                {{ isInActiveTerm ? (activeTermName || 'สถานะการเรียนและเวลานับถอยหลังแบบเรียลไทม์') : 'นับตามช่วงเวลาภาคเรียนปัจจุบัน' }}
+              </p>
             </div>
             <!-- Live Indicator -->
-            <div class="flex items-center gap-1.5 text-xs text-emerald-600 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20 font-medium">
+            <div v-if="isInActiveTerm" class="flex items-center gap-1.5 text-xs text-emerald-600 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20 font-medium">
               <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
               สด
             </div>
           </div>
 
-          <div v-if="!todaysClasses.length" class="flex flex-col items-center justify-center py-8 text-center rounded-2xl border border-dashed border-gray-800 transition-all duration-300"
+          <div v-if="!isInActiveTerm" class="flex flex-col items-center justify-center py-8 text-center rounded-2xl border border-dashed border-gray-800" style="background: var(--bg-elevated);">
+            <p class="text-sm font-semibold" style="color: var(--text-primary);">ไม่ได้อยู่ช่วงเวลาเรียน</p>
+            <p class="text-xs mt-1.5" style="color: var(--text-muted);">{{ offTermMessage }}</p>
+            <div
+              v-if="nextTermCountdown"
+              class="mt-4 w-full max-w-sm rounded-xl border px-4 py-3"
+              style="background: var(--brand-soft); border-color: var(--brand-border);"
+            >
+              <p class="text-[10px] font-semibold uppercase tracking-wider" style="color: var(--brand-ink);">ภาคเรียนถัดไป</p>
+              <p class="text-sm font-bold mt-1" style="color: var(--text-primary);">{{ nextTermCountdown.termName }}</p>
+              <p class="num text-xs mt-1 font-medium" style="color: var(--brand-ink);">เริ่มในอีก {{ nextTermCountdown.label }}</p>
+              <p class="text-[11px] mt-1" style="color: var(--text-muted);">{{ nextTermCountdown.dateLabel }}</p>
+            </div>
+          </div>
+
+          <div v-else-if="!todaysClasses.length" class="flex flex-col items-center justify-center py-8 text-center rounded-2xl border border-dashed border-gray-800 transition-all duration-300"
             :class="{ 'study-blinking-card border-solid border-indigo-500/60': isBlinking && nextClass }"
             :style="!isBlinking ? { background: 'var(--bg-elevated)' } : {}">
             <span class="text-2xl mb-1">🌴</span>
@@ -687,8 +710,8 @@
                 <div class="flex items-center gap-3">
                   <div class="w-9 h-9 rounded-xl bg-violet-500/20 flex items-center justify-center text-base">📚</div>
                   <div>
-                    <h2 class="text-base font-semibold text-white">สร้างภาคเรียนใหม่</h2>
-                    <p class="text-xs text-gray-500">ใส่ชื่อและช่วงเวลาของภาคเรียน</p>
+                    <h2 class="text-base font-semibold text-white">{{ isEditingTerm ? 'แก้ไขภาคเรียน' : 'สร้างภาคเรียนใหม่' }}</h2>
+                    <p class="text-xs text-gray-500">{{ isEditingTerm ? 'ปรับชื่อและช่วงเวลาของภาคเรียน' : 'ใส่ชื่อและช่วงเวลาของภาคเรียน' }}</p>
                   </div>
                 </div>
                 <button
@@ -739,7 +762,7 @@
                     class="flex-1 btn-primary py-2.5 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed text-sm font-semibold flex items-center justify-center gap-2 tap-scale touch-target"
                   >
                     <span v-if="isSubmittingTerm" class="inline-block w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
-                    {{ isSubmittingTerm ? 'กำลังบันทึก...' : 'สร้างภาคเรียน' }}
+                    {{ isSubmittingTerm ? 'กำลังบันทึก...' : (isEditingTerm ? 'บันทึกการแก้ไข' : 'สร้างภาคเรียน') }}
                   </button>
                 </div>
               </form>
@@ -856,8 +879,8 @@ const courseInk = (name: string) => ['var(--brand-ink)', 'var(--ink-emerald)', '
 
 const terms = ref<BackendTerm[]>([])
 const selectedTermId = ref('')
-const schedules = computed<ScheduleRow[]>(() => {
-  const term = terms.value.find(t => t.id === selectedTermId.value)
+
+const mapTermCourses = (term?: BackendTerm | null): ScheduleRow[] => {
   if (!term) return []
   return term.courses.map(c => ({
     id: c.id,
@@ -867,6 +890,10 @@ const schedules = computed<ScheduleRow[]>(() => {
     end_time: c.endTime,
     location: c.room,
   }))
+}
+
+const schedules = computed<ScheduleRow[]>(() => {
+  return mapTermCourses(terms.value.find(t => t.id === selectedTermId.value))
 })
 const currentTime = ref(nowTH())
 const isLoading = ref(true)
@@ -880,7 +907,9 @@ const scheduleCurrentPage = ref(1)
 
 const isTermModalOpen = ref(false)
 const isSubmittingTerm = ref(false)
+const editingTermId = ref('')
 const termForm = reactive({ termName: '', startDate: '', endDate: '' })
+const isEditingTerm = computed(() => Boolean(editingTermId.value))
 
 const form = reactive({
   courseName: '', dayOfWeek: 1, startTime: '08:00', endTime: '09:00', location: '',
@@ -904,6 +933,83 @@ const toMinutes = (time: string) => {
 const hourHeight = 70 // pixels per hour row
 
 const selectedTermName = computed(() => terms.value.find(t => t.id === selectedTermId.value)?.termName || 'ยังไม่มีภาคเรียน')
+
+const termDateKey = (value?: string | null) => (value ? String(value).slice(0, 10) : '')
+
+const formatThaiDateLabel = (dateStr: string) => {
+  if (!dateStr) return ''
+  const [year, month, day] = dateStr.split('-').map(Number)
+  if (!year || !month || !day) return dateStr
+  return new Date(year, month - 1, day).toLocaleDateString('th-TH', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  })
+}
+
+const termStartMs = (term: BackendTerm) => {
+  const [year, month, day] = termDateKey(term.startDate).split('-').map(Number)
+  if (!year || !month || !day) return Number.NaN
+  return new Date(year, month - 1, day, 0, 0, 0, 0).getTime()
+}
+
+const formatDurationCountdown = (ms: number) => {
+  if (ms <= 0) return 'เริ่มแล้ว'
+  const totalSeconds = Math.floor(ms / 1000)
+  const days = Math.floor(totalSeconds / 86400)
+  const hours = Math.floor((totalSeconds % 86400) / 3600)
+  const minutes = Math.floor((totalSeconds % 3600) / 60)
+  const seconds = totalSeconds % 60
+  if (days > 0) {
+    return hours > 0 ? `${days} วัน ${hours} ชม.` : `${days} วัน`
+  }
+  if (hours > 0) {
+    return minutes > 0 ? `${hours} ชม. ${minutes} นาที` : `${hours} ชม.`
+  }
+  if (minutes > 0) {
+    return `${minutes} นาที ${seconds} วินาที`
+  }
+  return `${seconds} วินาที`
+}
+
+const activeTerm = computed(() => {
+  const todayStr = getTodayTH()
+  return terms.value.find((term) => {
+    const start = termDateKey(term.startDate)
+    const end = termDateKey(term.endDate)
+    return Boolean(start && end && start <= todayStr && end >= todayStr)
+  }) || null
+})
+
+const nextUpcomingTerm = computed(() => {
+  const nowMs = currentTime.value.getTime()
+  return terms.value
+    .filter((term) => termStartMs(term) > nowMs)
+    .sort((a, b) => termStartMs(a) - termStartMs(b))[0] || null
+})
+
+const isInActiveTerm = computed(() => Boolean(activeTerm.value))
+const activeTermName = computed(() => activeTerm.value?.termName || '')
+
+const nextTermCountdown = computed(() => {
+  const term = nextUpcomingTerm.value
+  if (!term) return null
+  const startMs = termStartMs(term)
+  if (Number.isNaN(startMs)) return null
+  return {
+    termName: term.termName,
+    label: formatDurationCountdown(startMs - currentTime.value.getTime()),
+    dateLabel: `เริ่ม ${formatThaiDateLabel(termDateKey(term.startDate))}`,
+  }
+})
+
+const offTermMessage = computed(() => {
+  if (!terms.value.length) return 'ยังไม่มีภาคเรียนในระบบ'
+  if (nextTermCountdown.value) return 'อยู่นอกช่วงเวลาของภาคเรียนปัจจุบัน'
+  return 'ภาคเรียนล่าสุดสิ้นสุดแล้ว และยังไม่มีภาคเรียนถัดไป'
+})
+
+const todaySchedules = computed<ScheduleRow[]>(() => mapTermCourses(activeTerm.value))
 
 const uniqueSubjectsCount = computed(() => {
   const names = schedules.value.map(item => item.course_name.trim())
@@ -1049,12 +1155,18 @@ const getSchedulesForDay = (dayValue: number) => {
   return sortedSchedules.value.filter(item => item.day_of_week === dayValue)
 }
 
-const sortedSchedules = computed(() => [...schedules.value].sort((a, b) => {
+const sortScheduleRows = (rows: ScheduleRow[]) => [...rows].sort((a, b) => {
   if (a.day_of_week !== b.day_of_week) return a.day_of_week - b.day_of_week
   return a.start_time.localeCompare(b.start_time)
-}))
+})
 
-const todaysClasses = computed(() => sortedSchedules.value.filter(item => item.day_of_week === todayWeekday.value))
+const sortedSchedules = computed(() => sortScheduleRows(schedules.value))
+const sortedTodaySchedules = computed(() => sortScheduleRows(todaySchedules.value))
+
+const todaysClasses = computed(() => {
+  if (!isInActiveTerm.value) return []
+  return sortedTodaySchedules.value.filter(item => item.day_of_week === todayWeekday.value)
+})
 
 const { isBlinking, remainingSeconds, triggerBlink } = useStudyBlink(5000)
 
@@ -1201,20 +1313,20 @@ const scheduleGrid = computed(() => {
 })
 
 const nextClass = computed(() => {
-  if (!sortedSchedules.value.length) return null
+  if (!isInActiveTerm.value || !sortedTodaySchedules.value.length) return null
   const now = currentTime.value
   const currentDay = now.getDay() === 0 ? 7 : now.getDay()
   const currentMinutes = (now.getHours() * 60) + now.getMinutes()
   for (let offset = 0; offset < 7; offset += 1) {
     const checkingDay = ((currentDay - 1 + offset) % 7) + 1
-    const classesInDay = sortedSchedules.value.filter(item => item.day_of_week === checkingDay).sort((a, b) => a.start_time.localeCompare(b.start_time))
+    const classesInDay = sortedTodaySchedules.value.filter(item => item.day_of_week === checkingDay).sort((a, b) => a.start_time.localeCompare(b.start_time))
     for (const item of classesInDay) {
       const startMinutes = toMinutes(item.start_time)
       const endMinutes = toMinutes(item.end_time)
       if (offset > 0 || currentMinutes < endMinutes || currentMinutes <= startMinutes) return item
     }
   }
-  return sortedSchedules.value[0] || null
+  return sortedTodaySchedules.value[0] || null
 })
 
 const nextClassTitle = computed(() => nextClass.value?.course_name || 'ยังไม่มีคาบเรียน')
@@ -1351,37 +1463,82 @@ const openEditScheduleModal = (item: ScheduleRow) => {
 
 const closeScheduleModal = () => { resetForm(); errorMessage.value = ''; isScheduleModalOpen.value = false }
 
+const resetTermForm = () => {
+  editingTermId.value = ''
+  termForm.termName = ''
+  termForm.startDate = ''
+  termForm.endDate = ''
+}
+
 const openCreateTermModal = () => {
-  termForm.termName = ''; termForm.startDate = ''; termForm.endDate = ''
+  resetTermForm()
   isTermModalOpen.value = true
 }
 
-const closeTermModal = () => { isTermModalOpen.value = false }
+const openEditTermModal = () => {
+  const { toastWarning } = useAlert()
+  const term = terms.value.find(t => t.id === selectedTermId.value)
+  if (!term) {
+    toastWarning('กรุณาเลือกภาคเรียนก่อน')
+    return
+  }
+  editingTermId.value = term.id
+  termForm.termName = term.termName
+  termForm.startDate = term.startDate ? term.startDate.slice(0, 10) : ''
+  termForm.endDate = term.endDate ? term.endDate.slice(0, 10) : ''
+  isTermModalOpen.value = true
+}
+
+const closeTermModal = () => {
+  isTermModalOpen.value = false
+  resetTermForm()
+}
 
 const submitTerm = async () => {
   if (isSubmittingTerm.value) return
   const { toastSuccess, toastError, toastWarning } = useAlert()
   if (!termForm.termName.trim()) { toastWarning('กรุณาระบุชื่อภาคเรียน'); return }
   if (!termForm.startDate || !termForm.endDate) { toastWarning('กรุณาระบุวันเริ่มและวันสิ้นสุดภาคเรียน'); return }
+  if (termForm.endDate < termForm.startDate) { toastWarning('วันสิ้นสุดต้องไม่ก่อนวันเริ่ม'); return }
+  const wasEditing = isEditingTerm.value
+  const editedTermId = editingTermId.value
   isSubmittingTerm.value = true
   try {
     if (!userId.value) return
-    const created = await apiFetch<BackendTerm>('/api/Schedule/terms', {
-      method: 'POST',
-      body: {
-        userId: userId.value,
-        termName: termForm.termName.trim(),
-        startDate: `${termForm.startDate}T00:00:00`,
-        endDate: `${termForm.endDate}T00:00:00`,
-      },
-    })
-    toastSuccess('สร้างภาคเรียนสำเร็จ')
-    closeTermModal()
-    await loadSchedules()
-    selectedTermId.value = created.id
+    const payload = {
+      termName: termForm.termName.trim(),
+      startDate: `${termForm.startDate}T00:00:00`,
+      endDate: `${termForm.endDate}T00:00:00`,
+    }
+    if (wasEditing) {
+      await apiFetch<BackendTerm>(`/api/Schedule/terms/${editedTermId}`, {
+        method: 'PUT',
+        body: {
+          id: editedTermId,
+          userId: userId.value,
+          ...payload,
+        },
+      })
+      toastSuccess('แก้ไขภาคเรียนสำเร็จ')
+      closeTermModal()
+      await loadSchedules()
+      selectedTermId.value = editedTermId
+    } else {
+      const created = await apiFetch<BackendTerm>('/api/Schedule/terms', {
+        method: 'POST',
+        body: {
+          userId: userId.value,
+          ...payload,
+        },
+      })
+      toastSuccess('สร้างภาคเรียนสำเร็จ')
+      closeTermModal()
+      await loadSchedules()
+      selectedTermId.value = created.id
+    }
   } catch (error: any) {
-    console.error('Create term error:', error)
-    toastError(getApiErrorMessage(error, 'สร้างภาคเรียนไม่สำเร็จ'))
+    console.error(wasEditing ? 'Update term error:' : 'Create term error:', error)
+    toastError(getApiErrorMessage(error, wasEditing ? 'แก้ไขภาคเรียนไม่สำเร็จ' : 'สร้างภาคเรียนไม่สำเร็จ'))
   } finally {
     isSubmittingTerm.value = false
   }
@@ -1416,16 +1573,17 @@ const loadSchedules = async () => {
   isLoading.value = true; errorMessage.value = ''
   try {
     if (!userId.value) return
+    const previousSelected = selectedTermId.value
     const data = await apiFetch<BackendTerm[]>(`/api/Schedule/terms/${userId.value}`)
     terms.value = data
-    
-    // Automatically select the term corresponding to current date/time
-    const currentTerm = findCurrentTerm(data)
-    if (currentTerm) {
-      selectedTermId.value = currentTerm.id
-    } else {
-      selectedTermId.value = data[0]?.id || ''
+
+    if (previousSelected && data.some(t => t.id === previousSelected)) {
+      selectedTermId.value = previousSelected
+      return
     }
+
+    const currentTerm = findCurrentTerm(data)
+    selectedTermId.value = currentTerm?.id || data[0]?.id || ''
   } catch (error: any) {
     console.error('Load study schedules error:', error)
     errorMessage.value = getApiErrorMessage(error, 'โหลดข้อมูลตารางเรียนไม่สำเร็จ')

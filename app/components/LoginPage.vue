@@ -1,113 +1,107 @@
 <template>
-  <div class="min-h-[100dvh] relative overflow-hidden bg-mesh lg:grid lg:grid-cols-2" style="background-color: var(--bg-base);">
-    <!-- Animated Background blobs -->
-    <div class="absolute inset-0 overflow-hidden pointer-events-none">
-      <div class="absolute -top-32 -right-32 w-[600px] h-[600px] rounded-full blur-[150px] opacity-60" style="background: radial-gradient(circle, rgba(59,78,240,0.16), transparent 70%); animation: float 16s ease-in-out infinite;"></div>
-      <div class="absolute -bottom-48 -left-48 w-[520px] h-[520px] rounded-full blur-[130px] opacity-50" style="background: radial-gradient(circle, rgba(111,91,255,0.13), transparent 70%); animation: float 22s ease-in-out infinite reverse;"></div>
-      <div class="absolute top-1/4 left-1/3 w-[420px] h-[420px] rounded-full blur-[150px] opacity-40" style="background: radial-gradient(circle, rgba(13,139,164,0.10), transparent 65%);"></div>
-    </div>
-
-    <!-- Brand panel (desktop) -->
-    <div class="hidden lg:flex relative flex-col justify-between p-12 overflow-hidden" style="background: linear-gradient(150deg, var(--brand), var(--brand-2));">
-      <div class="absolute inset-0 opacity-30" style="background: radial-gradient(circle at 30% 20%, rgba(255,255,255,0.35), transparent 45%), radial-gradient(circle at 80% 80%, rgba(255,255,255,0.2), transparent 40%);"></div>
+  <div class="min-h-[100dvh] relative lg:grid lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]" style="background-color: var(--bg-base);">
+    <!-- Brand panel (desktop / large tablet) -->
+    <div class="hidden lg:flex relative flex-col justify-between p-10 xl:p-14" style="background: var(--brand-panel); color: #f4f1ea;">
       <div class="relative flex items-center gap-3">
-        <div class="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center border border-white/30">
-          <span class="text-white font-extrabold text-2xl">M</span>
+        <div class="w-11 h-11 rounded-xl flex items-center justify-center" style="background: rgba(255,255,255,0.12);">
+          <span class="font-semibold text-xl">M</span>
         </div>
-        <p class="text-white font-extrabold text-xl tracking-tight">MyLife</p>
+        <p class="font-semibold text-lg tracking-tight">MyLife</p>
       </div>
-      <div class="relative text-white">
-        <h2 class="text-4xl font-extrabold leading-tight tracking-tight">จัดการทุกด้าน<br>ของชีวิตในที่เดียว</h2>
-        <p class="mt-4 text-white/85 text-base leading-relaxed max-w-sm">การเงิน ตารางเรียน งานที่ต้องทำ และกิจกรรมสำคัญ — สดใส เป็นระเบียบ และพร้อมเตือนคุณผ่าน LINE</p>
-        <div class="mt-8 flex flex-wrap gap-2.5">
-          <span v-for="f in features" :key="f" class="inline-flex items-center gap-1.5 rounded-full bg-white/15 border border-white/25 px-3.5 py-1.5 text-sm font-semibold text-white backdrop-blur">{{ f }}</span>
+      <div class="relative max-w-md">
+        <p class="text-[11px] tracking-[0.18em] uppercase" style="color: rgba(244,241,234,0.62);">Personal tracker</p>
+        <h2 class="mt-3 text-[2rem] xl:text-[2.35rem] font-semibold leading-snug tracking-tight">จัดการทุกด้านของชีวิตในที่เดียว</h2>
+        <p class="mt-4 text-[15px] leading-relaxed" style="color: rgba(244,241,234,0.78);">การเงิน ตารางเรียน งานที่ต้องทำ และกิจกรรมสำคัญ — เป็นระเบียบ และพร้อมเตือนคุณผ่าน LINE</p>
+        <div class="mt-8 flex flex-wrap gap-2">
+          <span v-for="f in features" :key="f" class="inline-flex items-center rounded-full px-3 py-1.5 text-[13px] font-medium" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.14);">{{ f }}</span>
         </div>
       </div>
-      <p class="relative text-white/70 text-xs">© {{ new Date().getFullYear() }} MyLife · Personal Tracker</p>
+      <p class="relative text-xs" style="color: rgba(244,241,234,0.5);">© {{ new Date().getFullYear() }} MyLife · Personal Tracker</p>
     </div>
 
     <!-- Right side: forms -->
-    <div class="relative flex items-center justify-center p-4 sm:p-8 min-h-[100dvh] lg:min-h-0">
+    <div class="relative flex items-center justify-center px-4 py-6 sm:px-8 sm:py-10 min-h-[100dvh] lg:min-h-0">
     <!-- Loading / Redirecting -->
     <div
       v-if="isCheckingSession || isRedirecting"
-      class="relative rounded-[1.75rem] p-10 flex flex-col items-center gap-5 max-w-sm w-full animate-fade-in"
-      style="background: var(--bg-card); border: 1px solid var(--border-subtle); box-shadow: var(--shadow-lg);"
+      class="relative rounded-2xl p-8 sm:p-10 flex flex-col items-center gap-4 max-w-sm w-full animate-fade-in"
+      style="background: var(--bg-card); border: 1px solid var(--border-subtle); box-shadow: var(--shadow-md);"
     >
-      <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500 via-purple-500 to-indigo-600 flex items-center justify-center shadow-xl glow-violet relative overflow-hidden">
-        <span class="text-white font-extrabold text-2xl relative z-10">M</span>
-        <div class="absolute inset-0 bg-gradient-to-t from-black/10 to-white/25"></div>
+      <div class="w-12 h-12 rounded-xl flex items-center justify-center" style="background: var(--brand); color: var(--brand-on);">
+        <span class="font-semibold text-xl">M</span>
       </div>
-      <span class="inline-block w-10 h-10 border-[3px] border-t-transparent rounded-full animate-spin" style="border-color: var(--brand); border-top-color: transparent;"></span>
-      <div class="text-center space-y-1.5">
-        <p class="text-lg font-bold" style="color: var(--text-primary);">
+      <span class="inline-block w-8 h-8 border-[2.5px] border-t-transparent rounded-full animate-spin" style="border-color: var(--brand); border-top-color: transparent;"></span>
+      <div class="text-center space-y-1">
+        <p class="text-base font-semibold" style="color: var(--text-primary);">
           {{ isRedirecting ? 'กำลังพาไปที่ Dashboard...' : 'กำลังตรวจสอบเซสชัน...' }}
         </p>
-        <p class="text-sm font-medium transition-all" style="color: var(--text-muted);">{{ sessionCheckHint }}</p>
+        <p class="text-sm" style="color: var(--text-muted);">{{ sessionCheckHint }}</p>
       </div>
     </div>
 
     <!-- Login Card -->
-    <div v-else class="relative rounded-[1.75rem] max-w-[420px] w-full overflow-hidden animate-slide-up" style="background: var(--bg-card); border: 1px solid var(--border-subtle); box-shadow: var(--shadow-lg);">
-      <!-- Decorative top gradient line -->
-      <div class="h-1.5 w-full" style="background: linear-gradient(90deg, var(--brand), var(--brand-2), var(--brand));"></div>
-
+    <div v-else class="auth-card relative rounded-2xl max-w-[420px] w-full overflow-hidden animate-slide-up" style="background: var(--bg-card); border: 1px solid var(--border-subtle); box-shadow: var(--shadow-md);">
       <!-- Card header -->
-      <div class="px-8 pt-8 pb-5 text-center">
-        <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500 via-purple-500 to-indigo-600 flex items-center justify-center shadow-xl glow-violet mx-auto mb-5 relative overflow-hidden lg:hidden">
-          <span class="text-white font-extrabold text-2xl relative z-10">M</span>
-          <div class="absolute inset-0 bg-gradient-to-t from-black/10 to-white/25"></div>
+      <div class="px-5 pt-7 pb-4 sm:px-8 sm:pt-8 sm:pb-5 text-center">
+        <div class="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-4 lg:hidden" style="background: var(--brand); color: var(--brand-on);">
+          <span class="font-semibold text-xl">M</span>
         </div>
-        <h1 class="text-2xl font-extrabold tracking-tight" style="color: var(--text-primary);">ยินดีต้อนรับ 👋</h1>
-        <p class="text-sm mt-1.5" style="color: var(--text-muted);">เข้าสู่ระบบเพื่อจัดการชีวิตของคุณ</p>
+        <p class="lg:hidden text-[11px] tracking-[0.16em] uppercase mb-1.5" style="color: var(--text-muted);">MyLife</p>
+        <h1 class="text-[1.45rem] sm:text-[1.6rem] font-semibold tracking-tight" style="color: var(--text-primary);">ยินดีต้อนรับ</h1>
+        <p class="text-sm mt-1.5 leading-relaxed" style="color: var(--text-muted);">เข้าสู่ระบบเพื่อจัดการชีวิตของคุณ</p>
       </div>
 
-      <div class="px-8 pb-8 space-y-5">
+      <div class="px-5 pb-6 sm:px-8 sm:pb-8 space-y-5">
         <!-- Messages -->
         <Transition name="slide-down">
           <div
             v-if="errorMessage"
-            class="flex items-start gap-2.5 rounded-xl p-3.5 text-sm text-rose-400"
-            style="background: rgba(244,63,94,0.08); border: 1px solid rgba(244,63,94,0.15);"
+            class="flex items-start gap-2.5 rounded-xl p-3.5 text-sm"
+            style="background: var(--event-status-soon-soft); border: 1px solid var(--event-status-soon-border); color: var(--ink-rose);"
+            role="alert"
           >
-            <span class="shrink-0 mt-0.5">⚠️</span>
+            <span class="shrink-0 mt-0.5" aria-hidden="true">!</span>
             <span>{{ errorMessage }}</span>
           </div>
         </Transition>
         <Transition name="slide-down">
           <div
             v-if="successMessage"
-            class="flex items-start gap-2.5 rounded-xl p-3.5 text-sm text-emerald-400"
-            style="background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.15);"
+            class="flex items-start gap-2.5 rounded-xl p-3.5 text-sm"
+            style="background: var(--event-status-ongoing-soft); border: 1px solid var(--event-status-ongoing-border); color: var(--ink-emerald);"
+            role="status"
           >
-            <span class="shrink-0 mt-0.5">✓</span>
+            <span class="shrink-0 mt-0.5" aria-hidden="true">✓</span>
             <span>{{ successMessage }}</span>
           </div>
         </Transition>
         <Transition name="slide-down">
           <div
             v-if="isLoading && loadingHint"
-            class="flex items-center gap-2 rounded-xl p-3 text-xs font-semibold animate-pulse"
-            style="background: rgba(182, 133, 42, 0.1); border: 1px solid rgba(182, 133, 42, 0.25); color: var(--ink-amber);"
+            class="flex items-center gap-2 rounded-xl p-3 text-xs font-medium"
+            style="background: var(--event-status-soon-soft); border: 1px solid var(--event-status-soon-border); color: var(--ink-amber);"
           >
-            <span class="shrink-0">⚡</span>
             <span>{{ loadingHint }}</span>
           </div>
         </Transition>
 
         <!-- Tab switcher -->
-        <div class="flex rounded-2xl p-1 gap-1" style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);">
+        <div class="flex rounded-xl p-1 gap-1" style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);" role="tablist">
           <button
+            type="button"
             @click="isSignUp = false"
-            class="flex-1 py-2.5 px-4 rounded-xl text-sm font-bold transition-all duration-300 tap-scale touch-target"
-            :style="!isSignUp ? 'background: linear-gradient(135deg, var(--brand), var(--brand-2)); color: #fff; box-shadow: var(--brand-glow);' : 'color: var(--text-muted);'"
+            class="flex-1 py-2.5 px-3 rounded-[10px] text-sm font-semibold tap-scale touch-target"
+            :style="!isSignUp ? 'background: var(--brand); color: var(--brand-on);' : 'color: var(--text-muted);'"
+            :aria-selected="!isSignUp"
           >
             ลงชื่อเข้าใช้
           </button>
           <button
+            type="button"
             @click="isSignUp = true"
-            class="flex-1 py-2.5 px-4 rounded-xl text-sm font-bold transition-all duration-300 tap-scale touch-target"
-            :style="isSignUp ? 'background: linear-gradient(135deg, var(--brand), var(--brand-2)); color: #fff; box-shadow: var(--brand-glow);' : 'color: var(--text-muted);'"
+            class="flex-1 py-2.5 px-3 rounded-[10px] text-sm font-semibold tap-scale touch-target"
+            :style="isSignUp ? 'background: var(--brand); color: var(--brand-on);' : 'color: var(--text-muted);'"
+            :aria-selected="isSignUp"
           >
             สมัครสมาชิก
           </button>
@@ -152,7 +146,7 @@
           <!-- Step 1: Account Information -->
           <form v-if="signUpStep === 'credentials'" @submit.prevent="proceedToModuleSelection" class="space-y-4">
             <div class="flex items-center justify-between mb-1">
-              <span class="text-xs font-semibold px-2 py-0.5 rounded-full" style="background: var(--brand-soft); color: var(--brand-ink);">
+              <span class="text-xs font-medium px-2 py-0.5 rounded-full" style="background: var(--brand-soft); color: var(--brand-ink);">
                 ขั้นตอนที่ 1/2: ข้อมูลบัญชี
               </span>
             </div>
@@ -214,23 +208,25 @@
 
           <!-- Step 2: Feature Selection (Onboarding) -->
           <div v-else class="space-y-4 animate-fade-in">
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-semibold px-2 py-0.5 rounded-full" style="background: var(--brand-soft); color: var(--brand-ink);">
+            <div class="flex items-center justify-between gap-2 flex-wrap">
+              <span class="text-xs font-medium px-2 py-0.5 rounded-full" style="background: var(--brand-soft); color: var(--brand-ink);">
                 ขั้นตอนที่ 2/2: ปรับแต่งการใช้งาน
               </span>
               <div class="flex items-center gap-1.5">
                 <button
                   type="button"
                   @click="selectAllModules"
-                  class="text-[11px] font-semibold text-violet-400 hover:underline"
+                  class="text-[12px] font-medium hover:underline"
+                  style="color: var(--brand-ink);"
                 >
                   เลือกทั้งหมด
                 </button>
-                <span class="text-gray-600 text-xs">·</span>
+                <span class="text-xs" style="color: var(--text-muted);">·</span>
                 <button
                   type="button"
                   @click="selectMinimalModules"
-                  class="text-[11px] font-semibold text-gray-400 hover:underline"
+                  class="text-[12px] font-medium hover:underline"
+                  style="color: var(--text-secondary);"
                 >
                   เฉพาะการเงิน
                 </button>
@@ -250,21 +246,20 @@
                 v-for="mod in allModules"
                 :key="mod.id"
                 @click="toggleSelectedModule(mod.id)"
-                class="flex items-start gap-3 p-2.5 rounded-xl border transition-all cursor-pointer tap-scale"
+                class="flex items-start gap-3 p-3 rounded-xl border cursor-pointer tap-scale"
                 :style="selectedSignUpModules.includes(mod.id)
-                  ? 'background: var(--brand-soft); border-color: var(--brand);'
-                  : 'background: var(--bg-elevated); border-color: var(--border-subtle); opacity: 0.65;'"
+                  ? 'background: var(--brand-soft); border-color: var(--brand-border);'
+                  : 'background: var(--bg-elevated); border-color: var(--border-subtle);'"
               >
-                <div class="text-xl shrink-0 mt-0.5">{{ mod.icon }}</div>
+                <div class="text-lg shrink-0 mt-0.5">{{ mod.icon }}</div>
                 <div class="flex-1 min-w-0">
-                  <div class="flex items-center justify-between">
-                    <p class="text-xs font-bold" :style="{ color: selectedSignUpModules.includes(mod.id) ? 'var(--brand-ink)' : 'var(--text-primary)' }">
+                  <div class="flex items-center justify-between gap-2">
+                    <p class="text-[13px] font-semibold" :style="{ color: selectedSignUpModules.includes(mod.id) ? 'var(--brand-ink)' : 'var(--text-primary)' }">
                       {{ mod.label }}
                     </p>
-                    <!-- Checkbox indicator -->
                     <div
-                      class="w-4 h-4 rounded-md flex items-center justify-center text-white text-[10px] shrink-0 font-bold transition-all"
-                      :style="selectedSignUpModules.includes(mod.id) ? 'background: var(--brand);' : 'border: 1px solid var(--border-default); background: transparent;'"
+                      class="w-5 h-5 rounded-md flex items-center justify-center text-[11px] shrink-0 font-semibold"
+                      :style="selectedSignUpModules.includes(mod.id) ? 'background: var(--brand); color: var(--brand-on);' : 'border: 1px solid var(--border-default); background: transparent; color: transparent;'"
                     >
                       <span v-if="selectedSignUpModules.includes(mod.id)">✓</span>
                     </div>
@@ -292,7 +287,7 @@
                 class="flex-1 btn-primary text-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none tap-scale touch-target"
               >
                 <span v-if="isLoading" class="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                <span>{{ isLoading ? 'กำลังสร้างบัญชี...' : 'ยืนยันและสร้างบัญชี ✨' }}</span>
+                <span>{{ isLoading ? 'กำลังสร้างบัญชี...' : 'ยืนยันและสร้างบัญชี' }}</span>
               </button>
             </div>
           </div>
@@ -342,7 +337,7 @@ const config = useRuntimeConfig()
 const { login, register, loginWithGoogleIdToken, isSessionValid } = useAuth()
 const { allModules, setModules } = useUserModules()
 
-const features = ['💸 การเงิน', '📅 ตารางเรียน', '✅ งาน & To-do', '🎉 กิจกรรม', '🔔 เตือนผ่าน LINE']
+const features = ['การเงิน', 'ตารางเรียน', 'งาน & To-do', 'กิจกรรม', 'เตือนผ่าน LINE']
 
 const isSignUp = ref(false)
 const signUpStep = ref<'credentials' | 'modules'>('credentials')
@@ -649,5 +644,11 @@ const handleGoogleSignIn = async () => {
 .slide-down-enter-from, .slide-down-leave-to {
   opacity: 0;
   transform: translateY(-8px);
+}
+
+@media (max-width: 639px) {
+  .auth-card {
+    border-radius: 1rem;
+  }
 }
 </style>

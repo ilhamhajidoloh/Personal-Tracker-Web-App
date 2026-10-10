@@ -1,28 +1,28 @@
 <template>
   <AppTabsLayout>
-    <div class="mx-auto w-full max-w-[1240px] px-4 md:px-6 py-6 md:py-8 space-y-5">
+    <div class="mx-auto w-full max-w-[1240px] px-4 sm:px-5 md:px-6 py-5 md:py-8 space-y-4 sm:space-y-5">
       <!-- Page head -->
-      <div class="flex flex-wrap items-end justify-between gap-4 animate-slide-up">
-        <div>
+      <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 animate-slide-up">
+        <div class="min-w-0">
           <p class="eyebrow">ภาพรวม · Dashboard</p>
-          <h1 class="text-2xl md:text-[30px] font-extrabold tracking-tight mt-1.5" style="color: var(--text-primary);">{{ greetingText }}, <em style="font-style: normal; color: var(--brand);">{{ userDisplayName }}</em></h1>
-          <p class="num text-xs mt-2" style="color: var(--text-muted);">{{ todayText }} · อัปเดต {{ lastUpdateTime }}</p>
+          <h1 class="text-[1.45rem] sm:text-2xl md:text-[1.85rem] font-semibold tracking-tight mt-1.5 leading-snug" style="color: var(--text-primary);">{{ greetingText }}, <em class="not-italic" style="color: var(--brand-ink);">{{ userDisplayName }}</em></h1>
+          <p class="text-xs mt-2" style="color: var(--text-muted);">{{ todayText }} · อัปเดต {{ lastUpdateTime }}</p>
         </div>
         <div class="flex items-center gap-2 flex-wrap">
           <NuxtLink v-if="isModuleEnabled('cashflow')" to="/cashflow" class="btn-primary text-sm inline-flex items-center gap-2">
-            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg>
             บันทึกรายการ
           </NuxtLink>
           <NuxtLink v-if="isModuleEnabled('study-schedule')" to="/study-schedule" class="btn-secondary text-sm inline-flex items-center gap-2">
-            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
             ตารางเรียน
           </NuxtLink>
           <NuxtLink v-if="isModuleEnabled('todos') && !isModuleEnabled('study-schedule')" to="/todos" class="btn-secondary text-sm inline-flex items-center gap-2">
-            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h11"/></svg>
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h11"/></svg>
             To-do List
           </NuxtLink>
           <NuxtLink v-if="isModuleEnabled('tasks') && !isModuleEnabled('cashflow')" to="/tasks" class="btn-secondary text-sm inline-flex items-center gap-2">
-            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
             จัดการงาน
           </NuxtLink>
         </div>
@@ -46,19 +46,18 @@
         <!-- LEFT column -->
         <div v-if="hasLeftColumn" class="space-y-4">
           <!-- Multi-Book Selector Bar (if user has books) -->
-          <div v-if="books.length > 0" class="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+          <div v-if="books.length > 0" class="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none -mx-1 px-1">
             <!-- All Books Pill -->
             <button
               type="button"
               @click="selectBook('all')"
-              class="px-3 py-1.5 rounded-xl text-xs font-semibold transition-all tap-scale flex items-center gap-1.5 shrink-0"
+              class="px-3 py-2 rounded-lg text-xs font-medium tap-scale flex items-center gap-1.5 shrink-0 min-h-10"
               :style="selectedBookId === 'all'
-                ? 'background: var(--brand); color: #ffffff; box-shadow: 0 4px 14px rgba(59,78,240,0.35);'
-                : 'background: var(--bg-surface); border: 1px solid var(--border-subtle); color: var(--text-secondary);'"
+                ? 'background: var(--brand); color: var(--brand-on);'
+                : 'background: var(--bg-card); border: 1px solid var(--border-default); color: var(--text-secondary);'"
             >
-              <span>📊</span>
               <span>ทุกสมุด (รวม)</span>
-              <span class="text-[10px] px-1.5 py-0.2 rounded-full opacity-80" :style="selectedBookId === 'all' ? 'background: rgba(255,255,255,0.2);' : 'background: rgba(0,0,0,0.2);'">
+              <span class="text-[10px] px-1.5 py-0.5 rounded-full" :style="selectedBookId === 'all' ? 'background: rgba(255,255,255,0.16);' : 'background: var(--bg-elevated);'">
                 {{ books.length }}
               </span>
             </button>
@@ -69,10 +68,10 @@
               :key="book.id"
               type="button"
               @click="selectBook(book.id)"
-              class="px-3 py-1.5 rounded-xl text-xs font-semibold transition-all tap-scale flex items-center gap-1.5 shrink-0"
+              class="px-3 py-2 rounded-lg text-xs font-medium tap-scale flex items-center gap-1.5 shrink-0 min-h-10"
               :style="selectedBookId === book.id
-                ? `background: ${book.color}22; border: 1px solid ${book.color}66; color: ${book.color}; box-shadow: 0 2px 10px ${book.color}20;`
-                : 'background: var(--bg-surface); border: 1px solid var(--border-subtle); color: var(--text-secondary);'"
+                ? `background: ${book.color}18; border: 1px solid ${book.color}40; color: ${book.color};`
+                : 'background: var(--bg-card); border: 1px solid var(--border-default); color: var(--text-secondary);'"
             >
               <span>{{ book.icon || '💼' }}</span>
               <span>{{ book.name }}</span>
@@ -90,14 +89,14 @@
                     <span v-if="selectedBook" class="font-semibold" :style="{ color: selectedBook.color }">({{ selectedBook.icon }} {{ selectedBook.name }})</span>
                     <span v-else class="font-normal" style="color: var(--text-muted);">(รวมทุกสมุด)</span>
                   </p>
-                  <p class="num text-[34px] md:text-[42px] font-bold leading-none mt-2" :style="{ color: remainingBalance >= 0 ? 'var(--text-primary)' : 'var(--ink-rose)' }">
-                    <span class="text-xl md:text-2xl font-semibold mr-1" style="color: var(--text-muted);">฿</span>{{ formattedBalanceParts.sign }}{{ formattedBalanceParts.integer }}<span class="text-xl md:text-2xl font-semibold" style="color: var(--text-muted);">.{{ formattedBalanceParts.decimal }}</span>
+                  <p class="num text-[32px] md:text-[40px] font-semibold leading-none mt-2" :style="{ color: remainingBalance >= 0 ? 'var(--text-primary)' : 'var(--ink-rose)' }">
+                    <span class="text-lg md:text-xl font-medium mr-1" style="color: var(--text-muted);">฿</span>{{ formattedBalanceParts.sign }}{{ formattedBalanceParts.integer }}<span class="text-lg md:text-xl font-medium" style="color: var(--text-muted);">.{{ formattedBalanceParts.decimal }}</span>
                   </p>
                   <div class="flex items-center gap-2.5 mt-3 flex-wrap">
-                    <span class="num text-[11px] px-2 py-1 rounded-md font-semibold" :style="remainingBalance >= 0 ? 'color: var(--ink-emerald); background: rgba(10,138,92,0.10);' : 'color: var(--ink-rose); background: rgba(208,39,72,0.10);'">
+                    <span class="text-[11px] px-2 py-1 rounded-md font-medium" :style="remainingBalance >= 0 ? 'color: var(--ink-emerald); background: var(--event-status-ongoing-soft);' : 'color: var(--ink-rose); background: rgba(180,74,82,0.10);'">
                       {{ remainingBalance >= 0 ? 'บวก' : 'ติดลบ' }}
                     </span>
-                    <span class="text-[12.5px]" style="color: var(--text-secondary);">{{ remainingProgressText }}</span>
+                    <span class="text-[13px]" style="color: var(--text-secondary);">{{ remainingProgressText }}</span>
                   </div>
                 </div>
                 <div class="icon-bubble">
@@ -106,8 +105,8 @@
               </div>
 
               <!-- Time Range Selector -->
-              <div class="flex items-center justify-end gap-1.5 mt-4 pt-1.5 border-t" style="border-color: var(--border-subtle);">
-                <span class="text-[11px] font-medium mr-auto" style="color: var(--text-muted);">ช่วงเวลา:</span>
+              <div class="flex items-center gap-1.5 mt-4 pt-3 border-t flex-wrap" style="border-color: var(--border-subtle);">
+                <span class="text-[11px] font-medium mr-auto" style="color: var(--text-muted);">ช่วงเวลา</span>
                 <button
                   v-for="range in [
                     { value: '7d', label: '7 วัน' },
@@ -117,10 +116,10 @@
                   ]"
                   :key="range.value"
                   @click="selectedChartRange = range.value as any"
-                  class="text-[11px] font-bold px-2.5 py-1 rounded-lg transition-all tap-scale touch-target"
+                  class="text-[11px] font-medium px-2.5 py-1.5 rounded-lg tap-scale min-h-9"
                   :style="selectedChartRange === range.value
-                    ? 'background: var(--brand); color: white; box-shadow: var(--brand-glow);'
-                    : 'background: var(--bg-hover); color: var(--text-secondary);'"
+                    ? 'background: var(--brand); color: var(--brand-on);'
+                    : 'background: var(--bg-elevated); color: var(--text-secondary);'"
                 >
                   {{ range.label }}
                 </button>
@@ -204,8 +203,8 @@
                           <!-- Hover tooltip -->
                           <div
                             v-if="hoveredBarIndex === index"
-                            class="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 rounded-xl p-3 text-[11px] font-semibold shadow-2xl z-30 pointer-events-none whitespace-nowrap"
-                            style="background: var(--bg-surface); border: 1px solid var(--border-subtle); box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5);"
+                            class="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 rounded-xl p-3 text-[11px] font-medium z-30 pointer-events-none whitespace-nowrap"
+                            style="background: var(--bg-card); border: 1px solid var(--border-default); box-shadow: var(--shadow-md);"
                           >
                             <div class="text-xs font-bold mb-1.5 pb-1 border-b text-center" style="color: var(--text-primary); border-color: var(--border-subtle);">{{ bar.label }}</div>
                             <div class="flex items-center justify-between gap-4 py-0.5">
@@ -310,74 +309,74 @@
           <!-- Nearest Recurring Expense -->
           <div class="section-card animate-slide-up delay-100 overflow-hidden">
             <div class="flex items-center justify-between gap-3 p-5" style="border-bottom: 1px solid var(--border-subtle);">
-              <div class="flex items-center gap-2">
-                <div class="w-7 h-7 rounded-lg bg-amber-500/15 text-amber-400 flex items-center justify-center text-sm shrink-0">
-                  🔄
+              <div class="flex items-center gap-2.5 min-w-0">
+                <div class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style="background: var(--event-status-soon-soft); color: var(--ink-amber);">
+                  <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12a9 9 0 1 0 9-9"/><path d="M3 4v5h5"/><path d="M12 7v5l3 2"/></svg>
                 </div>
-                <div>
-                  <h2 class="text-sm font-semibold text-white">รายจ่ายประจำใกล้ที่สุด</h2>
-                  <p class="text-[11px] text-gray-500">รายการถัดไปที่ต้องชำระ</p>
+                <div class="min-w-0">
+                  <h2 class="text-sm font-semibold" style="color: var(--text-primary);">รายจ่ายประจำใกล้ที่สุด</h2>
+                  <p class="text-[12px]" style="color: var(--text-muted);">รายการถัดไปที่ต้องชำระ</p>
                 </div>
               </div>
-              <NuxtLink to="/cashflow" class="eyebrow" style="color: var(--brand);">จัดการ →</NuxtLink>
+              <NuxtLink to="/cashflow" class="eyebrow shrink-0" style="color: var(--brand-ink);">จัดการ →</NuxtLink>
             </div>
 
             <div v-if="isRecurringLoading" class="p-5">
-              <div class="h-16 rounded-xl bg-gray-800/60 animate-pulse"></div>
+              <div class="h-16 rounded-xl animate-pulse" style="background: var(--bg-elevated);"></div>
             </div>
 
-            <div v-else-if="!nearestRecurringItemInfo" class="p-6 text-center text-xs" style="color: var(--text-muted);">
+            <div v-else-if="!nearestRecurringItemInfo" class="p-6 text-center text-sm" style="color: var(--text-muted);">
               ยังไม่มีรายการจ่ายประจำ
             </div>
 
             <div v-else class="p-4 sm:p-5">
-              <div class="p-4 rounded-xl bg-amber-500/10 border border-amber-500/25 space-y-3">
-                <div class="flex flex-wrap sm:flex-nowrap items-center justify-between gap-3">
+              <div class="p-4 rounded-xl space-y-3" style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div class="min-w-0 flex-1">
                     <div class="flex items-center gap-2 flex-wrap mb-1">
-                      <span class="text-sm font-bold text-white truncate">{{ nearestRecurringItemInfo.item.title }}</span>
-                      <span class="text-[10.5px] font-semibold px-2 py-0.5 rounded-md border" :class="nearestRecurringItemInfo.statusClass">
+                      <span class="text-sm font-semibold truncate" style="color: var(--text-primary);">{{ nearestRecurringItemInfo.item.title }}</span>
+                      <span class="text-[11px] font-medium px-2 py-0.5 rounded-md border" :class="nearestRecurringItemInfo.statusClass">
                         {{ nearestRecurringItemInfo.dueLabel }}
                       </span>
                     </div>
-                    <p class="text-xs text-gray-400">
-                      จ่ายทุกวันที่ {{ nearestRecurringItemInfo.item.dayOfMonthDue }} &bull;
-                      <span class="font-mono text-amber-300 font-semibold">{{ nearestRecurringItemInfo.countdownText }}</span>
+                    <p class="text-xs" style="color: var(--text-secondary);">
+                      จ่ายทุกวันที่ {{ nearestRecurringItemInfo.item.dayOfMonthDue }} ·
+                      <span class="num font-medium" style="color: var(--ink-amber);">{{ nearestRecurringItemInfo.countdownText }}</span>
                     </p>
                   </div>
 
-                  <div class="flex items-center gap-3 shrink-0 ml-auto sm:ml-0">
-                    <span class="num text-base font-extrabold text-white">฿{{ formatCurrency(nearestRecurringItemInfo.item.amount) }}</span>
+                  <div class="flex items-center gap-3 shrink-0">
+                    <span class="num text-base font-semibold" style="color: var(--text-primary);">{{ formatCurrency(nearestRecurringItemInfo.item.amount) }}</span>
                     <button
                       @click="payDashboardRecurring(nearestRecurringItemInfo.item)"
                       :disabled="isPayingDashboardRecurringId === nearestRecurringItemInfo.item.id"
-                      class="px-3 py-2 rounded-xl text-xs font-bold bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-400 flex items-center gap-1.5 transition-all tap-scale touch-target disabled:opacity-50"
+                      class="px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 tap-scale touch-target disabled:opacity-50"
+                      style="background: var(--event-status-ongoing-soft); border: 1px solid var(--event-status-ongoing-border); color: var(--ink-emerald);"
                     >
-                      <svg v-if="isPayingDashboardRecurringId !== nearestRecurringItemInfo.item.id" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                      <span v-else class="inline-block w-3 h-3 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin"></span>
+                      <svg v-if="isPayingDashboardRecurringId !== nearestRecurringItemInfo.item.id" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                      <span v-else class="inline-block w-3 h-3 border-2 rounded-full animate-spin" style="border-color: var(--event-status-ongoing-border); border-top-color: var(--ink-emerald);"></span>
                       <span>จ่ายแล้ว</span>
                     </button>
                   </div>
                 </div>
 
-                <!-- Progress bar -->
                 <div class="space-y-1.5">
-                  <div class="flex items-center justify-between text-[10px] font-semibold">
-                    <span class="text-gray-400">ความคืบหน้า</span>
-                    <span :class="nearestRecurringItemInfo.minDays <= 0 ? 'text-rose-400' : 'text-amber-400'">
+                  <div class="flex items-center justify-between text-[11px] font-medium">
+                    <span style="color: var(--text-muted);">ความคืบหน้า</span>
+                    <span :style="{ color: nearestRecurringItemInfo.minDays <= 0 ? 'var(--ink-rose)' : 'var(--ink-amber)' }">
                       {{ nearestRecurringItemInfo.progressPercent }}%
                     </span>
                   </div>
-                  <div class="h-2 rounded-full bg-gray-800/60 overflow-hidden">
+                  <div class="h-1.5 rounded-full overflow-hidden" style="background: var(--bg-elevated-2);">
                     <div
                       class="h-full rounded-full transition-all duration-300"
                       :style="{
                         width: `${nearestRecurringItemInfo.progressPercent}%`,
                         background: nearestRecurringItemInfo.minDays <= 0
-                          ? 'linear-gradient(90deg, #f43f5e, #fb923c)'
+                          ? 'var(--ink-rose)'
                           : nearestRecurringItemInfo.progress > 0.7
-                            ? 'linear-gradient(90deg, #fb923c, #f43f5e)'
-                            : 'linear-gradient(90deg, #8b5cf6, #fb923c)'
+                            ? 'var(--ink-amber)'
+                            : 'var(--brand)'
                       }"
                     ></div>
                   </div>
@@ -517,25 +516,46 @@
           <!-- Today's schedule -->
           <div v-if="isModuleEnabled('study-schedule')" class="section-card animate-slide-up delay-200">
             <div class="flex items-center justify-between gap-3 p-5" style="border-bottom: 1px solid var(--border-subtle);">
-              <h2 class="text-sm font-semibold" style="color: var(--text-primary);">ตารางวันนี้ · {{ todaysStudyClasses.length }} คาบ</h2>
+              <div class="min-w-0">
+                <h2 class="text-sm font-semibold" style="color: var(--text-primary);">
+                  {{ isInActiveTerm ? `ตารางวันนี้ · ${todaysStudyClasses.length} คาบ` : 'ตารางเรียน' }}
+                </h2>
+                <p v-if="activeTermName" class="text-[11px] mt-0.5 truncate" style="color: var(--text-muted);">{{ activeTermName }}</p>
+              </div>
               <NuxtLink to="/study-schedule" class="eyebrow" style="color: var(--brand);">ทั้งสัปดาห์ →</NuxtLink>
             </div>
             <div v-if="isScheduleLoading" class="p-5 space-y-2">
               <div v-for="i in 2" :key="i" class="h-12 rounded-lg animate-pulse" style="background: var(--bg-elevated);"></div>
             </div>
+            <template v-else-if="!isInActiveTerm">
+              <div class="p-6 text-center">
+                <p class="text-sm font-semibold" style="color: var(--text-primary);">ไม่ได้อยู่ช่วงเวลาเรียน</p>
+                <p class="text-xs mt-1.5" style="color: var(--text-muted);">{{ offTermMessage }}</p>
+                <div
+                  v-if="nextTermCountdown"
+                  class="mt-4 mx-auto max-w-sm rounded-xl border px-4 py-3"
+                  style="background: var(--brand-soft); border-color: var(--brand-border);"
+                >
+                  <p class="text-[10px] font-semibold uppercase tracking-wider" style="color: var(--brand-ink);">ภาคเรียนถัดไป</p>
+                  <p class="text-sm font-bold mt-1" style="color: var(--text-primary);">{{ nextTermCountdown.termName }}</p>
+                  <p class="num text-xs mt-1 font-medium" style="color: var(--brand-ink);">เริ่มในอีก {{ nextTermCountdown.label }}</p>
+                  <p class="text-[11px] mt-1" style="color: var(--text-muted);">{{ nextTermCountdown.dateLabel }}</p>
+                </div>
+              </div>
+            </template>
             <template v-else>
               <div v-if="todaysStudyClasses.length">
                 <!-- Countdown Banner for Active or Next Class -->
-                <div v-if="currentStudyClass || nextStudyClassToday" class="mx-5 mt-4 p-4 rounded-xl border flex flex-col gap-1.5 transition-all duration-300 relative overflow-hidden"
+                <div v-if="currentStudyClass || nextStudyClassToday" class="mx-4 sm:mx-5 mt-4 p-4 rounded-xl border flex flex-col gap-1.5 transition-all duration-300 relative overflow-hidden"
                   :class="{ 'study-blinking-card': isStudyBlinking }"
                   :style="!isStudyBlinking ? (currentStudyClass 
-                    ? 'background: rgba(10,138,92,0.05); border-color: rgba(10,138,92,0.25); color: var(--ink-emerald);'
-                    : 'background: rgba(59,78,240,0.05); border-color: rgba(59,78,240,0.25); color: var(--brand-ink);') : ''">
-                  <div class="flex items-center justify-between">
-                    <span class="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider transition-colors"
+                    ? 'background: var(--event-status-ongoing-soft); border-color: var(--event-status-ongoing-border); color: var(--ink-emerald);'
+                    : 'background: var(--brand-soft); border-color: var(--brand-border); color: var(--brand-ink);') : ''">
+                  <div class="flex items-center justify-between gap-2 flex-wrap">
+                    <span class="text-[10px] px-2 py-0.5 rounded-full font-semibold uppercase tracking-wider"
                       :class="{ 'animate-study-text-blink text-white': isStudyBlinking }"
-                      :style="!isStudyBlinking ? { background: currentStudyClass ? 'var(--ink-emerald)' : 'var(--brand)', color: '#ffffff' } : { background: '#1e293b', color: '#ffffff' }">
-                      {{ currentStudyClass ? '🔴 กำลังเรียน' : '⏳ คาบเรียนถัดไป' }}
+                      :style="!isStudyBlinking ? { background: currentStudyClass ? 'var(--ink-emerald)' : 'var(--brand)', color: 'var(--brand-on)' } : { background: '#1e293b', color: '#ffffff' }">
+                      {{ currentStudyClass ? 'กำลังเรียน' : 'คาบเรียนถัดไป' }}
                     </span>
                     <span class="num text-[11px] font-bold" :class="{ 'animate-study-text-blink text-white': isStudyBlinking }">
                       {{ formatTime(currentStudyClass ? currentStudyClass.start_time : (nextStudyClassToday?.start_time || '')) }} - 
@@ -547,14 +567,13 @@
                     :style="!isStudyBlinking ? { color: 'var(--text-primary)' } : { color: '#ffffff' }">
                     {{ currentStudyClass ? currentStudyClass.course_name : (nextStudyClassToday?.course_name || '') }}
                   </h3>
-                  <p class="text-xs font-semibold mt-0.5 flex items-center gap-1">
-                    <span>🕒</span>
-                    <span class="font-bold" :class="{ 'animate-study-text-blink text-white': isStudyBlinking }">{{ studyCountdownText }}</span>
+                  <p class="text-xs font-medium mt-0.5">
+                    <span :class="{ 'animate-study-text-blink text-white': isStudyBlinking }">{{ studyCountdownText }}</span>
                   </p>
-                  <p v-if="currentStudyClass?.location || nextStudyClassToday?.location" class="text-[11px]"
+                  <p v-if="currentStudyClass?.location || nextStudyClassToday?.location" class="text-[12px]"
                     :class="{ 'animate-study-text-blink text-white': isStudyBlinking }"
                     :style="!isStudyBlinking ? { color: 'var(--text-secondary)' } : { color: '#ffffff' }">
-                    📍 {{ currentStudyClass ? currentStudyClass.location : (nextStudyClassToday?.location || '') }}
+                    {{ currentStudyClass ? currentStudyClass.location : (nextStudyClassToday?.location || '') }}
                   </p>
                 </div>
 
@@ -588,13 +607,14 @@
                       :style="!isBlinkingRow(item) ? { color: 'var(--text-muted)' } : {}">{{ item.location }}</span>
                   </div>
                   <div class="flex items-center shrink-0">
-                    <span v-if="getClassStatus(item) === 'finished'" class="text-[11px] font-bold text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded-full flex items-center gap-0.5">
-                      ✓ เสร็จสิ้น
+                    <span v-if="getClassStatus(item) === 'finished'" class="text-[11px] font-medium px-2 py-0.5 rounded-full" style="color: var(--ink-emerald); background: var(--event-status-ongoing-soft);">
+                      เสร็จสิ้น
                     </span>
                     <span v-else-if="getClassStatus(item) === 'active'" 
-                      class="text-[11px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1"
-                      :class="isBlinkingRow(item) ? 'bg-indigo-600 text-white animate-study-text-blink' : 'bg-emerald-600 animate-pulse text-white'">
-                      <span class="w-1.5 h-1.5 rounded-full bg-white block"></span> กำลังเรียน
+                      class="text-[11px] font-medium px-2 py-0.5 rounded-full flex items-center gap-1"
+                      :class="isBlinkingRow(item) ? 'animate-study-text-blink text-white' : ''"
+                      :style="isBlinkingRow(item) ? 'background: #1e293b;' : 'background: var(--ink-emerald); color: #fff;'">
+                      กำลังเรียน
                     </span>
                   </div>
                 </div>
@@ -628,15 +648,9 @@
               <div
                 v-for="todo in dashboardTodos"
                 :key="todo.id"
-                class="grid grid-cols-[20px_1fr_auto] items-center gap-3 px-5 py-3"
+                class="grid grid-cols-[1fr_auto] items-center gap-3 px-5 py-3"
                 style="border-bottom: 1px solid var(--border-subtle);"
               >
-                <button
-                  @click="markTodoDone(todo.id)"
-                  class="w-[19px] h-[19px] rounded-md shrink-0 tap-scale transition-colors"
-                  style="border: 1.5px solid var(--border-strong);"
-                  aria-label="ทำเครื่องหมายว่าเสร็จ"
-                ></button>
                 <div class="min-w-0">
                   <p class="text-[13.5px] font-medium truncate" style="color: var(--text-primary);">{{ todo.title }}</p>
                   <p class="num text-[10.5px] mt-0.5" :class="getTodoDateColor(todo)">
@@ -737,7 +751,6 @@
                 <template v-else>
                   <div class="flex items-center justify-between text-xs">
                     <span class="font-semibold flex items-center gap-1.5" style="color: var(--brand-ink);">
-                      <span>⏰</span>
                       กิจกรรมถัดไป
                     </span>
                     <span class="num text-xs font-mono font-bold" style="color: var(--brand-ink);">
@@ -762,16 +775,13 @@
       </section>
 
       <!-- Feature Customization Notice if some modules are disabled -->
-      <div v-if="enabledModules.length < allModules.length" class="rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 border transition-all" style="background: var(--bg-card); border-color: var(--border-subtle);">
-        <div class="flex items-center gap-3">
-          <span class="text-2xl shrink-0">✨</span>
-          <div>
-            <p class="text-xs font-bold" style="color: var(--text-primary);">คุณกำลังเปิดใช้งาน {{ enabledModules.length }} จาก {{ allModules.length }} ฟังก์ชัน</p>
-            <p class="text-[11px]" style="color: var(--text-muted);">ต้องการใช้งานฟังก์ชันอื่นเพิ่มเติม (การเงิน, ตารางเรียน, To-do, งาน, กิจกรรม) สามารถเปิดได้ตลอดเวลา</p>
-          </div>
+      <div v-if="enabledModules.length < allModules.length" class="rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3" style="background: var(--bg-card); border: 1px solid var(--border-subtle);">
+        <div class="min-w-0">
+          <p class="text-sm font-semibold" style="color: var(--text-primary);">คุณกำลังเปิดใช้งาน {{ enabledModules.length }} จาก {{ allModules.length }} ฟังก์ชัน</p>
+          <p class="text-[13px] mt-0.5" style="color: var(--text-muted);">เปิดฟังก์ชันอื่นเพิ่มได้ตลอดเวลาจากหน้าโปรไฟล์</p>
         </div>
-        <NuxtLink to="/profile" class="btn-secondary text-xs shrink-0 py-2 px-3 flex items-center gap-1.5 tap-scale">
-          <span>⚙️ ปรับแต่งฟังก์ชัน</span>
+        <NuxtLink to="/profile" class="btn-secondary text-xs shrink-0 py-2 px-3">
+          ปรับแต่งฟังก์ชัน
         </NuxtLink>
       </div>
     </div>
@@ -790,12 +800,12 @@ const hasRightColumn = computed(() => isModuleEnabled('cashflow') || isModuleEna
 
 const gridClasses = computed(() => {
   if (hasLeftColumn.value && hasRightColumn.value) {
-    return 'grid grid-cols-1 lg:grid-cols-[1.05fr_1fr] gap-4 items-start'
+        return 'grid grid-cols-1 lg:grid-cols-[1.05fr_1fr] gap-4 md:gap-5 items-start'
   }
   if (hasLeftColumn.value) {
     return 'grid grid-cols-1 gap-4 items-start'
   }
-  return 'grid grid-cols-1 md:grid-cols-2 gap-4 items-start'
+    return 'grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5 items-start'
 })
 
 type TransactionType = 'income' | 'expense'
@@ -918,6 +928,7 @@ const formattedBalanceParts = computed(() => {
 
 const transactions = ref<TransactionRow[]>([])
 const studySchedules = ref<StudyScheduleRow[]>([])
+const academicTerms = ref<BackendTerm[]>([])
 const todos = ref<TodoRow[]>([])
 const events = ref<DashboardEventRow[]>([])
 const currentTime = ref(nowTH())
@@ -1296,6 +1307,81 @@ const barChartData = computed(() => {
     startDate: formatDateShort(startDateStr),
     endDate: formatDateShort(formatYYYYMMDD(now))
   }
+})
+
+const termDateKey = (value?: string | null) => (value ? String(value).slice(0, 10) : '')
+
+const formatThaiDateLabel = (dateStr: string) => {
+  if (!dateStr) return ''
+  const [year, month, day] = dateStr.split('-').map(Number)
+  if (!year || !month || !day) return dateStr
+  return new Date(year, month - 1, day).toLocaleDateString('th-TH', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  })
+}
+
+const termStartMs = (term: BackendTerm) => {
+  const [year, month, day] = termDateKey(term.startDate).split('-').map(Number)
+  if (!year || !month || !day) return Number.NaN
+  return new Date(year, month - 1, day, 0, 0, 0, 0).getTime()
+}
+
+const formatDurationCountdown = (ms: number) => {
+  if (ms <= 0) return 'เริ่มแล้ว'
+  const totalSeconds = Math.floor(ms / 1000)
+  const days = Math.floor(totalSeconds / 86400)
+  const hours = Math.floor((totalSeconds % 86400) / 3600)
+  const minutes = Math.floor((totalSeconds % 3600) / 60)
+  const seconds = totalSeconds % 60
+  if (days > 0) {
+    return hours > 0 ? `${days} วัน ${hours} ชม.` : `${days} วัน`
+  }
+  if (hours > 0) {
+    return minutes > 0 ? `${hours} ชม. ${minutes} นาที` : `${hours} ชม.`
+  }
+  if (minutes > 0) {
+    return `${minutes} นาที ${seconds} วินาที`
+  }
+  return `${seconds} วินาที`
+}
+
+const activeTerm = computed(() => {
+  const todayStr = getTodayTH()
+  return academicTerms.value.find((term) => {
+    const start = termDateKey(term.startDate)
+    const end = termDateKey(term.endDate)
+    return Boolean(start && end && start <= todayStr && end >= todayStr)
+  }) || null
+})
+
+const nextUpcomingTerm = computed(() => {
+  const nowMs = currentTime.value.getTime()
+  return academicTerms.value
+    .filter((term) => termStartMs(term) > nowMs)
+    .sort((a, b) => termStartMs(a) - termStartMs(b))[0] || null
+})
+
+const isInActiveTerm = computed(() => Boolean(activeTerm.value))
+const activeTermName = computed(() => activeTerm.value?.termName || '')
+
+const nextTermCountdown = computed(() => {
+  const term = nextUpcomingTerm.value
+  if (!term) return null
+  const startMs = termStartMs(term)
+  if (Number.isNaN(startMs)) return null
+  return {
+    termName: term.termName,
+    label: formatDurationCountdown(startMs - currentTime.value.getTime()),
+    dateLabel: `เริ่ม ${formatThaiDateLabel(termDateKey(term.startDate))}`,
+  }
+})
+
+const offTermMessage = computed(() => {
+  if (!academicTerms.value.length) return 'ยังไม่มีภาคเรียนในระบบ'
+  if (nextTermCountdown.value) return 'อยู่นอกช่วงเวลาของภาคเรียนปัจจุบัน'
+  return 'ภาคเรียนล่าสุดสิ้นสุดแล้ว และยังไม่มีภาคเรียนถัดไป'
 })
 
 const sortedStudySchedules = computed(() => [...studySchedules.value].sort((a, b) => {
@@ -1915,9 +2001,11 @@ const normalizeTransactionRows = (rows: BackendTransaction[]): TransactionRow[] 
 const pickActiveTerm = (terms: BackendTerm[]): BackendTerm | null => {
   if (!terms.length) return null
   const todayStr = getTodayTH()
-  const active = terms.find(t => t.startDate.slice(0, 10) <= todayStr && t.endDate.slice(0, 10) >= todayStr)
-  if (active) return active
-  return [...terms].sort((a, b) => b.startDate.localeCompare(a.startDate))[0] || null
+  return terms.find(t => {
+    const start = termDateKey(t.startDate)
+    const end = termDateKey(t.endDate)
+    return Boolean(start && end && start <= todayStr && end >= todayStr)
+  }) || null
 }
 
 const normalizeStudyRows = (terms: BackendTerm[]): StudyScheduleRow[] => {
@@ -1958,6 +2046,7 @@ const loadStudySchedules = async () => {
   try {
     if (!userId.value) return
     const data = await apiFetch<BackendTerm[]>(`/api/Schedule/terms/${userId.value}`)
+    academicTerms.value = data
     studySchedules.value = normalizeStudyRows(data)
   } catch (error: any) {
     console.error('Load study schedules summary error:', error)
@@ -2162,16 +2251,16 @@ const nearestRecurringItemInfo = computed(() => {
   let statusClass = ''
   if (minDays === 0) {
     dueLabel = 'ครบกำหนดวันนี้'
-    statusClass = 'bg-rose-500/15 text-rose-400 border-rose-500/30'
+    statusClass = 'text-[color:var(--ink-rose)]'
   } else if (minDays < 0) {
     dueLabel = `เลยกำหนด ${Math.abs(minDays)} วัน`
-    statusClass = 'bg-rose-500/15 text-rose-400 border-rose-500/30'
+    statusClass = 'text-[color:var(--ink-rose)]'
   } else if (minDays <= 3) {
     dueLabel = `อีก ${minDays} วัน`
-    statusClass = 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+    statusClass = 'text-[color:var(--ink-amber)]'
   } else {
     dueLabel = `อีก ${minDays} วัน`
-    statusClass = 'bg-gray-800 text-gray-400 border-gray-700/60'
+    statusClass = 'text-[color:var(--text-secondary)]'
   }
 
   // คำนวณ progress bar (จากวันที่เริ่มรอบจนถึงวันครบกำหนด)
