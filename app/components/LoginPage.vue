@@ -329,7 +329,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import type { AppModuleId } from '~/composables/useUserModules'
 
 const router = useRouter()
@@ -567,12 +567,18 @@ onMounted(async () => {
     return
   }
   isCheckingSession.value = false
+  isRedirecting.value = false
 
   try {
     await renderGoogleOfficialButton()
   } catch (err) {
     console.warn('Google Client pre-init warning:', err)
   }
+})
+
+onUnmounted(() => {
+  if (loadingTimer) clearTimeout(loadingTimer)
+  if (sessionTimer) clearTimeout(sessionTimer)
 })
 
 const handleSignIn = async () => {

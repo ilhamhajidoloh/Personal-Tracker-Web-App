@@ -6,6 +6,7 @@ useHead({
   titleTemplate: (titleChunk) => titleChunk ? `${titleChunk} | MyLife` : 'MyLife',
 })
 
+const route = useRoute()
 const { initializeTheme } = useAppTheme()
 
 onMounted(() => {
@@ -16,9 +17,9 @@ onMounted(() => {
 <template>
   <div>
     <NuxtPwaManifest />
-    <NuxtPage :page-key="route => route.fullPath" v-slot="{ Component }">
+    <NuxtPage v-slot="{ Component }">
       <Transition name="page" mode="out-in">
-        <component :is="Component" />
+        <component :is="Component" :key="route.fullPath" />
       </Transition>
     </NuxtPage>
     <InstallPrompt />

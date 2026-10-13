@@ -188,7 +188,6 @@ type NavItem = {
 }
 
 const route = useRoute()
-const router = useRouter()
 const { currentUser: user, signOut } = useAuth()
 const { isLightTheme, initializeTheme, toggleTheme } = useAppTheme()
 const { isModuleEnabled } = useUserModules()
@@ -234,19 +233,19 @@ const isRouteActive = (to?: RouteLocationRaw) => {
   return route.path.startsWith(to)
 }
 
-const handleLogout = async () => {
-  try {
-    isLoggingOut.value = true
-    signOut()
-    userMenuOpen.value = false
-    useAlert().toastSuccess('ออกจากระบบสำเร็จ')
-    await router.push('/login')
-  } catch (error: any) {
-    console.error('Logout error:', error)
-    useAlert().toastError(error?.message || 'ออกจากระบบไม่สำเร็จ')
-  } finally {
-    isLoggingOut.value = false
+const handleLogout = () => {
+  if (isLoggingOut.value) return
+
+  isLoggingOut.value = true
+  closeMenus()
+  signOut()
+
+  if (import.meta.client) {
+    window.location.replace('/')
+    return
   }
+
+  return navigateTo('/', { replace: true, external: true })
 }
 
 watch(() => route.path, () => {

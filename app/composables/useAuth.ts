@@ -33,6 +33,7 @@ export const useAuth = () => {
   const config = useRuntimeConfig()
   const session = useCookie<AuthSession | null>('auth_session', {
     maxAge: COOKIE_MAX_AGE,
+    path: '/',
     sameSite: 'lax',
     default: () => null,
   })
@@ -89,6 +90,11 @@ export const useAuth = () => {
 
   const clearSession = () => {
     session.value = null
+
+    if (!import.meta.client) return
+
+    // Force-expire the cookie in case the reactive helper leaves a stale value.
+    document.cookie = 'auth_session=; Max-Age=0; Path=/; SameSite=Lax'
   }
 
   const login = async (email: string, password: string) => {
@@ -120,6 +126,17 @@ export const useAuth = () => {
 
   const signOut = () => {
     clearSession()
+
+    if (!import.meta.client) return
+
+    try {
+      const googleIdentity = (globalThis as {
+        google?: { accounts?: { id?: { disableAutoSelect?: () => void } } }
+      }).google
+      googleIdentity?.accounts?.id?.disableAutoSelect?.()
+    } catch {
+      // Google Identity script may not be loaded on this page.
+    }
   }
 
   const updateProfile = async (fullName: string) => {
