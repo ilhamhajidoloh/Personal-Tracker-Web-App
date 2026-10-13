@@ -37,17 +37,28 @@ export const useAuth = () => {
     default: () => null,
   })
 
-  const normalizeProfileImageUrl = (userId?: string | null, profileImageUrl?: string | null) => {
+  const normalizeProfileImageUrl = (_userId?: string | null, profileImageUrl?: string | null) => {
     if (!profileImageUrl) return null
-    if (!userId) return profileImageUrl
-    if (
+    if (profileImageUrl.startsWith('/api/auth/profile-image')) return profileImageUrl
+
+    const isOwnedStorageImage =
       profileImageUrl.startsWith('profiles/') ||
       profileImageUrl.includes('objectstorage.') ||
-      profileImageUrl.includes('.compat.objectstorage.')
-    ) {
-      return `${config.public.apiBase}/api/Auth/profile-image/${userId}?v=${encodeURIComponent(profileImageUrl)}`
+      profileImageUrl.includes('/api/Auth/profile-image') ||
+      profileImageUrl.includes('/api/auth/profile-image')
+
+    if (!isOwnedStorageImage) return profileImageUrl
+
+    let cacheKey = profileImageUrl
+    try {
+      const parsed = new URL(profileImageUrl, 'http://localhost')
+      const nested = parsed.searchParams.get('v')
+      if (nested) cacheKey = nested
+    } catch {
+      // keep the original value as a cache-buster
     }
-    return profileImageUrl
+
+    return `/api/auth/profile-image?v=${encodeURIComponent(cacheKey)}`
   }
 
   const currentUser = computed(() => {
