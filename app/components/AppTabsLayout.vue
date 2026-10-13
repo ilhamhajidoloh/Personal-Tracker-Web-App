@@ -191,6 +191,7 @@ const route = useRoute()
 const { currentUser: user, signOut } = useAuth()
 const { isLightTheme, initializeTheme, toggleTheme } = useAppTheme()
 const { isModuleEnabled } = useUserModules()
+const { resetBooks } = useFinanceBooks()
 
 const userMenuOpen = ref(false)
 const isLoggingOut = ref(false)
@@ -233,19 +234,18 @@ const isRouteActive = (to?: RouteLocationRaw) => {
   return route.path.startsWith(to)
 }
 
-const handleLogout = () => {
+const handleLogout = async () => {
   if (isLoggingOut.value) return
 
   isLoggingOut.value = true
   closeMenus()
+  resetBooks()
   signOut()
 
-  if (import.meta.client) {
-    window.location.replace('/')
-    return
-  }
-
-  return navigateTo('/', { replace: true, external: true })
+  // Keep this in-app. A forced document reload can race cookie persistence and
+  // the service worker, leaving the login route stuck in a redirect/loading
+  // state after logging out.
+  await navigateTo('/', { replace: true })
 }
 
 watch(() => route.path, () => {

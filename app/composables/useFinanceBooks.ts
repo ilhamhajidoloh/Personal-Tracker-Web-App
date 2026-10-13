@@ -136,6 +136,15 @@ export const useFinanceBooks = () => {
     }
   }
 
+  // These values live for the lifetime of the Nuxt client. Clear them when the
+  // account changes so a subsequent sign-in never briefly renders the previous
+  // account's book selection or data.
+  const resetBooks = () => {
+    books.value = []
+    selectedBookId.value = 'all'
+    isLoadingBooks.value = false
+  }
+
   return {
     books,
     isLoadingBooks,
@@ -147,5 +156,6 @@ export const useFinanceBooks = () => {
     createBook,
     updateBook,
     deleteBook,
+    resetBooks,
   }
 }
