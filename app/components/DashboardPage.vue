@@ -631,6 +631,58 @@
             </template>
           </div>
 
+          <!-- Tasks (งานและการบ้าน) -->
+          <div v-if="isModuleEnabled('tasks')" class="section-card animate-slide-up delay-300">
+            <div class="flex items-center justify-between gap-3 p-5" style="border-bottom: 1px solid var(--border-subtle);">
+              <div class="min-w-0">
+                <h2 class="text-sm font-semibold" style="color: var(--text-primary);">งานค้าง</h2>
+                <p class="text-xs mt-0.5" style="color: var(--text-muted);">งานและการบ้านที่ต้องทำ</p>
+              </div>
+              <NuxtLink to="/tasks" class="eyebrow shrink-0" style="color: var(--brand);">ดูทั้งหมด →</NuxtLink>
+            </div>
+            <div v-if="isTasksLoading" class="p-5 space-y-2">
+              <div v-for="i in 3" :key="i" class="h-12 rounded-lg animate-pulse" style="background: var(--bg-elevated);"></div>
+            </div>
+            <div v-else-if="!dashboardTasks.length" class="p-8 text-center">
+              <div class="w-10 h-10 mx-auto mb-2 rounded-full flex items-center justify-center" style="background: var(--event-status-ongoing-soft); color: var(--ink-emerald);">
+                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+              </div>
+              <p class="text-sm font-medium" style="color: var(--ink-emerald);">ไม่มีงานค้างหรืองานด่วน</p>
+              <p class="text-xs mt-1" style="color: var(--text-muted);">ทำได้ดีมาก ทุกงานอยู่ในสถานะดี</p>
+            </div>
+            <div v-else>
+              <div
+                v-for="task in dashboardTasks"
+                :key="task.id"
+                class="grid grid-cols-[1fr_auto] items-center gap-3 px-5 py-3 transition-all duration-200"
+                style="border-bottom: 1px solid var(--border-subtle);"
+              >
+                <div class="min-w-0">
+                  <div class="flex items-center gap-2 flex-wrap mb-1">
+                    <p class="text-[13.5px] font-medium truncate" style="color: var(--text-primary);">{{ task.title }}</p>
+                    <span v-if="task.isUrgent" class="text-[10px] px-2 py-0.5 rounded-full font-bold shrink-0" style="color: var(--ink-rose); background: rgba(208,39,72,0.10); border: 1px solid rgba(208,39,72,0.2);">
+                      🔥 ด่วน
+                    </span>
+                  </div>
+                  <div class="flex items-center gap-2 text-[10.5px] flex-wrap">
+                    <span v-if="task.subject" class="num font-medium" style="color: var(--text-secondary);">
+                      {{ task.subject }} ·
+                    </span>
+                    <span class="num font-medium" :class="getTaskDeadlineColorClass(task)">
+                      {{ formatTaskDeadline(task.deadline) }}
+                    </span>
+                  </div>
+                </div>
+                <span
+                  class="text-[10px] px-2 py-1 rounded-md font-semibold uppercase tracking-wide shrink-0"
+                  :style="getTaskStatusStyle(task)"
+                >
+                  {{ getTaskStatusLabel(task) }}
+                </span>
+              </div>
+            </div>
+          </div>
+
           <!-- Todos -->
           <div v-if="isModuleEnabled('todos')" class="section-card animate-slide-up delay-300">
             <div class="flex items-center justify-between gap-3 p-5" style="border-bottom: 1px solid var(--border-subtle);">
@@ -796,7 +848,7 @@ import { useFinanceBooks } from '~/composables/useFinanceBooks'
 const { isModuleEnabled, allModules, enabledModules } = useUserModules()
 
 const hasLeftColumn = computed(() => isModuleEnabled('cashflow'))
-const hasRightColumn = computed(() => isModuleEnabled('cashflow') || isModuleEnabled('study-schedule') || isModuleEnabled('todos'))
+const hasRightColumn = computed(() => isModuleEnabled('cashflow') || isModuleEnabled('study-schedule') || isModuleEnabled('todos') || isModuleEnabled('tasks'))
 
 const gridClasses = computed(() => {
   if (hasLeftColumn.value && hasRightColumn.value) {
@@ -850,6 +902,16 @@ type TodoRow = {
   due_date: string | null
   status: TodoStatus
   priority: TodoPriority
+}
+
+type TaskRow = {
+  id: string
+  userId: string
+  title: string
+  subject: string | null
+  deadline: string
+  isUrgent: boolean
+  isCompleted: boolean
 }
 
 type EventTypeType = 'same_day_time' | 'same_day_all_day' | 'multi_day'
@@ -930,16 +992,19 @@ const transactions = ref<TransactionRow[]>([])
 const studySchedules = ref<StudyScheduleRow[]>([])
 const academicTerms = ref<BackendTerm[]>([])
 const todos = ref<TodoRow[]>([])
+const tasks = ref<TaskRow[]>([])
 const events = ref<DashboardEventRow[]>([])
 const currentTime = ref(nowTH())
 
 const isLoading = ref(true)
 const isScheduleLoading = ref(true)
 const isTodosLoading = ref(true)
+const isTasksLoading = ref(true)
 const isEventsLoading = ref(true)
 const errorMessage = ref('')
 const scheduleErrorMessage = ref('')
 const todosErrorMessage = ref('')
+const tasksErrorMessage = ref('')
 const eventsErrorMessage = ref('')
 
 const todayText = nowTH().toLocaleDateString('th-TH', {
@@ -1495,6 +1560,112 @@ const getTodoDateColor = (item: TodoRow) => {
   if (item.due_date < today) return 'text-rose-400'
   if (item.due_date === today) return 'text-amber-400'
   return 'text-gray-400'
+}
+
+// Tasks (งานและการบ้าน) Dashboard Functions
+const dashboardTasks = computed(() => {
+  const now = new Date()
+  return tasks.value
+    .filter(t => !t.isCompleted && (t.isUrgent || new Date(t.deadline) >= now))
+    .sort((a, b) => {
+      // Sort by urgent first, then by deadline
+      if (a.isUrgent !== b.isUrgent) return a.isUrgent ? -1 : 1
+      return new Date(a.deadline).getTime() - new Date(b.deadline).getTime()
+    })
+    .slice(0, 6)
+})
+
+const formatTaskDeadline = (dateStr: string) => {
+  if (!dateStr) return '-'
+  try {
+    const d = new Date(dateStr)
+    if (isNaN(d.getTime())) return dateStr
+    const now = new Date()
+    const diffMs = d.getTime() - now.getTime()
+    const diffHours = diffMs / (1000 * 60 * 60)
+    const diffDays = Math.floor(diffHours / 24)
+
+    // If overdue
+    if (diffMs < 0) {
+      const overdueDays = Math.abs(diffDays)
+      if (overdueDays === 0) return 'เลยกำหนดวันนี้'
+      return `เลยกำหนด ${overdueDays} วัน`
+    }
+
+    // If due today
+    if (diffDays === 0) {
+      const hours = Math.floor(diffHours)
+      if (hours === 0) {
+        const minutes = Math.floor((diffMs / (1000 * 60)))
+        return `อีก ${minutes} นาที`
+      }
+      return `วันนี้ ${d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.`
+    }
+
+    // If due tomorrow
+    if (diffDays === 1) {
+      return `พรุ่งนี้ ${d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.`
+    }
+
+    // Otherwise show full date
+    return d.toLocaleDateString('th-TH', {
+      day: 'numeric',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+  } catch {
+    return dateStr
+  }
+}
+
+const getTaskDeadlineColorClass = (task: TaskRow) => {
+  if (task.isCompleted) return 'text-[color:var(--text-muted)]'
+  try {
+    const d = new Date(task.deadline)
+    const now = new Date()
+    const diffMs = d.getTime() - now.getTime()
+    const diffHours = diffMs / (1000 * 60 * 60)
+
+    if (diffMs < 0) return 'text-[color:var(--ink-rose)]' // Overdue
+    if (diffHours <= 24) return 'text-[color:var(--ink-amber)]' // Due within 24 hours
+    if (diffHours <= 48) return 'text-[color:var(--brand-ink)]' // Due within 48 hours
+  } catch {}
+  return 'text-[color:var(--text-secondary)]'
+}
+
+const getTaskStatusLabel = (task: TaskRow) => {
+  try {
+    const d = new Date(task.deadline)
+    const now = new Date()
+    const diffMs = d.getTime() - now.getTime()
+    const diffHours = diffMs / (1000 * 60 * 60)
+
+    if (diffMs < 0) return 'เลยกำหนด'
+    if (diffHours <= 24) return 'ครบกำหนด'
+    if (task.isUrgent) return 'ด่วน'
+  } catch {}
+  return 'ค้างส่ง'
+}
+
+const getTaskStatusStyle = (task: TaskRow) => {
+  try {
+    const d = new Date(task.deadline)
+    const now = new Date()
+    const diffMs = d.getTime() - now.getTime()
+    const diffHours = diffMs / (1000 * 60 * 60)
+
+    if (diffMs < 0) {
+      return { color: 'var(--ink-rose)', background: 'rgba(208,39,72,0.10)', border: '1px solid rgba(208,39,72,0.2)' }
+    }
+    if (diffHours <= 24) {
+      return { color: 'var(--ink-amber)', background: 'rgba(182,133,42,0.10)', border: '1px solid rgba(182,133,42,0.2)' }
+    }
+    if (task.isUrgent) {
+      return { color: 'var(--ink-rose)', background: 'rgba(208,39,72,0.10)', border: '1px solid rgba(208,39,72,0.2)' }
+    }
+  } catch {}
+  return { color: 'var(--text-secondary)', background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)' }
 }
 
 const dashboardEvents = computed(() => {
@@ -2081,6 +2252,21 @@ const loadTodos = async () => {
   }
 }
 
+const loadTasks = async () => {
+  isTasksLoading.value = true
+  tasksErrorMessage.value = ''
+  try {
+    if (!userId.value) return
+    const data = await apiFetch<TaskRow[]>(`/api/Task/${userId.value}`)
+    tasks.value = Array.isArray(data) ? data : []
+  } catch (error: any) {
+    console.error('Load tasks error:', error)
+    tasksErrorMessage.value = getApiErrorMessage(error, 'โหลดข้อมูลงานและการบ้านไม่สำเร็จ')
+  } finally {
+    isTasksLoading.value = false
+  }
+}
+
 const markTodoDone = async (id: string) => {
   const item = todos.value.find(t => t.id === id)
   if (!item) return
@@ -2350,6 +2536,9 @@ const refreshOverview = async () => {
   }
   if (isModuleEnabled('todos')) {
     promises.push(loadTodos())
+  }
+  if (isModuleEnabled('tasks')) {
+    promises.push(loadTasks())
   }
   if (isModuleEnabled('events')) {
     promises.push(loadEvents())

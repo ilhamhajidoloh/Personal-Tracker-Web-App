@@ -443,7 +443,16 @@ const isGoogleBtnRendered = ref(false)
 const redirectToDashboard = async () => {
   if (import.meta.server || isRedirecting.value) return
   isRedirecting.value = true
-  await router.push('/dashboard')
+
+  try {
+    await router.push('/dashboard')
+  } catch (error) {
+    console.error('Redirect to dashboard error:', error)
+    // If navigation fails, force reload
+    if (import.meta.client) {
+      window.location.href = '/dashboard'
+    }
+  }
 }
 
 const showMessage = (message: string, type: 'error' | 'success') => {

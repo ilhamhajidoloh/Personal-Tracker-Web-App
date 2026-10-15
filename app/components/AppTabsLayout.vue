@@ -172,6 +172,28 @@
         </NuxtLink>
       </div>
     </nav>
+
+    <!-- Logout Overlay -->
+    <Teleport to="body">
+      <Transition name="fade-overlay">
+        <div
+          v-if="isLoggingOut"
+          class="fixed inset-0 z-[9999] flex items-center justify-center"
+          style="background: rgba(3,5,12,0.85); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);"
+        >
+          <div class="relative rounded-2xl p-8 sm:p-10 flex flex-col items-center gap-4 max-w-sm w-full mx-4 animate-scale-in" style="background: var(--bg-card); border: 1px solid var(--border-default); box-shadow: var(--shadow-xl);">
+            <div class="w-14 h-14 rounded-xl flex items-center justify-center" style="background: var(--brand); color: var(--brand-on);">
+              <span class="font-semibold text-2xl">M</span>
+            </div>
+            <span class="inline-block w-10 h-10 border-[3px] border-t-transparent rounded-full animate-spin" style="border-color: var(--brand); border-top-color: transparent;"></span>
+            <div class="text-center space-y-1.5">
+              <p class="text-lg font-semibold" style="color: var(--text-primary);">กำลังออกจากระบบ...</p>
+              <p class="text-sm" style="color: var(--text-muted);">กรุณารอสักครู่</p>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -237,15 +259,40 @@ const isRouteActive = (to?: RouteLocationRaw) => {
 const handleLogout = async () => {
   if (isLoggingOut.value) return
 
+  // Show overlay immediately
   isLoggingOut.value = true
   closeMenus()
-  resetBooks()
-  signOut()
 
-  // Keep this in-app. A forced document reload can race cookie persistence and
-  // the service worker, leaving the login route stuck in a redirect/loading
-  // state after logging out.
-  await navigateTo('/', { replace: true })
+  // Give UI time to render the overlay
+  await new Promise(resolve => setTimeout(resolve, 50))
+
+  try {
+    // 1. Clear session first
+    signOut()
+    resetBooks()
+
+    // 2. Force clear cookie immediately
+    if (import.meta.client) {
+      document.cookie = 'auth_session=; Max-Age=0; Path=/; SameSite=Lax'
+    }
+
+    // 3. Wait a bit to ensure cookie is cleared and user sees the logout message
+    await new Promise(resolve => setTimeout(resolve, 300))
+
+    // 4. Do a full page reload to the root to clear all state
+    if (import.meta.client) {
+      window.location.href = '/'
+    } else {
+      await navigateTo('/', { replace: true, external: true })
+    }
+  } catch (error) {
+    console.error('Logout error:', error)
+    // Even if there's an error, force reload
+    if (import.meta.client) {
+      window.location.href = '/'
+    }
+  }
+  // Don't set isLoggingOut to false since we're reloading
 }
 
 watch(() => route.path, () => {
@@ -278,5 +325,30 @@ onMounted(() => {
 .menu-enter-from, .menu-leave-to {
   opacity: 0;
   transform: translateY(-6px);
+}
+
+.fade-overlay-enter-active {
+  transition: all 0.3s ease;
+}
+.fade-overlay-leave-active {
+  transition: all 0.2s ease;
+}
+.fade-overlay-enter-from, .fade-overlay-leave-to {
+  opacity: 0;
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-scale-in {
+  animation: scale-in 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 </style>

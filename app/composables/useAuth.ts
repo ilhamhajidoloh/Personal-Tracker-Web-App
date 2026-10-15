@@ -93,8 +93,16 @@ export const useAuth = () => {
 
     if (!import.meta.client) return
 
-    // Force-expire the cookie in case the reactive helper leaves a stale value.
-    document.cookie = 'auth_session=; Max-Age=0; Path=/; SameSite=Lax'
+    // Force-expire the cookie immediately with multiple approaches
+    // to ensure it's cleared across all browsers
+    const expireStrings = [
+      'auth_session=; Max-Age=0; Path=/; SameSite=Lax',
+      'auth_session=; expires=Thu, 01 Jan 1970 00:00:00 UTC; Path=/; SameSite=Lax',
+    ]
+
+    expireStrings.forEach(str => {
+      document.cookie = str
+    })
   }
 
   const login = async (email: string, password: string) => {
