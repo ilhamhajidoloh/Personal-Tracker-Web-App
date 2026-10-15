@@ -1,32 +1,83 @@
 <template>
   <AppTabsLayout>
-    <div class="mx-auto w-full max-w-[1240px] px-4 sm:px-5 md:px-6 py-5 md:py-8 space-y-4 sm:space-y-5">
-      <!-- Page head -->
-      <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 animate-slide-up">
+    <div class="dashboard-shell mx-auto w-full max-w-[1240px] px-4 sm:px-5 md:px-6 py-5 md:py-8 space-y-4 sm:space-y-5 relative">
+      <!-- Animated Background Orbs -->
+      <div class="dashboard-orb dashboard-orb-1"></div>
+      <div class="dashboard-orb dashboard-orb-2"></div>
+
+      <!-- Page head with enhanced styling -->
+      <header class="dashboard-workspace-header flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 animate-slide-up relative z-10">
         <div class="min-w-0">
-          <p class="eyebrow">ภาพรวม · Dashboard</p>
-          <h1 class="text-[1.45rem] sm:text-2xl md:text-[1.85rem] font-semibold tracking-tight mt-1.5 leading-snug" style="color: var(--text-primary);">{{ greetingText }}, <em class="not-italic" style="color: var(--brand-ink);">{{ userDisplayName }}</em></h1>
-          <p class="text-xs mt-2" style="color: var(--text-muted);">{{ todayText }} · อัปเดต {{ lastUpdateTime }}</p>
+          <div class="flex items-center gap-2 mb-2">
+            <span class="eyebrow">ภาพรวม · Dashboard</span>
+            <span class="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider animate-pulse-slow" style="background: var(--brand-soft); color: var(--brand-ink); border: 1px solid var(--brand-border);">Live</span>
+          </div>
+          <h1 class="text-[1.45rem] sm:text-2xl md:text-[1.85rem] font-bold tracking-tight leading-snug">
+            <span class="gradient-text-animated">{{ greetingText }}</span><span style="color: var(--text-primary);">, </span>
+            <em class="not-italic bg-gradient-to-r from-[var(--brand)] to-[var(--brand-2)] bg-clip-text text-transparent font-extrabold">{{ userDisplayName }}</em>
+          </h1>
+          <div class="flex items-center gap-2 mt-2 flex-wrap">
+            <p class="text-xs flex items-center gap-1.5" style="color: var(--text-muted);">
+              <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
+              {{ todayText }}
+            </p>
+            <span class="text-xs" style="color: var(--border-strong);">·</span>
+            <p class="text-xs flex items-center gap-1.5" style="color: var(--text-muted);">
+              <svg class="w-3 h-3 animate-spin-slow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 3 .7M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-3-.7"/></svg>
+              อัปเดต {{ lastUpdateTime }}
+            </p>
+          </div>
         </div>
         <div class="flex items-center gap-2 flex-wrap">
-          <NuxtLink v-if="isModuleEnabled('cashflow')" to="/cashflow" class="btn-primary text-sm inline-flex items-center gap-2">
-            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg>
+          <NuxtLink v-if="isModuleEnabled('cashflow')" to="/cashflow" class="btn-primary-enhanced text-sm inline-flex items-center gap-2 group">
+            <svg class="w-4 h-4 group-hover:rotate-90 transition-transform duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg>
             บันทึกรายการ
           </NuxtLink>
-          <NuxtLink v-if="isModuleEnabled('study-schedule')" to="/study-schedule" class="btn-secondary text-sm inline-flex items-center gap-2">
-            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
+          <NuxtLink v-if="isModuleEnabled('study-schedule')" to="/study-schedule" class="btn-secondary-enhanced text-sm inline-flex items-center gap-2 group">
+            <svg class="w-4 h-4 group-hover:scale-110 transition-transform duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
             ตารางเรียน
           </NuxtLink>
-          <NuxtLink v-if="isModuleEnabled('todos') && !isModuleEnabled('study-schedule')" to="/todos" class="btn-secondary text-sm inline-flex items-center gap-2">
-            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h11"/></svg>
+          <NuxtLink v-if="isModuleEnabled('todos') && !isModuleEnabled('study-schedule')" to="/todos" class="btn-secondary-enhanced text-sm inline-flex items-center gap-2 group">
+            <svg class="w-4 h-4 group-hover:scale-110 transition-transform duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h11"/></svg>
             To-do List
           </NuxtLink>
-          <NuxtLink v-if="isModuleEnabled('tasks') && !isModuleEnabled('cashflow')" to="/tasks" class="btn-secondary text-sm inline-flex items-center gap-2">
-            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          <NuxtLink v-if="isModuleEnabled('tasks') && !isModuleEnabled('cashflow')" to="/tasks" class="btn-secondary-enhanced text-sm inline-flex items-center gap-2 group">
+            <svg class="w-4 h-4 group-hover:scale-110 transition-transform duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
             จัดการงาน
           </NuxtLink>
         </div>
-      </div>
+      </header>
+
+      <!-- Productivity snapshot: the next action is visible before the detail panels. -->
+      <section class="focus-command-center animate-slide-up delay-100" aria-label="Today's overview">
+        <div class="focus-command-intro">
+          <span class="focus-command-kicker">TODAY'S FOCUS</span>
+          <p class="text-sm font-semibold" style="color: var(--text-primary);">ภาพรวมที่ต้องจัดการวันนี้</p>
+        </div>
+        <div class="focus-command-grid">
+          <NuxtLink v-if="isModuleEnabled('cashflow')" to="/cashflow" class="focus-command-item">
+            <span class="focus-command-icon focus-command-icon--finance">
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/></svg>
+            </span>
+            <span class="min-w-0"><span class="focus-command-label">คงเหลือ</span><strong class="num focus-command-value">{{ formatCurrency(remainingBalance) }}</strong></span>
+            <svg class="focus-command-arrow w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+          </NuxtLink>
+          <NuxtLink v-if="isModuleEnabled('study-schedule')" to="/study-schedule" class="focus-command-item">
+            <span class="focus-command-icon focus-command-icon--study">
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
+            </span>
+            <span><span class="focus-command-label">ตารางวันนี้</span><strong class="focus-command-value">{{ todaysStudyClasses.length }} คาบ</strong></span>
+            <svg class="focus-command-arrow w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+          </NuxtLink>
+          <NuxtLink v-if="isModuleEnabled('tasks') || isModuleEnabled('todos')" :to="isModuleEnabled('tasks') ? '/tasks' : '/todos'" class="focus-command-item">
+            <span class="focus-command-icon focus-command-icon--tasks">
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 11 3 3L22 4"/><path d="M21 12v7a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h11"/></svg>
+            </span>
+            <span><span class="focus-command-label">งานค้าง</span><strong class="focus-command-value">{{ dashboardTasks.length + dashboardTodos.length }} รายการ</strong></span>
+            <svg class="focus-command-arrow w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+          </NuxtLink>
+        </div>
+      </section>
 
       <!-- Error -->
       <Transition name="slide-down">
@@ -79,28 +130,47 @@
             </button>
           </div>
 
-          <!-- Hero balance + chart -->
-          <div class="section-card animate-slide-up overflow-hidden">
-            <div class="p-5 md:p-6">
+          <!-- Hero balance + chart - Enhanced Glass Card -->
+          <div class="hero-glass-card productivity-hero animate-slide-up overflow-hidden relative group">
+            <!-- Shimmer Effect -->
+            <div class="shimmer-overlay"></div>
+
+            <!-- Gradient Border Top -->
+            <div class="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-[var(--brand)] to-transparent opacity-60"></div>
+
+            <div class="p-5 md:p-6 relative z-10">
               <div class="flex items-start justify-between gap-3">
-                <div>
+                <div class="flex-1">
                   <p class="eyebrow flex items-center gap-1.5">
+                    <svg class="w-3 h-3 animate-pulse-slow" viewBox="0 0 24 24" fill="currentColor">
+                      <circle cx="12" cy="12" r="3"/>
+                    </svg>
                     <span>เงินคงเหลือ</span>
                     <span v-if="selectedBook" class="font-semibold" :style="{ color: selectedBook.color }">({{ selectedBook.icon }} {{ selectedBook.name }})</span>
                     <span v-else class="font-normal" style="color: var(--text-muted);">(รวมทุกสมุด)</span>
                   </p>
-                  <p class="num text-[32px] md:text-[40px] font-semibold leading-none mt-2" :style="{ color: remainingBalance >= 0 ? 'var(--text-primary)' : 'var(--ink-rose)' }">
-                    <span class="text-lg md:text-xl font-medium mr-1" style="color: var(--text-muted);">฿</span>{{ formattedBalanceParts.sign }}{{ formattedBalanceParts.integer }}<span class="text-lg md:text-xl font-medium" style="color: var(--text-muted);">.{{ formattedBalanceParts.decimal }}</span>
-                  </p>
+                  <div class="balance-amount-wrapper">
+                    <p class="num text-[32px] md:text-[40px] font-bold leading-none mt-2 tracking-tight" :style="{ color: remainingBalance >= 0 ? 'var(--text-primary)' : 'var(--ink-rose)' }">
+                      <span class="text-lg md:text-xl font-medium mr-1" style="color: var(--text-muted);">฿</span>{{ formattedBalanceParts.sign }}{{ formattedBalanceParts.integer }}<span class="text-lg md:text-xl font-medium" style="color: var(--text-muted);">.{{ formattedBalanceParts.decimal }}</span>
+                    </p>
+                  </div>
                   <div class="flex items-center gap-2.5 mt-3 flex-wrap">
-                    <span class="text-[11px] px-2 py-1 rounded-md font-medium" :style="remainingBalance >= 0 ? 'color: var(--ink-emerald); background: var(--event-status-ongoing-soft);' : 'color: var(--ink-rose); background: rgba(180,74,82,0.10);'">
+                    <span class="status-badge" :class="remainingBalance >= 0 ? 'status-positive' : 'status-negative'">
+                      <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <path v-if="remainingBalance >= 0" d="M12 19V5M5 12l7-7 7 7"/>
+                        <path v-else d="M12 5v14M19 12l-7 7-7-7"/>
+                      </svg>
                       {{ remainingBalance >= 0 ? 'บวก' : 'ติดลบ' }}
                     </span>
-                    <span class="text-[13px]" style="color: var(--text-secondary);">{{ remainingProgressText }}</span>
+                    <span class="text-[13px] font-medium" style="color: var(--text-secondary);">{{ remainingProgressText }}</span>
                   </div>
                 </div>
-                <div class="icon-bubble">
-                  <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--brand);"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+                <div class="icon-bubble-enhanced">
+                  <div class="icon-bubble-glow"></div>
+                  <svg class="w-5 h-5 relative z-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--brand);">
+                    <rect x="2" y="5" width="20" height="14" rx="2"/>
+                    <path d="M2 10h20"/>
+                  </svg>
                 </div>
               </div>
 
@@ -263,7 +333,7 @@
           </div>
 
           <!-- Recent transactions -->
-          <div class="section-card animate-slide-up delay-100">
+          <div class="section-card dashboard-panel productivity-panel animate-slide-up delay-100">
             <div class="flex items-center justify-between gap-3 p-5" style="border-bottom: 1px solid var(--border-subtle);">
               <h2 class="text-sm font-semibold" style="color: var(--text-primary);">รายการล่าสุด</h2>
               <NuxtLink to="/cashflow" class="eyebrow" style="color: var(--brand);">ดูทั้งหมด →</NuxtLink>
@@ -307,7 +377,7 @@
           </div>
 
           <!-- Nearest Recurring Expense -->
-          <div class="section-card animate-slide-up delay-100 overflow-hidden">
+          <div class="section-card dashboard-panel productivity-panel animate-slide-up delay-100 overflow-hidden">
             <div class="flex items-center justify-between gap-3 p-5" style="border-bottom: 1px solid var(--border-subtle);">
               <div class="flex items-center gap-2.5 min-w-0">
                 <div class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style="background: var(--event-status-soon-soft); color: var(--ink-amber);">
@@ -389,7 +459,7 @@
         <!-- RIGHT column -->
         <div v-if="hasRightColumn" class="space-y-4">
           <!-- Expense allocation (Donut Chart) -->
-          <div v-if="isModuleEnabled('cashflow')" class="section-card animate-slide-up delay-100">
+          <div v-if="isModuleEnabled('cashflow')" class="section-card dashboard-panel productivity-panel animate-slide-up delay-100">
             <div class="flex items-center justify-between gap-3 p-5" style="border-bottom: 1px solid var(--border-subtle);">
               <div class="flex items-center gap-2">
                 <div class="w-6 h-6 rounded-md flex items-center justify-center text-xs" style="background: var(--brand-soft); color: var(--brand-ink);">
@@ -514,7 +584,7 @@
           </div>
 
           <!-- Today's schedule -->
-          <div v-if="isModuleEnabled('study-schedule')" class="section-card animate-slide-up delay-200">
+          <div v-if="isModuleEnabled('study-schedule')" class="section-card dashboard-panel productivity-panel animate-slide-up delay-200">
             <div class="flex items-center justify-between gap-3 p-5" style="border-bottom: 1px solid var(--border-subtle);">
               <div class="min-w-0">
                 <h2 class="text-sm font-semibold" style="color: var(--text-primary);">
@@ -632,7 +702,7 @@
           </div>
 
           <!-- Tasks (งานและการบ้าน) -->
-          <div v-if="isModuleEnabled('tasks')" class="section-card animate-slide-up delay-300">
+          <div v-if="isModuleEnabled('tasks')" class="section-card dashboard-panel productivity-panel animate-slide-up delay-300">
             <div class="flex items-center justify-between gap-3 p-5" style="border-bottom: 1px solid var(--border-subtle);">
               <div class="min-w-0">
                 <h2 class="text-sm font-semibold" style="color: var(--text-primary);">งานค้าง</h2>
@@ -684,7 +754,7 @@
           </div>
 
           <!-- Todos -->
-          <div v-if="isModuleEnabled('todos')" class="section-card animate-slide-up delay-300">
+          <div v-if="isModuleEnabled('todos')" class="section-card dashboard-panel productivity-panel animate-slide-up delay-300">
             <div class="flex items-center justify-between gap-3 p-5" style="border-bottom: 1px solid var(--border-subtle);">
               <h2 class="text-sm font-semibold" style="color: var(--text-primary);">To-do List</h2>
               <NuxtLink to="/todos" class="eyebrow" style="color: var(--brand);">ดูทั้งหมด →</NuxtLink>
@@ -727,7 +797,7 @@
       </section>
 
       <!-- Events Section -->
-      <section v-if="isModuleEnabled('events')" class="section-card animate-slide-up delay-400">
+      <section v-if="isModuleEnabled('events')" class="section-card dashboard-panel productivity-panel dashboard-events-panel animate-slide-up delay-400">
         <div class="flex items-center justify-between gap-3 p-5" style="border-bottom: 1px solid var(--border-subtle);">
           <div>
             <h2 class="text-sm font-semibold" style="color: var(--text-primary);">กิจกรรมและนัดหมาย</h2>
@@ -754,7 +824,7 @@
             <div
               v-for="event in dashboardEvents"
               :key="event.id"
-              class="rounded-[10px] p-4 pl-[18px] relative overflow-hidden tap-scale transition-all"
+              class="dashboard-event-card rounded-[10px] p-4 pl-[18px] relative overflow-hidden tap-scale transition-all"
               style="background: var(--bg-card); border: 1px solid var(--border-subtle);"
             >
               <span class="absolute left-0 top-0 bottom-0 w-1" :style="{ background: 'var(' + getDashboardEventStatusTokenPrefix(event) + '-ink)' }"></span>
@@ -2579,5 +2649,673 @@ onUnmounted(() => {
 .slide-down-enter-from, .slide-down-leave-to {
   opacity: 0;
   transform: translateY(-8px);
+}
+
+/* ============================================
+   MODERN DASHBOARD ENHANCEMENTS
+   ============================================ */
+
+/* Animated Background Orbs */
+.dashboard-orb {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  filter: blur(80px);
+  opacity: 0.15;
+  z-index: 0;
+}
+
+.dashboard-orb-1 {
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, var(--brand) 0%, transparent 70%);
+  top: -200px;
+  right: -100px;
+  animation: float-orb-1 20s ease-in-out infinite;
+}
+
+.dashboard-orb-2 {
+  width: 350px;
+  height: 350px;
+  background: radial-gradient(circle, var(--brand-2) 0%, transparent 70%);
+  bottom: -150px;
+  left: -100px;
+  animation: float-orb-2 25s ease-in-out infinite;
+}
+
+@keyframes float-orb-1 {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(-30px, -50px) scale(1.1);
+  }
+  66% {
+    transform: translate(40px, 30px) scale(0.9);
+  }
+}
+
+@keyframes float-orb-2 {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(50px, -40px) scale(1.15);
+  }
+}
+
+/* Gradient Text Animation */
+.gradient-text-animated {
+  background: linear-gradient(120deg, var(--brand), var(--brand-2), var(--brand));
+  background-size: 200% auto;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: gradient-shift 3s ease infinite;
+}
+
+@keyframes gradient-shift {
+  0%, 100% {
+    background-position: 0% center;
+  }
+  50% {
+    background-position: 100% center;
+  }
+}
+
+/* Enhanced Primary Button */
+.btn-primary-enhanced {
+  position: relative;
+  background: linear-gradient(135deg, var(--brand) 0%, var(--brand-2) 100%);
+  color: var(--brand-on);
+  font-weight: 600;
+  border-radius: 0.75rem;
+  padding: 0.65rem 1.1rem;
+  min-height: 44px;
+  box-shadow: 0 4px 14px -4px var(--brand), 0 2px 8px -2px rgba(0,0,0,0.12);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+.btn-primary-enhanced::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, transparent 0%, rgba(255,255,255,0.2) 50%, transparent 100%);
+  transform: translateX(-100%);
+  transition: transform 0.6s ease;
+}
+
+.btn-primary-enhanced:hover::before {
+  transform: translateX(100%);
+}
+
+.btn-primary-enhanced:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px -4px var(--brand), 0 4px 12px -2px rgba(0,0,0,0.15);
+}
+
+.btn-primary-enhanced:active {
+  transform: translateY(0);
+}
+
+/* Enhanced Secondary Button */
+.btn-secondary-enhanced {
+  position: relative;
+  background: var(--bg-card);
+  border: 1.5px solid var(--border-default);
+  border-radius: 0.75rem;
+  padding: 0.65rem 1.1rem;
+  min-height: 44px;
+  color: var(--text-primary);
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+.btn-secondary-enhanced::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--brand-soft);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.btn-secondary-enhanced:hover::after {
+  opacity: 1;
+}
+
+.btn-secondary-enhanced:hover {
+  border-color: var(--brand-border);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+}
+
+.btn-secondary-enhanced > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Slow Animations */
+@keyframes pulse-slow {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 3s linear infinite;
+}
+
+/* Hero Glass Card with Glassmorphism */
+.hero-glass-card {
+  background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-elevated) 100%);
+  border: 1px solid var(--border-subtle);
+  border-radius: 1.25rem;
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.08),
+    0 20px 40px -20px rgba(var(--shadow-color) / 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.hero-glass-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, var(--brand-border), transparent, var(--brand-border));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.hero-glass-card:hover::before {
+  opacity: 1;
+}
+
+.hero-glass-card:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 8px 16px -2px rgba(0, 0, 0, 0.12),
+    0 24px 48px -20px rgba(var(--shadow-color) / 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+/* Shimmer Overlay Effect */
+.shimmer-overlay {
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    transparent 100%
+  );
+  animation: shimmer 8s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 1;
+}
+
+@keyframes shimmer {
+  0% {
+    left: -100%;
+  }
+  50%, 100% {
+    left: 200%;
+  }
+}
+
+/* Balance Amount Animation */
+.balance-amount-wrapper {
+  animation: fade-scale-in 0.6s cubic-bezier(0.4, 0, 0.2, 1) backwards;
+}
+
+@keyframes fade-scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Enhanced Status Badge */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 11px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  border: 1px solid transparent;
+}
+
+.status-positive {
+  color: var(--ink-emerald);
+  background: var(--event-status-ongoing-soft);
+  border-color: var(--event-status-ongoing-border);
+}
+
+.status-positive:hover {
+  background: var(--event-status-ongoing-border);
+  transform: scale(1.05);
+}
+
+.status-negative {
+  color: var(--ink-rose);
+  background: rgba(180, 74, 82, 0.1);
+  border-color: rgba(180, 74, 82, 0.25);
+}
+
+.status-negative:hover {
+  background: rgba(180, 74, 82, 0.15);
+  transform: scale(1.05);
+}
+
+/* Enhanced Icon Bubble with Glow */
+.icon-bubble-enhanced {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 0.875rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-elevated);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.icon-bubble-glow {
+  position: absolute;
+  inset: -8px;
+  background: radial-gradient(circle, var(--brand) 0%, transparent 70%);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  filter: blur(12px);
+  z-index: 0;
+}
+
+.hero-glass-card:hover .icon-bubble-glow {
+  opacity: 0.3;
+}
+
+.icon-bubble-enhanced:hover {
+  transform: rotate(5deg) scale(1.1);
+  border-color: var(--brand-border);
+  background: var(--brand-soft);
+}
+
+.icon-bubble-enhanced svg {
+  transition: transform 0.3s ease;
+}
+
+.icon-bubble-enhanced:hover svg {
+  transform: scale(1.1);
+}
+
+/* Dashboard panels: a quieter glass layer with a moving light edge. */
+.dashboard-panel {
+  isolation: isolate;
+  position: relative;
+  border-color: color-mix(in srgb, var(--border-subtle) 74%, var(--brand) 26%);
+  background:
+    linear-gradient(145deg, color-mix(in srgb, var(--bg-card) 96%, white 4%), var(--bg-card) 58%, var(--bg-elevated));
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.3) inset,
+    0 18px 45px -34px rgba(21, 46, 84, 0.68);
+  transition: transform 280ms cubic-bezier(.2, .8, .2, 1), box-shadow 280ms ease, border-color 280ms ease;
+}
+
+.dashboard-panel::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  background:
+    radial-gradient(260px circle at var(--panel-x, 18%) -20%, color-mix(in srgb, var(--brand) 16%, transparent), transparent 60%),
+    linear-gradient(115deg, transparent 35%, color-mix(in srgb, white 22%, transparent) 50%, transparent 65%);
+  transition: opacity 280ms ease;
+}
+
+.dashboard-panel:hover {
+  transform: translateY(-4px);
+  border-color: color-mix(in srgb, var(--brand) 42%, var(--border-default));
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.38) inset,
+    0 28px 55px -35px color-mix(in srgb, var(--brand) 50%, transparent);
+}
+
+.dashboard-panel:hover::before {
+  opacity: 1;
+}
+
+.dashboard-panel > :first-child {
+  position: relative;
+}
+
+.dashboard-panel > :first-child::after {
+  content: '';
+  position: absolute;
+  right: 1.25rem;
+  bottom: -1px;
+  left: 1.25rem;
+  height: 1px;
+  opacity: 0;
+  background: linear-gradient(90deg, transparent, var(--brand), transparent);
+  transition: opacity 280ms ease;
+}
+
+.dashboard-panel:hover > :first-child::after {
+  opacity: 0.52;
+}
+
+.dashboard-event-card {
+  background: linear-gradient(135deg, var(--bg-card), var(--bg-elevated));
+  border-color: color-mix(in srgb, var(--border-subtle) 82%, var(--brand) 18%) !important;
+  box-shadow: 0 10px 22px -22px rgba(21, 46, 84, 0.7);
+  transition: transform 220ms cubic-bezier(.2, .8, .2, 1), box-shadow 220ms ease, border-color 220ms ease;
+}
+
+.dashboard-event-card:hover {
+  transform: translateY(-3px) scale(1.01);
+  border-color: var(--brand-border) !important;
+  box-shadow: 0 18px 30px -22px color-mix(in srgb, var(--brand) 65%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-panel,
+  .dashboard-event-card {
+    transition: none;
+  }
+
+  .dashboard-panel:hover,
+  .dashboard-event-card:hover {
+    transform: none;
+  }
+}
+
+/* Productivity dashboard rebuild: structured, quiet, and action-first. */
+.dashboard-orb,
+.shimmer-overlay {
+  display: none;
+}
+
+.dashboard-workspace-header {
+  padding: 0.5rem 0 0.25rem;
+}
+
+.gradient-text-animated {
+  background: none;
+  -webkit-text-fill-color: currentColor;
+  color: var(--text-primary);
+  animation: none;
+}
+
+.focus-command-center {
+  display: grid;
+  grid-template-columns: minmax(125px, 0.42fr) 1fr;
+  gap: 1rem;
+  align-items: stretch;
+  padding: 0.875rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: 1rem;
+  background: var(--bg-card);
+  box-shadow: 0 10px 24px -24px rgba(21, 46, 84, 0.65);
+}
+
+.focus-command-intro {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0.55rem 0.85rem;
+  border-right: 1px solid var(--border-subtle);
+}
+
+.focus-command-kicker {
+  margin-bottom: 0.3rem;
+  color: var(--text-muted);
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.focus-command-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.focus-command-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.65rem;
+  min-height: 58px;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid transparent;
+  border-radius: 0.75rem;
+  color: inherit;
+  transition: background 180ms ease, border-color 180ms ease, transform 180ms ease;
+}
+
+.focus-command-item:hover {
+  border-color: var(--border-default);
+  background: var(--bg-elevated);
+  transform: translateY(-1px);
+}
+
+.focus-command-icon {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  border-radius: 0.6rem;
+}
+
+.focus-command-icon--finance { background: var(--event-status-ongoing-soft); color: var(--ink-emerald); }
+.focus-command-icon--study { background: var(--brand-soft); color: var(--brand-ink); }
+.focus-command-icon--tasks { background: var(--event-status-soon-soft); color: var(--ink-amber); }
+
+.focus-command-label,
+.focus-command-value {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.focus-command-label { color: var(--text-muted); font-size: 0.67rem; font-weight: 600; }
+.focus-command-value { color: var(--text-primary); font-size: 0.78rem; font-weight: 750; line-height: 1.35; }
+.focus-command-arrow { color: var(--text-muted); }
+
+.dashboard-panel {
+  border-color: var(--border-subtle);
+  border-radius: 1rem;
+  background: var(--bg-card);
+  box-shadow: 0 12px 28px -28px rgba(21, 46, 84, 0.62);
+}
+
+.dashboard-panel::before,
+.dashboard-panel > :first-child::after { display: none; }
+
+.dashboard-panel:hover {
+  transform: translateY(-2px);
+  border-color: var(--border-default);
+  box-shadow: 0 18px 34px -29px rgba(21, 46, 84, 0.68);
+}
+
+.hero-glass-card {
+  border-radius: 1rem;
+  border-color: var(--border-subtle);
+  background: var(--bg-card);
+  box-shadow: 0 12px 28px -28px rgba(21, 46, 84, 0.62);
+  backdrop-filter: none;
+}
+
+.hero-glass-card::before { display: none; }
+
+.hero-glass-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--border-default);
+  box-shadow: 0 18px 34px -29px rgba(21, 46, 84, 0.68);
+}
+
+.dashboard-event-card {
+  border-radius: 0.85rem;
+  background: var(--bg-elevated);
+  box-shadow: none;
+}
+
+@media (max-width: 700px) {
+  .focus-command-center { grid-template-columns: 1fr; gap: 0.65rem; }
+  .focus-command-intro { padding: 0.25rem 0.4rem 0.65rem; border-right: 0; border-bottom: 1px solid var(--border-subtle); }
+}
+
+@media (max-width: 500px) {
+  .focus-command-grid { grid-template-columns: 1fr; gap: 0.15rem; }
+  .focus-command-item { min-height: 50px; }
+}
+
+/* The content blocks deliberately use a different component language from the old cards. */
+.productivity-hero,
+.productivity-panel {
+  border: 1px solid var(--border-default) !important;
+  border-radius: 0.65rem !important;
+  background: var(--bg-card) !important;
+  box-shadow: none !important;
+}
+
+.productivity-hero {
+  border-left: 4px solid var(--brand) !important;
+}
+
+.productivity-panel {
+  border-left: 3px solid var(--border-strong) !important;
+}
+
+.productivity-panel:nth-child(2n) { border-left-color: var(--brand) !important; }
+
+.productivity-hero:hover,
+.productivity-panel:hover {
+  transform: none !important;
+  border-color: var(--brand-border) !important;
+  box-shadow: 0 0 0 3px var(--brand-ring) !important;
+}
+
+.productivity-panel > :first-child {
+  min-height: 58px;
+  padding: 0.85rem 1rem !important;
+  border-bottom: 0 !important;
+  background: var(--bg-elevated);
+  box-shadow: inset 0 -1px 0 var(--border-subtle);
+}
+
+.productivity-panel > :first-child h2 {
+  letter-spacing: 0.01em;
+  font-size: 0.82rem;
+  font-weight: 750;
+}
+
+.productivity-panel > :first-child .eyebrow,
+.productivity-panel > :first-child a.eyebrow {
+  padding: 0.35rem 0.55rem;
+  border: 1px solid var(--brand-border);
+  border-radius: 0.35rem;
+  background: var(--bg-card);
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+
+.productivity-panel [style*="border-bottom"] {
+  border-bottom-color: var(--border-subtle) !important;
+}
+
+/* Lists switch from separators into compact work rows. */
+.productivity-panel .grid.grid-cols-\[34px_1fr_auto\],
+.productivity-panel .grid.grid-cols-\[1fr_auto\] {
+  margin: 0.45rem 0.65rem;
+  padding: 0.8rem 0.7rem !important;
+  border: 1px solid var(--border-subtle) !important;
+  border-radius: 0.5rem;
+  background: var(--bg-elevated);
+  transition: border-color 160ms ease, background 160ms ease;
+}
+
+.productivity-panel .grid.grid-cols-\[34px_1fr_auto\]:hover,
+.productivity-panel .grid.grid-cols-\[1fr_auto\]:hover {
+  border-color: var(--brand-border) !important;
+  background: var(--bg-card);
+}
+
+.productivity-hero .icon-bubble-enhanced {
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 0.5rem;
+  box-shadow: none;
+}
+
+.productivity-hero .status-badge,
+.productivity-panel .status-badge {
+  border-radius: 0.3rem;
+}
+
+.productivity-hero .balance-amount-wrapper {
+  padding-bottom: 0.25rem;
+  border-bottom: 1px dashed var(--border-default);
+}
+
+.productivity-hero .grid.grid-cols-2 > div {
+  background: var(--bg-elevated);
+}
+
+.dashboard-events-panel .dashboard-event-card {
+  border-radius: 0.5rem;
+  border-left: 3px solid var(--brand) !important;
+  background: var(--bg-elevated) !important;
+}
+
+@media (max-width: 639px) {
+  .productivity-hero,
+  .productivity-panel { border-radius: 0.55rem !important; }
+  .productivity-panel .grid.grid-cols-\[34px_1fr_auto\],
+  .productivity-panel .grid.grid-cols-\[1fr_auto\] { margin-inline: 0.45rem; }
 }
 </style>

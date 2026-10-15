@@ -1,7 +1,9 @@
 <template>
-  <div class="min-h-[100dvh] relative lg:grid lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]" style="background-color: var(--bg-base);">
+  <div class="auth-page min-h-[100dvh] relative lg:grid lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]" style="background-color: var(--bg-base);">
     <!-- Brand panel (desktop / large tablet) -->
-    <div class="hidden lg:flex relative flex-col justify-between p-10 xl:p-14" style="background: var(--brand-panel); color: #f4f1ea;">
+    <div class="auth-brand-panel hidden lg:flex relative overflow-hidden flex-col justify-between p-10 xl:p-14" style="background: var(--brand-panel); color: #f4f1ea;">
+      <div class="auth-orb auth-orb-one" aria-hidden="true"></div>
+      <div class="auth-orb auth-orb-two" aria-hidden="true"></div>
       <div class="relative flex items-center gap-3">
         <div class="w-11 h-11 rounded-xl flex items-center justify-center" style="background: rgba(255,255,255,0.12);">
           <span class="font-semibold text-xl">M</span>
@@ -40,7 +42,7 @@
     </div>
 
     <!-- Login Card -->
-    <div v-else class="auth-card relative rounded-2xl max-w-[420px] w-full overflow-hidden animate-slide-up" style="background: var(--bg-card); border: 1px solid var(--border-subtle); box-shadow: var(--shadow-md);">
+    <div v-else class="auth-card auth-card-new relative rounded-2xl max-w-[420px] w-full overflow-hidden animate-slide-up" style="background: var(--bg-card); border: 1px solid var(--border-subtle); box-shadow: var(--shadow-md);">
       <!-- Card header -->
       <div class="px-5 pt-7 pb-4 sm:px-8 sm:pt-8 sm:pb-5 text-center">
         <div class="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-4 lg:hidden" style="background: var(--brand); color: var(--brand-on);">
@@ -293,30 +295,59 @@
           </div>
         </div>
 
-        <!-- Divider -->
-        <div class="flex items-center gap-3">
-          <div class="flex-1 h-px" style="background: var(--border-default);"></div>
-          <span class="text-xs" style="color: var(--text-muted);">หรือ</span>
-          <div class="flex-1 h-px" style="background: var(--border-default);"></div>
+        <!-- Divider with enhanced styling -->
+        <div class="relative flex items-center gap-3 my-1">
+          <div class="flex-1 h-px" style="background: linear-gradient(to right, transparent, var(--border-default), transparent);"></div>
+          <span class="text-xs font-medium px-2 py-1 rounded-md" style="color: var(--text-muted); background: var(--bg-elevated);">หรือ</span>
+          <div class="flex-1 h-px" style="background: linear-gradient(to left, transparent, var(--border-default), transparent);"></div>
         </div>
 
-        <!-- Google Sign In Button Container -->
-        <div class="w-full flex flex-col items-center gap-2">
-          <div ref="googleBtnRef" class="w-full flex justify-center min-h-[44px]"></div>
+        <!-- Google Sign In Button Container - Enhanced -->
+        <div class="w-full flex flex-col items-center gap-3">
+          <!-- Official Google Button Container with Enhanced Wrapper -->
+          <div class="w-full google-btn-wrapper">
+            <div ref="googleBtnRef" class="w-full flex justify-center min-h-[44px]"></div>
+          </div>
+
+          <!-- Fallback Custom Google Button -->
           <button
             v-if="!isGoogleBtnRendered"
             @click="handleGoogleSignIn"
             :disabled="isLoading"
-            class="w-full btn-secondary text-sm font-medium flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed tap-scale touch-target"
+            class="group w-full relative overflow-hidden rounded-xl py-3 px-4 font-semibold text-sm flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 hover-lift"
+            style="background: #ffffff; border: 1.5px solid var(--border-default); color: #1f1f1f; box-shadow: 0 1px 3px rgba(0,0,0,0.08);"
           >
-            <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24">
+            <!-- Hover effect background -->
+            <span class="absolute inset-0 bg-gradient-to-br from-transparent to-gray-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
+
+            <!-- Google Logo SVG -->
+            <svg class="w-5 h-5 shrink-0 relative z-10 group-hover:scale-110 transition-transform duration-300" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
               <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
               <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
               <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
             </svg>
-            ลงชื่อเข้าใช้ผ่าน Google
+
+            <!-- Button Text -->
+            <span class="relative z-10 group-hover:translate-x-0.5 transition-transform duration-300">
+              {{ isLoading ? 'กำลังเชื่อมต่อ...' : 'ลงชื่อเข้าใช้ด้วย Google' }}
+            </span>
+
+            <!-- Loading Spinner -->
+            <span v-if="isLoading" class="inline-block w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin relative z-10"></span>
           </button>
+
+          <!-- Benefits text -->
+          <div class="w-full rounded-lg p-3 flex items-start gap-2.5 text-left" style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);">
+            <svg class="w-4 h-4 shrink-0 mt-0.5" style="color: var(--brand);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              <path d="M9 12l2 2 4-4"/>
+            </svg>
+            <div class="flex-1 min-w-0">
+              <p class="text-xs font-medium" style="color: var(--text-primary);">ปลอดภัย รวดเร็ว ไม่ต้องจำรหัสผ่าน</p>
+              <p class="text-[11px] mt-0.5 leading-relaxed" style="color: var(--text-muted);">เข้าใช้งานด้วย Google Account ของคุณ</p>
+            </div>
+          </div>
         </div>
 
         <p class="text-xs text-center leading-relaxed" style="color: var(--text-muted);">
@@ -557,11 +588,12 @@ const renderGoogleOfficialButton = async () => {
       const isDark = typeof document !== 'undefined' && document.documentElement.classList.contains('theme-night')
       getGoogleWindow().google!.accounts.id.renderButton(googleBtnRef.value, {
         type: 'standard',
-        theme: isDark ? 'filled_black' : 'outline',
+        theme: isDark ? 'filled_black' : 'filled_blue',
         size: 'large',
         text: 'signin_with',
-        shape: 'rectangular',
-        width: 320,
+        shape: 'pill',
+        width: '100%',
+        logo_alignment: 'left',
       })
       isGoogleBtnRendered.value = true
     }
@@ -653,12 +685,136 @@ const handleGoogleSignIn = async () => {
 </script>
 
 <style scoped>
+.auth-page {
+  background:
+    radial-gradient(circle at 88% 8%, var(--brand-soft), transparent 24rem),
+    var(--bg-base);
+}
+
+.auth-brand-panel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.06), transparent 42%);
+  pointer-events: none;
+}
+
+.auth-orb {
+  position: absolute;
+  border-radius: 999px;
+  pointer-events: none;
+  filter: blur(1px);
+  background: rgba(151, 205, 246, 0.13);
+}
+
+.auth-orb-one {
+  width: 25rem;
+  height: 25rem;
+  right: -11rem;
+  top: -8rem;
+}
+
+.auth-orb-two {
+  width: 16rem;
+  height: 16rem;
+  left: -8rem;
+  bottom: -6rem;
+  background: rgba(117, 180, 229, 0.09);
+}
+
+.auth-card-new {
+  border-radius: 1.5rem !important;
+  box-shadow: 0 26px 60px -34px rgba(20, 65, 110, 0.5) !important;
+}
+
+.auth-card-new::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 4px;
+  background: linear-gradient(90deg, var(--brand), var(--brand-2));
+}
+
+.auth-card-new > div {
+  position: relative;
+}
+
+.auth-card-new input {
+  border-radius: 0.875rem;
+}
+
 .slide-down-enter-active, .slide-down-leave-active {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .slide-down-enter-from, .slide-down-leave-to {
   opacity: 0;
   transform: translateY(-8px);
+}
+
+.hover-lift {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hover-lift:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.12), 0 2px 4px rgba(0,0,0,0.08);
+}
+
+.hover-lift:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+/* Enhanced Google Button Wrapper Styles */
+.google-btn-wrapper {
+  position: relative;
+}
+
+/* Style the Google button iframe/container */
+.google-btn-wrapper :deep(iframe) {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  border-radius: 12px !important;
+  overflow: hidden !important;
+}
+
+.google-btn-wrapper :deep(iframe:hover) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15), 0 2px 6px rgba(0, 0, 0, 0.1) !important;
+}
+
+.google-btn-wrapper :deep(iframe:active) {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12) !important;
+}
+
+/* Add a subtle glow effect on hover */
+.google-btn-wrapper:hover::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(66, 133, 244, 0.15), rgba(52, 168, 83, 0.15), rgba(251, 188, 5, 0.15), rgba(234, 67, 53, 0.15));
+  z-index: -1;
+  opacity: 0;
+  animation: glow-pulse 2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes glow-pulse {
+  0%, 100% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+/* Wrapper container for better spacing */
+.google-btn-wrapper > div {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 48px;
 }
 
 @media (max-width: 639px) {

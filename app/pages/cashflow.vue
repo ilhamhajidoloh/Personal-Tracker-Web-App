@@ -37,77 +37,101 @@
         </div>
       </div>
 
-      <!-- Multi-Book Selector Bar -->
-      <div class="mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-2 rounded-2xl border" style="background: var(--bg-surface); border-color: var(--border-subtle);">
-        <div class="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
-          <!-- All Books Pill -->
-          <button
-            type="button"
-            @click="selectBook('all')"
-            class="px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all tap-scale flex items-center gap-1.5 shrink-0"
-            :style="selectedBookId === 'all'
-              ? 'background: var(--brand); color: #ffffff; box-shadow: 0 4px 14px rgba(59,78,240,0.35);'
-              : 'background: var(--bg-elevated); border: 1px solid var(--border-subtle); color: var(--text-secondary);'"
-          >
-            <span>📊</span>
-            <span>ทุกสมุด (รวม)</span>
-            <span class="text-[10px] px-1.5 py-0.2 rounded-full opacity-80" :style="selectedBookId === 'all' ? 'background: rgba(255,255,255,0.2);' : 'background: rgba(0,0,0,0.2);'">
-              {{ books.length }}
-            </span>
-          </button>
+      <!-- Multi-Book Selector Section -->
+      <section class="mt-4">
+        <div class="section-card p-3">
+          <!-- Book Selector Pills -->
+          <div class="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+            <!-- All Books -->
+            <button
+              type="button"
+              @click="selectBook('all')"
+              class="book-pill"
+              :class="{ 'book-pill-active': selectedBookId === 'all' }"
+            >
+              <span class="text-base">📊</span>
+              <span class="font-semibold">ทุกสมุด</span>
+              <span class="book-pill-badge">{{ books.length }}</span>
+            </button>
 
-          <!-- Individual Book Pills -->
-          <button
-            v-for="book in books"
-            :key="book.id"
-            type="button"
-            @click="selectBook(book.id)"
-            class="px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all tap-scale flex items-center gap-1.5 shrink-0"
-            :style="selectedBookId === book.id
-              ? `background: ${book.color}22; border: 1px solid ${book.color}66; color: ${book.color}; box-shadow: 0 2px 10px ${book.color}20;`
-              : 'background: var(--bg-elevated); border: 1px solid var(--border-subtle); color: var(--text-secondary);'"
-          >
-            <span>{{ book.icon || '💼' }}</span>
-            <span>{{ book.name }}</span>
-            <span v-if="book.isDefault" class="text-[9px] px-1.5 py-0.2 rounded-md font-medium" :style="{ background: `${book.color}25`, color: book.color }">หลัก</span>
-          </button>
-        </div>
+            <!-- Individual Books -->
+            <button
+              v-for="book in books"
+              :key="book.id"
+              type="button"
+              @click="selectBook(book.id)"
+              class="book-pill"
+              :class="{ 'book-pill-selected': selectedBookId === book.id }"
+              :style="selectedBookId === book.id ? {
+                background: `${book.color}15`,
+                borderColor: `${book.color}50`,
+                color: book.color
+              } : {}"
+            >
+              <span class="text-base">{{ book.icon || '💼' }}</span>
+              <span class="font-semibold">{{ book.name }}</span>
+              <span v-if="book.isDefault" class="book-default-badge" :style="{ background: `${book.color}20`, color: book.color }">
+                หลัก
+              </span>
+            </button>
+          </div>
 
-        <!-- Book Management Controls -->
-        <div class="flex items-center gap-1.5 shrink-0 self-end sm:self-auto">
-          <button
-            type="button"
-            @click="openManageBooksModal"
-            class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-gray-800/80 hover:bg-gray-800 border border-gray-700/60 text-gray-300 hover:text-white transition-all tap-scale flex items-center gap-1.5"
-            title="จัดการสมุดบัญชีทั้งหมด"
-          >
-            <span>⚙️</span>
-            <span>จัดการสมุด</span>
-          </button>
-          <button
-            type="button"
-            @click="openCreateBookModal"
-            class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/30 text-violet-300 transition-all tap-scale flex items-center gap-1"
-            title="เพิ่มสมุดบัญชีใหม่"
-          >
-            <span>+</span>
-            <span>เพิ่มสมุด</span>
-          </button>
+          <!-- Management Actions -->
+          <div class="flex items-center gap-2 mt-3 pt-3 border-t" style="border-color: var(--border-subtle);">
+            <button
+              type="button"
+              @click="openManageBooksModal"
+              class="btn-secondary text-xs py-1.5 px-3 flex items-center gap-1.5 touch-target flex-1 sm:flex-none"
+            >
+              <span>⚙️</span>
+              <span class="font-semibold">จัดการสมุด</span>
+            </button>
+            <button
+              type="button"
+              @click="openCreateBookModal"
+              class="btn-primary text-xs py-1.5 px-3 flex items-center gap-1.5 touch-target flex-1 sm:flex-none"
+            >
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M12 5v14M5 12h14"/>
+              </svg>
+              <span class="font-semibold">เพิ่มสมุด</span>
+            </button>
+          </div>
         </div>
+      </section>
+
+      <!-- Error Message -->
+      <div
+        v-if="errorMessage"
+        class="mt-4 rounded-2xl px-4 py-3 text-sm flex items-center gap-2 font-medium"
+        style="background: rgba(182, 133, 42, 0.1); border: 1px solid rgba(182, 133, 42, 0.3); color: var(--ink-amber);"
+      >
+        <span>⚠️</span><span>{{ errorMessage }}</span>
       </div>
 
-      <div class="space-y-5 mt-6">
-        <!-- Error -->
-        <div
-          v-if="errorMessage"
-          class="rounded-2xl px-4 py-3 text-sm flex items-center gap-2 font-medium"
-          style="background: rgba(182, 133, 42, 0.1); border: 1px solid rgba(182, 133, 42, 0.3); color: var(--ink-amber);"
-        >
-          <span>⚠️</span><span>{{ errorMessage }}</span>
+      <!-- Tabs Navigation -->
+      <nav class="cashflow-view-tabs mt-6" aria-label="Cashflow views">
+        <div class="grid grid-cols-4 gap-1">
+          <button
+            v-for="tab in tabs"
+            :key="tab.id"
+            type="button"
+            @click="activeTab = tab.id"
+            class="tab-button"
+            :class="{ 'tab-button-active': activeTab === tab.id }"
+          >
+            <span class="cashflow-tab-icon">{{ tab.icon }}</span>
+            <span class="font-semibold text-xs sm:text-sm">{{ tab.id === 'analytics' ? 'รายการ' : tab.label }}</span>
+          </button>
         </div>
+      </nav>
 
-        <!-- Summary tiles -->
-        <div class="section-card grid grid-cols-1 sm:grid-cols-3">
+      <!-- Tab Content -->
+      <div class="mt-5">
+        <!-- Tab 1: ภาพรวม (Overview) -->
+        <div v-show="activeTab === 'overview'" class="space-y-5">
+          <!-- Summary tiles -->
+          <div class="section-card grid grid-cols-1 sm:grid-cols-3">
           <!-- Income -->
           <div class="p-5 border-b sm:border-b-0 sm:border-r" style="border-color: var(--border-subtle);">
             <div class="flex items-center justify-between gap-2">
@@ -197,7 +221,10 @@
           </div>
         </div>
 
+        </div>
+
         <!-- Recurring Expenses Section -->
+        <div v-show="activeTab === 'recurring'" class="space-y-5">
         <section class="section-card">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 py-4 border-b border-gray-800/60">
             <div class="flex items-center gap-3">
@@ -387,8 +414,10 @@
             </div>
           </div>
         </section>
+        </div>
 
         <!-- Daily Summary -->
+        <div v-show="activeTab === 'daily'" class="space-y-5">
         <section class="section-card">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 py-4 border-b border-gray-800/60">
             <div>
@@ -444,8 +473,10 @@
             </div>
           </div>
         </section>
+        </div>
 
         <!-- Transaction List (Ledger Style) -->
+        <div v-show="activeTab === 'analytics'" class="space-y-5">
         <section class="section-card">
           <div class="flex flex-col gap-3 px-5 py-4" style="border-bottom: 1px solid var(--border-subtle);">
             <div class="flex items-center justify-between">
@@ -759,7 +790,8 @@
             </button>
           </div>
         </section>
-      </div>
+        </div>
+    </div>
     </div>
 
     <!-- Expense Ranking Modal -->
@@ -1859,6 +1891,15 @@ const isDeletingId = ref('')
 const editingTransactionId = ref('')
 const errorMessage = ref('')
 const transactions = ref<TransactionRow[]>([])
+
+// Tabs state
+const activeTab = ref<'overview' | 'recurring' | 'daily' | 'analytics'>('overview')
+const tabs = [
+  { id: 'overview', label: 'ภาพรวม', icon: '📊' },
+  { id: 'recurring', label: 'รายจ่ายประจำ', icon: '🔄' },
+  { id: 'daily', label: 'รายวัน', icon: '📅' },
+  { id: 'analytics', label: 'วิเคราะห์', icon: '📈' },
+] as const
 
 const summaryFilterMonth = ref(getThisMonthTH())
 const transactionFilterMode = ref<'day' | 'month'>('month')
@@ -3117,3 +3158,98 @@ const exportToPDF = async () => {
   }
 }
 </script>
+
+<style scoped>
+/* Tabs */
+.cashflow-view-tabs {
+  padding: 0.35rem;
+  overflow-x: auto;
+  border: 1px solid var(--border-subtle);
+  border-radius: 0.85rem;
+  background: var(--bg-card);
+  box-shadow: 0 10px 24px -25px rgba(21, 46, 84, 0.65);
+}
+
+.cashflow-view-tabs > div {
+  min-width: 420px;
+}
+
+.tab-button {
+  @apply px-3 py-2.5 rounded-lg flex flex-row items-center justify-center gap-2 transition-all border;
+  background: transparent;
+  border-color: transparent;
+  color: var(--text-secondary);
+}
+
+.tab-button:hover {
+  background: var(--bg-surface);
+  border-color: var(--border-default);
+  color: var(--text-primary);
+}
+
+.tab-button:active {
+  transform: scale(0.97);
+}
+
+.tab-button-active {
+  background: var(--brand-soft) !important;
+  border-color: var(--brand-border) !important;
+  color: var(--brand-ink) !important;
+  box-shadow: 0 1px 2px rgba(21, 46, 84, 0.08);
+}
+
+.cashflow-tab-icon { font-size: 0.95rem; line-height: 1; }
+
+/* Book Selector Pills */
+.book-pill {
+  @apply px-3.5 py-2 rounded-xl text-xs transition-all flex items-center gap-2 shrink-0 border;
+  background: var(--bg-elevated);
+  border-color: var(--border-subtle);
+  color: var(--text-secondary);
+}
+
+.book-pill:hover {
+  background: var(--bg-surface);
+  border-color: var(--border-default);
+  color: var(--text-primary);
+}
+
+.book-pill:active {
+  transform: scale(0.97);
+}
+
+.book-pill-active {
+  background: var(--brand) !important;
+  border-color: var(--brand) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 14px rgba(59, 78, 240, 0.35);
+}
+
+.book-pill-selected {
+  box-shadow: 0 2px 10px rgba(139, 92, 246, 0.2);
+}
+
+.book-pill-badge {
+  @apply text-[10px] px-1.5 py-0.5 rounded-full font-semibold;
+  background: rgba(255, 255, 255, 0.15);
+  color: currentColor;
+}
+
+.book-pill-active .book-pill-badge {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.book-default-badge {
+  @apply text-[10px] px-1.5 py-0.5 rounded-md font-semibold shrink-0;
+}
+
+/* Scrollbar Hide */
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+</style>

@@ -49,7 +49,7 @@ onUnmounted(() => {
       class="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom,0px))] md:bottom-8 left-4 right-4 md:left-1/2 md:right-auto md:-translate-x-1/2 z-[60]"
     >
       <div
-        class="w-full md:w-[400px] rounded-2xl p-4 sm:p-5"
+        class="install-card w-full md:w-[400px] rounded-2xl p-4 sm:p-5"
         style="background: var(--bg-card); border: 1px solid var(--border-default); box-shadow: var(--shadow-lg);"
       >
         <div class="flex items-start gap-3.5">

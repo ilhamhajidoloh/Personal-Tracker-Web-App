@@ -1,7 +1,7 @@
 <template>
-  <div class="min-h-[100dvh] flex flex-col" style="background: var(--bg-base);">
+  <div class="app-shell min-h-[100dvh] flex flex-col">
     <!-- ============ Top Command Bar ============ -->
-    <header class="sticky top-0 z-30 glass-header">
+    <header class="app-topbar sticky top-0 z-30 glass-header">
       <div class="mx-auto w-full max-w-[1240px] px-4 sm:px-5 md:px-6">
         <div class="h-14 md:h-[58px] flex items-center gap-3 md:gap-4">
           <NuxtLink to="/dashboard" class="flex items-center gap-2.5 shrink-0 tap-scale" @click="closeMenus">
@@ -154,21 +154,45 @@
 
     <!-- Mobile bottom tabs -->
     <nav
-      class="md:hidden fixed bottom-0 inset-x-0 z-40 tab-bar"
+      class="md:hidden fixed bottom-0 inset-x-0 z-40"
+      style="background: var(--header-bg); border-top: 1px solid var(--border-subtle); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); padding-bottom: env(safe-area-inset-bottom, 0px);"
       aria-label="เมนูหลัก"
     >
-      <div class="mx-auto max-w-[640px] px-2 pt-1.5 grid" :style="{ gridTemplateColumns: `repeat(${navItems.length}, minmax(0, 1fr))` }">
+      <div class="mx-auto max-w-[640px] px-1 sm:px-2 grid" :style="{ gridTemplateColumns: `repeat(${navItems.length}, minmax(0, 1fr))` }">
         <NuxtLink
           v-for="item in navItems"
           :key="item.label"
           :to="item.to || '#'"
           @click="closeMenus"
-          class="tab-item flex flex-col items-center justify-center gap-0.5 px-1 py-1.5 text-[10.5px] font-medium leading-tight text-center tap-scale"
-          :class="isRouteActive(item.to) ? 'tab-item-active' : ''"
+          class="flex flex-col items-center justify-center gap-1 px-2 py-2 transition-all duration-200 touch-target relative"
+          :class="isRouteActive(item.to) ? 'tab-item-active' : 'tab-item-inactive'"
           :aria-current="isRouteActive(item.to) ? 'page' : undefined"
         >
-          <svg class="w-[20px] h-[20px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" v-html="item.svg"></svg>
-          <span class="truncate max-w-full">{{ item.shortLabel || item.label }}</span>
+          <!-- Active indicator -->
+          <span
+            v-if="isRouteActive(item.to)"
+            class="absolute top-0 inset-x-2 h-0.5 rounded-full"
+            style="background: var(--brand);"
+          ></span>
+
+          <!-- Icon -->
+          <svg
+            class="w-5 h-5 sm:w-[22px] sm:h-[22px] transition-all duration-200"
+            :class="isRouteActive(item.to) ? 'scale-105' : 'scale-100'"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            v-html="item.svg"
+          ></svg>
+
+          <!-- Label -->
+          <span
+            class="text-[10px] sm:text-[10.5px] font-medium leading-tight truncate max-w-full"
+            :class="isRouteActive(item.to) ? 'font-semibold' : ''"
+          >
+            {{ item.shortLabel || item.label }}
+          </span>
         </NuxtLink>
       </div>
     </nav>
@@ -350,5 +374,24 @@ onMounted(() => {
 
 .animate-scale-in {
   animation: scale-in 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Mobile Tab Styles */
+.tab-item-active {
+  color: var(--brand);
+}
+
+.tab-item-inactive {
+  color: var(--text-muted);
+}
+
+.tab-item-inactive:hover {
+  color: var(--text-secondary);
+}
+
+/* Touch target for mobile */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
 }
 </style>
