@@ -1,117 +1,147 @@
 <template>
   <AppTabsLayout>
-    <div class="mx-auto w-full max-w-[1240px] px-4 md:px-6 py-6 md:py-8">
-      <!-- Page head -->
-      <!-- Page head -->
-      <div class="flex flex-wrap items-end justify-between gap-4">
-        <div class="min-w-0">
-          <p class="eyebrow">การเงิน · Cashflow</p>
-          <h1 class="text-2xl md:text-[30px] font-extrabold tracking-tight mt-1.5" style="color: var(--text-primary);">รายรับ<span class="text-gradient">·</span>รายจ่าย</h1>
-          <p class="text-xs mt-2 text-gray-400 font-medium">{{ currentMonthYearLabel }} &bull; {{ transactions.length }} รายการ <span v-if="selectedBook" class="text-violet-400">({{ selectedBook.icon }} {{ selectedBook.name }})</span></p>
+    <div class="mx-auto w-full max-w-[1240px] px-4 md:px-6 py-6 md:py-8 space-y-6">
+      <!-- 1. Page Header Block -->
+      <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="eyebrow">การเงิน &bull; CASHFLOW</span>
+            <span
+              v-if="selectedBook"
+              class="text-[11px] font-semibold px-2 py-0.5 rounded-md flex items-center gap-1"
+              :style="{ background: `${selectedBook.color}15`, color: selectedBook.color, border: `1px solid ${selectedBook.color}35` }"
+            >
+              <span>{{ selectedBook.icon }}</span>
+              <span>{{ selectedBook.name }}</span>
+            </span>
+          </div>
+          <h1 class="text-2xl md:text-[32px] font-extrabold tracking-tight mt-1" style="color: var(--text-primary);">
+            รายรับ<span class="text-gradient">·</span>รายจ่าย
+          </h1>
+          <p class="text-xs mt-1.5 flex items-center gap-2 flex-wrap font-medium" style="color: var(--text-muted);">
+            <span class="flex items-center gap-1">
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              <span>{{ currentMonthYearLabel }}</span>
+            </span>
+            <span>&bull;</span>
+            <span class="num font-semibold">{{ transactions.length }} รายการ</span>
+            <span v-if="recurringExpenses.length > 0">&bull;</span>
+            <span v-if="recurringExpenses.length > 0" class="font-semibold flex items-center gap-1" style="color: var(--ink-amber);">
+              🔄 {{ recurringExpenses.length }} รายจ่ายประจำ
+            </span>
+          </p>
         </div>
+
         <div class="flex items-center gap-2 shrink-0 flex-wrap">
           <button
             @click="openExportModal"
             :disabled="transactions.length === 0"
-            class="btn-secondary text-sm inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed tap-scale touch-target"
+            class="btn-secondary text-xs sm:text-sm inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed tap-scale touch-target"
             title="Export ข้อมูล (PDF, Excel, CSV)"
           >
-            <svg class="w-4 h-4 text-violet-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
-            <span class="font-semibold">Export</span>
-          </button>
-          <button
-            @click="openAddTransactionModal"
-            class="btn-primary text-sm inline-flex items-center gap-2 tap-scale touch-target"
-          >
-            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-            <span class="hidden sm:inline">เพิ่มรายการ</span><span class="sm:hidden">เพิ่ม</span>
+            <svg class="w-4 h-4 text-violet-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+            <span class="font-semibold">ส่งออก</span>
           </button>
           <button
             @click="refreshData"
             :disabled="isLoading || isLoadingBooks"
-            class="btn-secondary text-sm inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed tap-scale touch-target"
+            class="btn-secondary text-xs sm:text-sm inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed tap-scale touch-target"
+            title="รีเฟรชข้อมูล"
           >
             <svg class="w-4 h-4" :class="isLoading ? 'animate-spin' : ''" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5M21 12a9 9 0 0 1-15 6.7L3 16M3 21v-5h5"/></svg>
             <span class="hidden sm:inline">{{ isLoading ? 'กำลังโหลด...' : 'รีเฟรช' }}</span>
           </button>
+          <button
+            @click="openAddTransactionModal"
+            class="btn-primary text-xs sm:text-sm inline-flex items-center gap-2 tap-scale touch-target"
+          >
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+            <span class="font-semibold">เพิ่มรายการ</span>
+          </button>
         </div>
       </div>
 
-      <!-- Multi-Book Selector Section -->
-      <section class="mt-4">
-        <div class="section-card p-3">
-          <!-- Book Selector Pills -->
-          <div class="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
-            <!-- All Books -->
-            <button
-              type="button"
-              @click="selectBook('all')"
-              class="book-pill"
-              :class="{ 'book-pill-active': selectedBookId === 'all' }"
-            >
-              <span class="text-base">📊</span>
-              <span class="font-semibold">ทุกสมุด</span>
-              <span class="book-pill-badge">{{ books.length }}</span>
-            </button>
-
-            <!-- Individual Books -->
-            <button
-              v-for="book in books"
-              :key="book.id"
-              type="button"
-              @click="selectBook(book.id)"
-              class="book-pill"
-              :class="{ 'book-pill-selected': selectedBookId === book.id }"
-              :style="selectedBookId === book.id ? {
-                background: `${book.color}15`,
-                borderColor: `${book.color}50`,
-                color: book.color
-              } : {}"
-            >
-              <span class="text-base">{{ book.icon || '💼' }}</span>
-              <span class="font-semibold">{{ book.name }}</span>
-              <span v-if="book.isDefault" class="book-default-badge" :style="{ background: `${book.color}20`, color: book.color }">
-                หลัก
-              </span>
-            </button>
+      <!-- 2. Multi-Book Switcher Block -->
+      <section class="section-card p-3 sm:p-4">
+        <div class="flex items-center justify-between gap-3 mb-2.5">
+          <div class="flex items-center gap-2">
+            <span class="text-sm">💼</span>
+            <span class="text-xs font-bold uppercase tracking-wider" style="color: var(--text-secondary);">สมุดบัญชี (Books)</span>
+            <span class="num text-[11px] font-semibold px-2 py-0.5 rounded-full" style="background: var(--bg-elevated); color: var(--text-muted);">
+              {{ books.length }} เล่ม
+            </span>
           </div>
-
-          <!-- Management Actions -->
-          <div class="flex items-center gap-2 mt-3 pt-3 border-t" style="border-color: var(--border-subtle);">
+          <div class="flex items-center gap-1.5">
             <button
               type="button"
               @click="openManageBooksModal"
-              class="btn-secondary text-xs py-1.5 px-3 flex items-center gap-1.5 touch-target flex-1 sm:flex-none"
+              class="px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all tap-scale"
+              style="background: var(--bg-elevated); color: var(--text-secondary); border: 1px solid var(--border-subtle);"
             >
               <span>⚙️</span>
-              <span class="font-semibold">จัดการสมุด</span>
+              <span class="hidden sm:inline">จัดการสมุด</span>
             </button>
             <button
               type="button"
               @click="openCreateBookModal"
-              class="btn-primary text-xs py-1.5 px-3 flex items-center gap-1.5 touch-target flex-1 sm:flex-none"
+              class="px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all tap-scale"
+              style="background: var(--brand-soft); color: var(--brand-ink); border: 1px solid var(--brand-border);"
             >
-              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                <path d="M12 5v14M5 12h14"/>
-              </svg>
-              <span class="font-semibold">เพิ่มสมุด</span>
+              <span>+</span>
+              <span class="hidden sm:inline">เพิ่มสมุด</span>
             </button>
           </div>
         </div>
+
+        <!-- Scrollable Book Pills -->
+        <div class="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+          <!-- All Books -->
+          <button
+            type="button"
+            @click="selectBook('all')"
+            class="book-pill"
+            :class="{ 'book-pill-active': selectedBookId === 'all' }"
+          >
+            <span class="text-base">📊</span>
+            <span class="font-semibold">ทุกสมุด</span>
+            <span class="book-pill-badge">{{ transactions.length }}</span>
+          </button>
+
+          <!-- Individual Books -->
+          <button
+            v-for="book in books"
+            :key="book.id"
+            type="button"
+            @click="selectBook(book.id)"
+            class="book-pill"
+            :class="{ 'book-pill-selected': selectedBookId === book.id }"
+            :style="selectedBookId === book.id ? {
+              background: `${book.color}18`,
+              borderColor: `${book.color}60`,
+              color: book.color
+            } : {}"
+          >
+            <span class="text-base">{{ book.icon || '💼' }}</span>
+            <span class="font-semibold">{{ book.name }}</span>
+            <span v-if="book.isDefault" class="book-default-badge" :style="{ background: `${book.color}20`, color: book.color }">
+              หลัก
+            </span>
+          </button>
+        </div>
       </section>
 
-      <!-- Error Message -->
+      <!-- Error Message Banner -->
       <div
         v-if="errorMessage"
-        class="mt-4 rounded-2xl px-4 py-3 text-sm flex items-center gap-2 font-medium"
+        class="rounded-2xl px-4 py-3 text-sm flex items-center gap-2 font-medium"
         style="background: rgba(182, 133, 42, 0.1); border: 1px solid rgba(182, 133, 42, 0.3); color: var(--ink-amber);"
       >
         <span>⚠️</span><span>{{ errorMessage }}</span>
       </div>
 
-      <!-- Tabs Navigation -->
-      <nav class="cashflow-view-tabs mt-6" aria-label="Cashflow views">
-        <div class="grid grid-cols-4 gap-1">
+      <!-- 3. Navigation View Tabs -->
+      <nav class="cashflow-view-tabs" aria-label="Cashflow views">
+        <div class="grid grid-cols-4 gap-1.5">
           <button
             v-for="tab in tabs"
             :key="tab.id"
@@ -121,212 +151,473 @@
             :class="{ 'tab-button-active': activeTab === tab.id }"
           >
             <span class="cashflow-tab-icon">{{ tab.icon }}</span>
-            <span class="font-semibold text-xs sm:text-sm">{{ tab.id === 'analytics' ? 'รายการ' : tab.label }}</span>
+            <span class="font-semibold text-xs sm:text-sm">{{ tab.id === 'analytics' ? 'รายการแยกประเภท' : tab.label }}</span>
+            <span
+              v-if="tab.id === 'recurring' && recurringExpenses.length > 0"
+              class="hidden sm:inline-block text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+              :class="activeTab === 'recurring' ? 'bg-white/30 text-white' : 'bg-amber-500/15 text-amber-500'"
+            >
+              {{ recurringExpenses.length }}
+            </span>
+            <span
+              v-if="tab.id === 'analytics' && transactions.length > 0"
+              class="hidden sm:inline-block text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+              :class="activeTab === 'analytics' ? 'bg-white/30 text-white' : 'bg-gray-800/10 text-gray-500'"
+            >
+              {{ transactions.length }}
+            </span>
           </button>
         </div>
       </nav>
 
-      <!-- Tab Content -->
-      <div class="mt-5">
+      <!-- 4. Tab Contents -->
+      <div>
         <!-- Tab 1: ภาพรวม (Overview) -->
-        <div v-show="activeTab === 'overview'" class="space-y-5">
-          <!-- Summary tiles -->
-          <div class="section-card grid grid-cols-1 sm:grid-cols-3">
-          <!-- Income -->
-          <div class="p-5 border-b sm:border-b-0 sm:border-r" style="border-color: var(--border-subtle);">
-            <div class="flex items-center justify-between gap-2">
-              <p class="eyebrow">รายรับ</p>
-              <button
-                v-if="incomeCategoryRankings.length > 0"
-                @click="isIncomeRankingModalOpen = true"
-                class="eyebrow"
-                style="color: var(--brand);"
-              >อันดับ →</button>
+        <div v-show="activeTab === 'overview'" class="space-y-6">
+          <!-- Hero Net Balance & Flow Breakdown -->
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+            <!-- Hero Balance Card (7 cols on lg) -->
+            <div
+              class="lg:col-span-7 section-card p-5 sm:p-6 flex flex-col justify-between relative overflow-hidden"
+              style="background: linear-gradient(145deg, var(--bg-card), var(--bg-elevated));"
+            >
+              <div>
+                <div class="flex items-center justify-between gap-3">
+                  <div class="flex items-center gap-2">
+                    <span class="eyebrow">คงเหลือสุทธิ · NET BALANCE</span>
+                  </div>
+                  <span
+                    class="text-[11px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1.5"
+                    :style="remainingBalance >= 0
+                      ? { background: 'rgba(40, 116, 91, 0.12)', color: 'var(--ink-emerald)', border: '1px solid rgba(40, 116, 91, 0.25)' }
+                      : { background: 'rgba(172, 77, 90, 0.12)', color: 'var(--ink-rose)', border: '1px solid rgba(172, 77, 90, 0.25)' }"
+                  >
+                    <span class="w-1.5 h-1.5 rounded-full" :style="{ background: remainingBalance >= 0 ? 'var(--ink-emerald)' : 'var(--ink-rose)' }"></span>
+                    <span>{{ remainingBalance >= 0 ? 'สภาพคล่องบวก' : 'ยอดติดลบ' }}</span>
+                  </span>
+                </div>
+
+                <!-- Big Balance Numeral -->
+                <div class="mt-3">
+                  <p
+                    class="num text-3xl sm:text-4xl lg:text-[42px] font-extrabold tracking-tight"
+                    :style="{ color: remainingBalance >= 0 ? 'var(--text-primary)' : 'var(--ink-rose)' }"
+                  >
+                    {{ formatCurrency(remainingBalance) }}
+                  </p>
+                  <p class="text-xs mt-1" style="color: var(--text-muted);">
+                    {{ currentMonthYearLabel }} &bull; ยอดรวมของทุกรายการในช่วงเวลานี้
+                  </p>
+                </div>
+              </div>
+
+              <!-- Flow Comparison Ratio Bar -->
+              <div class="mt-6 pt-5 border-t" style="border-color: var(--border-subtle);">
+                <div class="flex items-center justify-between text-xs font-semibold mb-2">
+                  <span class="flex items-center gap-1.5" style="color: var(--ink-emerald);">
+                    <span class="w-2 h-2 rounded-full" style="background: var(--ink-emerald);"></span>
+                    รับ +{{ formatCurrency(totalIncome) }}
+                  </span>
+                  <span class="flex items-center gap-1.5" style="color: var(--ink-rose);">
+                    จ่าย −{{ formatCurrency(totalExpense) }}
+                    <span class="w-2 h-2 rounded-full" style="background: var(--ink-rose);"></span>
+                  </span>
+                </div>
+
+                <!-- Progress Track -->
+                <div class="h-2.5 rounded-full overflow-hidden flex" style="background: var(--bg-surface); border: 1px solid var(--border-subtle);">
+                  <div
+                    class="h-full transition-all duration-500 rounded-l-full"
+                    :style="{
+                      width: totalIncome + totalExpense > 0 ? `${(totalIncome / (totalIncome + totalExpense)) * 100}%` : '50%',
+                      background: 'var(--ink-emerald)'
+                    }"
+                    title="สัดส่วนรายรับ"
+                  ></div>
+                  <div
+                    class="h-full transition-all duration-500 rounded-r-full"
+                    :style="{
+                      width: totalIncome + totalExpense > 0 ? `${(totalExpense / (totalIncome + totalExpense)) * 100}%` : '50%',
+                      background: 'var(--ink-rose)'
+                    }"
+                    title="สัดส่วนรายจ่าย"
+                  ></div>
+                </div>
+
+                <div class="flex items-center justify-between text-[11px] mt-2" style="color: var(--text-muted);">
+                  <span>{{ expenseProgressText }}</span>
+                  <span v-if="overspentAmount > 0" class="font-bold" style="color: var(--ink-rose);">
+                    ⚠️ เกินงบ {{ formatCurrency(overspentAmount) }}
+                  </span>
+                  <span v-else>{{ remainingProgressText }}</span>
+                </div>
+              </div>
             </div>
-            <p class="num text-2xl md:text-[26px] font-bold mt-2" style="color: var(--ink-emerald);">+{{ formatCurrency(totalIncome) }}</p>
+
+            <!-- Inflow & Outflow Side Cards (5 cols on lg) -->
+            <div class="lg:col-span-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
+              <!-- Income Card -->
+              <div class="section-card p-4 sm:p-5 flex flex-col justify-between">
+                <div class="flex items-center justify-between gap-3">
+                  <div class="flex items-center gap-2.5">
+                    <div
+                      class="w-9 h-9 rounded-xl flex items-center justify-center text-lg shrink-0"
+                      style="background: rgba(40, 116, 91, 0.12); color: var(--ink-emerald); border: 1px solid rgba(40, 116, 91, 0.2);"
+                    >
+                      📈
+                    </div>
+                    <div>
+                      <p class="eyebrow" style="color: var(--ink-emerald);">รายรับรวม</p>
+                      <h3 class="text-sm font-bold" style="color: var(--text-primary);">Total Inflow</h3>
+                    </div>
+                  </div>
+                  <button
+                    v-if="incomeCategoryRankings.length > 0"
+                    @click="isIncomeRankingModalOpen = true"
+                    class="text-xs font-semibold px-2.5 py-1 rounded-lg transition-all tap-scale"
+                    style="background: var(--bg-elevated); color: var(--brand-ink); border: 1px solid var(--border-subtle);"
+                  >
+                    อันดับ →
+                  </button>
+                </div>
+                <div class="mt-3">
+                  <p class="num text-2xl font-bold" style="color: var(--ink-emerald);">
+                    +{{ formatCurrency(totalIncome) }}
+                  </p>
+                  <p class="text-[11px] mt-1" style="color: var(--text-muted);">
+                    {{ incomeCategoryRankings.length }} หมวดหมู่รายรับ
+                  </p>
+                </div>
+              </div>
+
+              <!-- Expense Card -->
+              <div class="section-card p-4 sm:p-5 flex flex-col justify-between">
+                <div class="flex items-center justify-between gap-3">
+                  <div class="flex items-center gap-2.5">
+                    <div
+                      class="w-9 h-9 rounded-xl flex items-center justify-center text-lg shrink-0"
+                      style="background: rgba(172, 77, 90, 0.12); color: var(--ink-rose); border: 1px solid rgba(172, 77, 90, 0.2);"
+                    >
+                      📉
+                    </div>
+                    <div>
+                      <p class="eyebrow" style="color: var(--ink-rose);">รายจ่ายรวม</p>
+                      <h3 class="text-sm font-bold" style="color: var(--text-primary);">Total Outflow</h3>
+                    </div>
+                  </div>
+                  <button
+                    v-if="expenseCategoryRankings.length > 0"
+                    @click="isRankingModalOpen = true"
+                    class="text-xs font-semibold px-2.5 py-1 rounded-lg transition-all tap-scale"
+                    style="background: var(--bg-elevated); color: var(--ink-rose); border: 1px solid var(--border-subtle);"
+                  >
+                    อันดับ →
+                  </button>
+                </div>
+                <div class="mt-3">
+                  <p class="num text-2xl font-bold" style="color: var(--ink-rose);">
+                    −{{ formatCurrency(totalExpense) }}
+                  </p>
+                  <p class="text-[11px] mt-1 truncate" style="color: var(--text-muted);">
+                    หมวดสูงสุด: <strong style="color: var(--text-primary);">{{ topExpenseCategory.name }}</strong> ({{ formatCurrency(topExpenseCategory.amount) }})
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <!-- Expense -->
-          <div class="p-5 border-b sm:border-b-0 sm:border-r" style="border-color: var(--border-subtle);">
-            <p class="eyebrow">รายจ่าย</p>
-            <p class="num text-2xl md:text-[26px] font-bold mt-2" style="color: var(--ink-rose);">−{{ formatCurrency(totalExpense) }}</p>
-            <p class="num text-[11px] mt-1.5" style="color: var(--text-muted);">
-              {{ expenseProgressText }}<span v-if="overspentAmount > 0" style="color: var(--event-status-soon-ink);"> · เกิน {{ formatCurrency(overspentAmount) }}</span>
-            </p>
-          </div>
+          <!-- Top / Bottom Expense Category Rankings -->
+          <div v-if="expenseCategoryRankings.length > 0" class="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <!-- Top 3 Highest -->
+            <div class="section-card p-5">
+              <div class="flex items-center justify-between gap-2 mb-4">
+                <div class="flex items-center gap-2.5">
+                  <div
+                    class="w-8 h-8 rounded-lg flex items-center justify-center text-base shrink-0"
+                    style="background: rgba(172, 77, 90, 0.12); color: var(--ink-rose);"
+                  >🔺</div>
+                  <div>
+                    <h2 class="text-sm font-bold" style="color: var(--text-primary);">3 อันดับรายจ่ายสูงสุด</h2>
+                    <p class="text-[11px]" style="color: var(--text-muted);">หมวดหมู่ที่มีการใช้จ่ายมากที่สุด</p>
+                  </div>
+                </div>
+                <button
+                  @click="isRankingModalOpen = true"
+                  class="px-2.5 py-1 rounded-lg text-xs font-semibold transition-all tap-scale"
+                  style="background: var(--bg-elevated); color: var(--text-secondary); border: 1px solid var(--border-subtle);"
+                >
+                  ดูทั้งหมด ({{ expenseCategoryRankings.length }}) →
+                </button>
+              </div>
 
-          <!-- Balance -->
-          <div class="p-5">
-            <p class="eyebrow">คงเหลือสุทธิ</p>
-            <p class="num text-2xl md:text-[26px] font-bold mt-2" :style="{ color: remainingBalance >= 0 ? 'var(--text-primary)' : 'var(--ink-rose)' }">{{ formatCurrency(remainingBalance) }}</p>
-            <p class="num text-[11px] mt-1.5" style="color: var(--text-muted);">หมวดสูงสุด · {{ topExpenseCategory.name }}</p>
+              <div class="space-y-2.5">
+                <div
+                  v-for="(cat, i) in topExpenseCategories"
+                  :key="cat.name"
+                  class="p-3 rounded-xl transition-all"
+                  style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);"
+                >
+                  <div class="flex items-center justify-between gap-2">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                      <span
+                        class="w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center shrink-0"
+                        :style="i === 0
+                          ? { background: 'rgba(172, 77, 90, 0.2)', color: 'var(--ink-rose)' }
+                          : i === 1
+                            ? { background: 'rgba(168, 93, 51, 0.2)', color: 'var(--ink-orange)' }
+                            : { background: 'rgba(147, 112, 61, 0.2)', color: 'var(--ink-amber)' }"
+                      >
+                        {{ i + 1 }}
+                      </span>
+                      <span class="text-sm font-semibold truncate" style="color: var(--text-primary);">{{ cat.name }}</span>
+                    </div>
+                    <span class="num text-sm font-bold shrink-0" style="color: var(--ink-rose);">
+                      {{ formatCurrency(cat.amount) }}
+                    </span>
+                  </div>
+                  <!-- Progress bar -->
+                  <div class="mt-2 flex items-center gap-2">
+                    <div class="flex-1 h-1.5 rounded-full overflow-hidden" style="background: var(--bg-surface);">
+                      <div
+                        class="h-full rounded-full transition-all duration-500"
+                        :style="{
+                          width: `${(cat.amount / (expenseCategoryRankings[0]?.amount || 1)) * 100}%`,
+                          background: 'var(--ink-rose)'
+                        }"
+                      ></div>
+                    </div>
+                    <span class="num text-[10px] font-semibold shrink-0" style="color: var(--text-muted);">
+                      {{ formatPercent((cat.amount / (totalExpense || 1)) * 100) }}%
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Top 3 Lowest -->
+            <div class="section-card p-5">
+              <div class="flex items-center gap-2.5 mb-4">
+                <div
+                  class="w-8 h-8 rounded-lg flex items-center justify-center text-base shrink-0"
+                  style="background: rgba(40, 116, 91, 0.12); color: var(--ink-emerald);"
+                >🔻</div>
+                <div>
+                  <h2 class="text-sm font-bold" style="color: var(--text-primary);">3 อันดับรายจ่ายน้อยสุด</h2>
+                  <p class="text-[11px]" style="color: var(--text-muted);">หมวดหมู่ที่มีการประหยัดงบได้ดี</p>
+                </div>
+              </div>
+
+              <div class="space-y-2.5">
+                <div
+                  v-for="(cat, i) in bottomExpenseCategories"
+                  :key="cat.name"
+                  class="p-3 rounded-xl transition-all"
+                  style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);"
+                >
+                  <div class="flex items-center justify-between gap-2">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                      <span
+                        class="w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center shrink-0"
+                        :style="i === 0
+                          ? { background: 'rgba(40, 116, 91, 0.2)', color: 'var(--ink-emerald)' }
+                          : i === 1
+                            ? { background: 'rgba(40, 118, 110, 0.2)', color: 'var(--ink-teal)' }
+                            : { background: 'rgba(40, 114, 138, 0.2)', color: 'var(--ink-cyan)' }"
+                      >
+                        {{ i + 1 }}
+                      </span>
+                      <span class="text-sm font-semibold truncate" style="color: var(--text-primary);">{{ cat.name }}</span>
+                    </div>
+                    <span class="num text-sm font-bold shrink-0" style="color: var(--ink-emerald);">
+                      {{ formatCurrency(cat.amount) }}
+                    </span>
+                  </div>
+                  <!-- Progress bar -->
+                  <div class="mt-2 flex items-center gap-2">
+                    <div class="flex-1 h-1.5 rounded-full overflow-hidden" style="background: var(--bg-surface);">
+                      <div
+                        class="h-full rounded-full transition-all duration-500"
+                        :style="{
+                          width: `${(cat.amount / (bottomExpenseCategories[bottomExpenseCategories.length - 1]?.amount || 1)) * 100}%`,
+                          background: 'var(--ink-emerald)'
+                        }"
+                      ></div>
+                    </div>
+                    <span class="num text-[10px] font-semibold shrink-0" style="color: var(--text-muted);">
+                      {{ formatPercent((cat.amount / (totalExpense || 1)) * 100) }}%
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        <!-- Top / Bottom Expense Category Rankings -->
-        <div v-if="expenseCategoryRankings.length > 0" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <!-- Top 3 Highest -->
+        <!-- Tab 2: Recurring Expenses Section -->
+        <div v-show="activeTab === 'recurring'" class="space-y-5">
+          <!-- Top Metric & Quick Action Card -->
           <div class="section-card p-5">
-            <div class="flex items-center justify-between gap-2 mb-4">
-              <div class="flex items-center gap-2">
-                <div class="w-8 h-8 rounded-lg bg-rose-500/15 flex items-center justify-center text-base shrink-0">🔺</div>
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div class="flex items-center gap-3">
+                <div
+                  class="w-10 h-10 rounded-xl flex items-center justify-center text-xl shrink-0"
+                  style="background: rgba(147, 112, 61, 0.15); color: var(--ink-amber); border: 1px solid rgba(147, 112, 61, 0.25);"
+                >
+                  🔄
+                </div>
                 <div>
-                  <h2 class="text-sm font-semibold text-white">3 อันดับรายจ่ายสูงสุด</h2>
-                  <p class="text-[11px] text-gray-500">หมวดที่ใช้จ่ายมากที่สุด</p>
+                  <h2 class="text-base font-bold" style="color: var(--text-primary);">รายจ่ายประจำ (Recurring Bills)</h2>
+                  <p class="text-xs" style="color: var(--text-muted);">รายการผ่อนชำระและค่าใช้จ่ายที่ต้องจ่ายทุกเดือน</p>
                 </div>
               </div>
               <button
-                @click="isRankingModalOpen = true"
-                class="px-3 py-1.5 rounded-lg bg-gray-800/70 hover:bg-gray-800 border border-gray-700/60 text-xs text-gray-400 hover:text-white transition-all whitespace-nowrap tap-scale touch-target"
-              >ดูทั้งหมด →</button>
-            </div>
-            <div class="space-y-2">
-              <div
-                v-for="(cat, i) in topExpenseCategories"
-                :key="cat.name"
-                class="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-gray-800/30"
+                @click="openAddRecurringModal"
+                class="btn-primary text-xs py-2 px-3.5 inline-flex items-center gap-2 tap-scale touch-target self-start sm:self-auto"
               >
-                <span
-                  class="w-6 h-6 rounded-full text-[11px] font-bold flex items-center justify-center shrink-0"
-                  :class="i === 0 ? 'bg-rose-500/30 text-rose-300' : i === 1 ? 'bg-orange-500/30 text-orange-300' : 'bg-amber-500/30 text-amber-300'"
-                >{{ i + 1 }}</span>
-                <span class="flex-1 text-sm text-white truncate">{{ cat.name }}</span>
-                <span class="text-sm font-semibold text-rose-400 shrink-0">{{ formatCurrency(cat.amount) }}</span>
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+                <span>เพิ่มรายจ่ายประจำ</span>
+              </button>
+            </div>
+
+            <!-- Mini Summary Stats -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4 pt-4 border-t" style="border-color: var(--border-subtle);">
+              <div class="p-3 rounded-xl" style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);">
+                <p class="text-[11px]" style="color: var(--text-muted);">ยอดจ่ายประจำต่อเดือน</p>
+                <p class="num text-lg font-bold mt-0.5" style="color: var(--text-primary);">
+                  ฿{{ formatCurrency(recurringTotalMonthly).replace('฿', '') }}
+                </p>
+              </div>
+              <div class="p-3 rounded-xl" style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);">
+                <p class="text-[11px]" style="color: var(--text-muted);">ใกล้ครบกำหนด (ภายใน 3 วัน)</p>
+                <p class="num text-lg font-bold mt-0.5" :style="{ color: recurringDueSoonCount > 0 ? 'var(--ink-amber)' : 'var(--ink-emerald)' }">
+                  {{ recurringDueSoonCount }} รายการ
+                </p>
+              </div>
+              <div class="p-3 rounded-xl" style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);">
+                <p class="text-[11px]" style="color: var(--text-muted);">ทั้งหมดในระบบ</p>
+                <p class="num text-lg font-bold mt-0.5" style="color: var(--text-primary);">
+                  {{ recurringExpenses.length }} รายการ (ผ่อน {{ fixedRecurringExpenses.length }} &bull; ตลอดชีพ {{ indefiniteRecurringExpenses.length }})
+                </p>
               </div>
             </div>
           </div>
-          <!-- Top 3 Lowest -->
-          <div class="section-card p-5">
-            <div class="flex items-center gap-2 mb-4">
-              <div class="w-8 h-8 rounded-lg bg-emerald-500/15 flex items-center justify-center text-base shrink-0">🔻</div>
-              <div>
-                <h2 class="text-sm font-semibold text-white">3 อันดับรายจ่ายน้อยสุด</h2>
-                <p class="text-[11px] text-gray-500">หมวดที่ใช้จ่ายน้อยที่สุด</p>
-              </div>
-            </div>
-            <div class="space-y-2">
-              <div
-                v-for="(cat, i) in bottomExpenseCategories"
-                :key="cat.name"
-                class="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-gray-800/30"
-              >
-                <span
-                  class="w-6 h-6 rounded-full text-[11px] font-bold flex items-center justify-center shrink-0"
-                  :class="i === 0 ? 'bg-emerald-500/30 text-emerald-300' : i === 1 ? 'bg-teal-500/30 text-teal-300' : 'bg-cyan-500/30 text-cyan-300'"
-                >{{ i + 1 }}</span>
-                <span class="flex-1 text-sm text-white truncate">{{ cat.name }}</span>
-                <span class="text-sm font-semibold text-emerald-400 shrink-0">{{ formatCurrency(cat.amount) }}</span>
-              </div>
-            </div>
+
+          <!-- Loading Skeleton -->
+          <div v-if="isLoadingRecurring" class="section-card p-5 space-y-3">
+            <div v-for="i in 2" :key="i" class="h-20 rounded-xl bg-gray-800/10 animate-pulse"></div>
           </div>
-        </div>
 
-        </div>
-
-        <!-- Recurring Expenses Section -->
-        <div v-show="activeTab === 'recurring'" class="space-y-5">
-        <section class="section-card">
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 py-4 border-b border-gray-800/60">
-            <div class="flex items-center gap-3">
-              <div class="w-9 h-9 rounded-xl bg-amber-500/15 text-amber-400 flex items-center justify-center text-lg shrink-0">
-                🔄
-              </div>
-              <div>
-                <h2 class="text-base font-semibold text-white">รายจ่ายประจำ</h2>
-                <p class="text-xs text-gray-500">รายการที่ต้องจ่ายทุกเดือน</p>
-              </div>
+          <!-- Empty State -->
+          <div v-else-if="!recurringExpenses.length" class="section-card flex flex-col items-center justify-center py-12 text-center px-5">
+            <div
+              class="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl mb-3"
+              style="background: rgba(147, 112, 61, 0.12); color: var(--ink-amber); border: 1px solid rgba(147, 112, 61, 0.2);"
+            >
+              📅
             </div>
+            <p class="text-sm font-bold" style="color: var(--text-primary);">ยังไม่มีรายการจ่ายประจำ</p>
+            <p class="text-xs mt-1 max-w-sm" style="color: var(--text-muted);">
+              กด "+ เพิ่มรายจ่ายประจำ" เพื่อบันทึกค่าเช่า ค่างวด ค่าเน็ต หรือบริการรายเดือน ระบบจะช่วยนับถอยหลังและบันทึกอัตโนมัติ
+            </p>
             <button
               @click="openAddRecurringModal"
-              class="btn-primary text-xs py-1.5 px-3 inline-flex items-center gap-1.5 tap-scale touch-target self-start sm:self-auto"
+              class="btn-primary text-xs py-2 px-4 mt-4 inline-flex items-center gap-1.5 tap-scale"
             >
-              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-              <span>เพิ่มรายจ่ายประจำ</span>
+              <span>+ เพิ่มรายการแรก</span>
             </button>
           </div>
 
-          <div v-if="isLoadingRecurring" class="p-5 space-y-2">
-            <div v-for="i in 2" :key="i" class="h-16 rounded-xl bg-gray-800/60 animate-pulse"></div>
-          </div>
-
-          <div v-else-if="!recurringExpenses.length" class="flex flex-col items-center justify-center py-10 text-center px-5">
-            <div class="w-12 h-12 rounded-xl bg-amber-500/10 flex items-center justify-center text-xl mb-2.5">📅</div>
-            <p class="text-sm font-medium text-gray-400">ยังไม่มีรายการจ่ายประจำ</p>
-            <p class="text-xs text-gray-500 mt-1">กด "+ เพิ่มรายจ่ายประจำ" เพื่อบันทึกรายจ่ายประจำของคุณ</p>
-          </div>
-
-          <div v-else class="p-4 sm:p-5 space-y-5">
+          <div v-else class="space-y-5">
             <!-- Group 1: มีกำหนดระยะเวลา -->
-            <div v-if="fixedRecurringExpenses.length > 0">
-              <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
-                <span class="w-2 h-2 rounded-full bg-amber-400"></span>
-                มีกำหนดระยะเวลา
-              </p>
-              <div class="space-y-2">
+            <div v-if="fixedRecurringExpenses.length > 0" class="section-card p-4 sm:p-5">
+              <div class="flex items-center justify-between gap-2 mb-3">
+                <p class="text-xs font-bold uppercase tracking-wider flex items-center gap-2" style="color: var(--text-secondary);">
+                  <span class="w-2.5 h-2.5 rounded-full" style="background: var(--ink-amber);"></span>
+                  มีกำหนดระยะเวลา (Installments / งวด)
+                </p>
+                <span class="num text-xs font-semibold px-2 py-0.5 rounded-full" style="background: var(--bg-elevated); color: var(--text-muted);">
+                  {{ fixedRecurringExpenses.length }} รายการ
+                </span>
+              </div>
+
+              <div class="space-y-3">
                 <div
                   v-for="r in fixedRecurringExpenses"
                   :key="r.id"
                   @click="openEditRecurringModal(r)"
-                  class="group p-3.5 rounded-xl bg-gray-800/40 border border-gray-800 hover:border-gray-700/80 transition-all cursor-pointer space-y-3"
+                  class="p-4 rounded-xl transition-all cursor-pointer space-y-3 group"
+                  style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);"
                 >
                   <div class="flex flex-wrap sm:flex-nowrap items-center justify-between gap-3">
                     <div class="flex items-center gap-3 min-w-0 flex-1">
-                      <div class="w-9 h-9 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center shrink-0">
+                      <div
+                        class="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0"
+                        style="background: rgba(147, 112, 61, 0.15); color: var(--ink-amber);"
+                      >
                         🗓️
                       </div>
                       <div class="min-w-0">
-                        <p class="text-sm font-semibold text-white truncate">{{ r.title }}</p>
-                        <p class="text-xs text-gray-400 mt-0.5 truncate">
-                          จ่ายทุกวันที่ {{ r.dayOfMonthDue }} &bull;
-                          {{ formatShortDate(r.startDate) }} - {{ formatShortDate(r.endDate!) }}
+                        <div class="flex items-center gap-2 flex-wrap">
+                          <p class="text-sm font-bold truncate group-hover:text-amber-500 transition-colors" style="color: var(--text-primary);">
+                            {{ r.title }}
+                          </p>
+                          <span
+                            v-if="selectedBookId === 'all' && getBookById(r.bookId)"
+                            class="text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0"
+                            :style="{ background: `${getBookById(r.bookId)?.color}15`, color: getBookById(r.bookId)?.color }"
+                          >
+                            {{ getBookById(r.bookId)?.icon }} {{ getBookById(r.bookId)?.name }}
+                          </span>
+                        </div>
+                        <p class="text-xs mt-0.5 truncate" style="color: var(--text-muted);">
+                          จ่ายทุกวันที่ {{ r.dayOfMonthDue }} &bull; {{ formatShortDate(r.startDate) }} - {{ formatShortDate(r.endDate!) }}
                         </p>
                       </div>
                     </div>
 
                     <div class="flex items-center gap-3 shrink-0 ml-auto sm:ml-0">
                       <div class="text-right">
-                        <p class="text-sm font-bold text-white">฿{{ formatCurrency(r.amount) }}</p>
+                        <p class="num text-sm sm:text-base font-bold" style="color: var(--text-primary);">
+                          ฿{{ formatCurrency(r.amount).replace('฿', '') }}
+                        </p>
                         <span
                           class="inline-block mt-0.5 text-[10.5px] font-semibold px-2 py-0.5 rounded-md border"
                           :class="getDueInfo(r).statusClass"
                         >
                           {{ getDueInfo(r).label }}
                         </span>
-                        <div class="mt-1 text-[10px] font-mono font-semibold text-amber-300">
-                          {{ getDueInfo(r).countdownText }}
+                        <div class="mt-1 text-[10px] font-mono font-semibold" style="color: var(--ink-amber);">
+                          ⏱️ {{ getDueInfo(r).countdownText }}
                         </div>
                       </div>
 
                       <button
                         @click.stop="payRecurring(r)"
                         :disabled="isPayingRecurringId === r.id"
-                        class="px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-400 flex items-center gap-1 transition-all tap-scale touch-target disabled:opacity-50"
+                        class="px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all tap-scale touch-target disabled:opacity-50"
+                        style="background: rgba(40, 116, 91, 0.15); color: var(--ink-emerald); border: 1px solid rgba(40, 116, 91, 0.3);"
                       >
                         <svg v-if="isPayingRecurringId !== r.id" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                        <span v-else class="inline-block w-3 h-3 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin"></span>
+                        <span v-else class="inline-block w-3 h-3 border-2 rounded-full animate-spin" style="border-color: rgba(40, 116, 91, 0.3); border-top-color: var(--ink-emerald);"></span>
                         <span>จ่ายแล้ว</span>
                       </button>
                     </div>
                   </div>
 
-                  <!-- Progress bar -->
+                  <!-- Cycle Progress Bar -->
                   <div class="space-y-1">
                     <div class="flex items-center justify-between text-[10px] font-semibold">
-                      <span class="text-gray-400">ความคืบหน้า</span>
-                      <span :class="getDueInfo(r).daysUntil <= 0 ? 'text-rose-400' : 'text-amber-400'">
+                      <span style="color: var(--text-muted);">ความคืบหน้าของรอบ</span>
+                      <span :style="{ color: getDueInfo(r).daysUntil <= 0 ? 'var(--ink-rose)' : 'var(--ink-amber)' }">
                         {{ getDueInfo(r).progressPercent }}%
                       </span>
                     </div>
-                    <div class="h-1.5 rounded-full bg-gray-800/60 overflow-hidden">
+                    <div class="h-1.5 rounded-full overflow-hidden" style="background: var(--bg-surface);">
                       <div
                         class="h-full rounded-full transition-all duration-300"
                         :style="{
                           width: `${getDueInfo(r).progressPercent}%`,
-                          background: getDueInfo(r).daysUntil <= 0
-                            ? 'linear-gradient(90deg, #f43f5e, #fb923c)'
-                            : getDueInfo(r).progress > 0.7
-                              ? 'linear-gradient(90deg, #fb923c, #f43f5e)'
-                              : 'linear-gradient(90deg, #8b5cf6, #fb923c)'
+                          background: getDueInfo(r).daysUntil <= 0 ? 'var(--ink-rose)' : 'var(--ink-amber)'
                         }"
                       ></div>
                     </div>
@@ -336,26 +627,47 @@
             </div>
 
             <!-- Group 2: ไม่มีกำหนดสิ้นสุด -->
-            <div v-if="indefiniteRecurringExpenses.length > 0">
-              <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
-                <span class="w-2 h-2 rounded-full bg-sky-400"></span>
-                ไม่มีกำหนดสิ้นสุด
-              </p>
-              <div class="space-y-2">
+            <div v-if="indefiniteRecurringExpenses.length > 0" class="section-card p-4 sm:p-5">
+              <div class="flex items-center justify-between gap-2 mb-3">
+                <p class="text-xs font-bold uppercase tracking-wider flex items-center gap-2" style="color: var(--text-secondary);">
+                  <span class="w-2.5 h-2.5 rounded-full" style="background: var(--ink-sky);"></span>
+                  ไม่มีกำหนดสิ้นสุด (Subscriptions & Recurring)
+                </p>
+                <span class="num text-xs font-semibold px-2 py-0.5 rounded-full" style="background: var(--bg-elevated); color: var(--text-muted);">
+                  {{ indefiniteRecurringExpenses.length }} รายการ
+                </span>
+              </div>
+
+              <div class="space-y-3">
                 <div
                   v-for="r in indefiniteRecurringExpenses"
                   :key="r.id"
                   @click="openEditRecurringModal(r)"
-                  class="group p-3.5 rounded-xl bg-gray-800/40 border border-gray-800 hover:border-gray-700/80 transition-all cursor-pointer space-y-3"
+                  class="p-4 rounded-xl transition-all cursor-pointer space-y-3 group"
+                  style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);"
                 >
                   <div class="flex flex-wrap sm:flex-nowrap items-center justify-between gap-3">
                     <div class="flex items-center gap-3 min-w-0 flex-1">
-                      <div class="w-9 h-9 rounded-lg bg-sky-500/10 text-sky-400 flex items-center justify-center shrink-0">
+                      <div
+                        class="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0"
+                        style="background: rgba(37, 99, 168, 0.12); color: var(--ink-sky);"
+                      >
                         ♾️
                       </div>
                       <div class="min-w-0">
-                        <p class="text-sm font-semibold text-white truncate">{{ r.title }}</p>
-                        <p class="text-xs text-gray-400 mt-0.5 truncate">
+                        <div class="flex items-center gap-2 flex-wrap">
+                          <p class="text-sm font-bold truncate group-hover:text-sky-500 transition-colors" style="color: var(--text-primary);">
+                            {{ r.title }}
+                          </p>
+                          <span
+                            v-if="selectedBookId === 'all' && getBookById(r.bookId)"
+                            class="text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0"
+                            :style="{ background: `${getBookById(r.bookId)?.color}15`, color: getBookById(r.bookId)?.color }"
+                          >
+                            {{ getBookById(r.bookId)?.icon }} {{ getBookById(r.bookId)?.name }}
+                          </span>
+                        </div>
+                        <p class="text-xs mt-0.5 truncate" style="color: var(--text-muted);">
                           จ่ายทุกวันที่ {{ r.dayOfMonthDue }} &bull; เริ่ม {{ formatShortDate(r.startDate) }}
                         </p>
                       </div>
@@ -363,48 +675,47 @@
 
                     <div class="flex items-center gap-3 shrink-0 ml-auto sm:ml-0">
                       <div class="text-right">
-                        <p class="text-sm font-bold text-white">฿{{ formatCurrency(r.amount) }}</p>
+                        <p class="num text-sm sm:text-base font-bold" style="color: var(--text-primary);">
+                          ฿{{ formatCurrency(r.amount).replace('฿', '') }}
+                        </p>
                         <span
                           class="inline-block mt-0.5 text-[10.5px] font-semibold px-2 py-0.5 rounded-md border"
                           :class="getDueInfo(r).statusClass"
                         >
                           {{ getDueInfo(r).label }}
                         </span>
-                        <div class="mt-1 text-[10px] font-mono font-semibold text-amber-300">
-                          {{ getDueInfo(r).countdownText }}
+                        <div class="mt-1 text-[10px] font-mono font-semibold" style="color: var(--ink-amber);">
+                          ⏱️ {{ getDueInfo(r).countdownText }}
                         </div>
                       </div>
 
                       <button
                         @click.stop="payRecurring(r)"
                         :disabled="isPayingRecurringId === r.id"
-                        class="px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-400 flex items-center gap-1 transition-all tap-scale touch-target disabled:opacity-50"
+                        class="px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all tap-scale touch-target disabled:opacity-50"
+                        style="background: rgba(40, 116, 91, 0.15); color: var(--ink-emerald); border: 1px solid rgba(40, 116, 91, 0.3);"
                       >
                         <svg v-if="isPayingRecurringId !== r.id" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                        <span v-else class="inline-block w-3 h-3 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin"></span>
+                        <span v-else class="inline-block w-3 h-3 border-2 rounded-full animate-spin" style="border-color: rgba(40, 116, 91, 0.3); border-top-color: var(--ink-emerald);"></span>
                         <span>จ่ายแล้ว</span>
                       </button>
                     </div>
                   </div>
 
-                  <!-- Progress bar -->
+                  <!-- Cycle Progress Bar -->
                   <div class="space-y-1">
                     <div class="flex items-center justify-between text-[10px] font-semibold">
-                      <span class="text-gray-400">ความคืบหน้า</span>
-                      <span :class="getDueInfo(r).daysUntil <= 0 ? 'text-rose-400' : 'text-amber-400'">
+                      <span style="color: var(--text-muted);">ความคืบหน้าของรอบ</span>
+                      <span :style="{ color: getDueInfo(r).daysUntil <= 0 ? 'var(--ink-rose)' : 'var(--ink-amber)' }">
                         {{ getDueInfo(r).progressPercent }}%
                       </span>
                     </div>
-                    <div class="h-1.5 rounded-full bg-gray-800/60 overflow-hidden">
+                    <div class="h-1.5 rounded-full overflow-hidden" style="background: var(--bg-surface);">
                       <div
                         class="h-full rounded-full transition-all duration-300"
                         :style="{
                           width: `${getDueInfo(r).progressPercent}%`,
-                          background: getDueInfo(r).daysUntil <= 0
-                            ? 'linear-gradient(90deg, #f43f5e, #fb923c)'
-                            : getDueInfo(r).progress > 0.7
-                              ? 'linear-gradient(90deg, #fb923c, #f43f5e)'
-                              : 'linear-gradient(90deg, #8b5cf6, #fb923c)'
+                          background: getDueInfo(r).daysUntil <= 0 ? 'var(--ink-rose)' : 'var(--ink-amber)'
                         }"
                       ></div>
                     </div>
@@ -413,192 +724,363 @@
               </div>
             </div>
           </div>
-        </section>
         </div>
 
-        <!-- Daily Summary -->
+        <!-- Tab 3: Daily Summary Block -->
         <div v-show="activeTab === 'daily'" class="space-y-5">
-        <section class="section-card">
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 py-4 border-b border-gray-800/60">
-            <div>
-              <h2 class="text-base font-semibold text-white">สรุปรายวัน</h2>
-              <p class="text-xs text-gray-500 mt-0.5">ยอดรับจ่ายและคงเหลือแต่ละวัน</p>
-            </div>
-            <div class="flex items-center gap-2 flex-wrap">
-              <input
-                v-model="summaryFilterMonth"
-                type="month"
-                class="bg-gray-800/80 border border-gray-700/60 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 transition-all"
-              />
-              <button
-                v-if="summaryFilterMonth"
-                @click="summaryFilterMonth = ''"
-                class="text-xs text-gray-500 hover:text-white px-2 py-1 rounded-lg hover:bg-gray-800 transition-all tap-scale touch-target"
-              >ล้าง ✕</button>
-              <span class="text-xs bg-gray-800/80 text-gray-400 border border-gray-700/60 rounded-full px-3 py-1">{{ dailySummaries.length }} วัน</span>
-            </div>
-          </div>
+          <section class="section-card">
+            <!-- Filter & Month Toolbar -->
+            <div class="p-4 sm:p-5 border-b" style="border-color: var(--border-subtle);">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <h2 class="text-base font-bold" style="color: var(--text-primary);">สรุปความเคลื่อนไหวรายวัน</h2>
+                  <p class="text-xs mt-0.5" style="color: var(--text-muted);">บันทึกยอดรับ จ่าย และคงเหลือสุทธิของแต่ละวัน</p>
+                </div>
+                <div class="flex items-center gap-2 flex-wrap">
+                  <input
+                    v-model="summaryFilterMonth"
+                    type="month"
+                    class="input-glass text-xs sm:text-sm py-1.5 px-3"
+                  />
+                  <button
+                    v-if="summaryFilterMonth"
+                    @click="summaryFilterMonth = ''"
+                    class="px-2.5 py-1.5 rounded-lg text-xs transition-all tap-scale"
+                    style="background: var(--bg-elevated); color: var(--text-secondary); border: 1px solid var(--border-subtle);"
+                  >
+                    ล้าง ✕
+                  </button>
+                  <span class="num text-xs font-semibold px-3 py-1.5 rounded-xl" style="background: var(--bg-elevated); color: var(--text-secondary); border: 1px solid var(--border-subtle);">
+                    {{ dailySummaries.length }} วัน
+                  </span>
+                </div>
+              </div>
 
-          <div v-if="isLoading" class="p-5 space-y-2">
-            <div v-for="i in 3" :key="i" class="h-14 rounded-xl bg-gray-800/60 animate-pulse"></div>
-          </div>
-          <div v-else-if="!dailySummaries.length" class="flex flex-col items-center justify-center py-12 text-center px-5">
-            <div class="w-14 h-14 rounded-2xl bg-gray-800/70 flex items-center justify-center text-2xl mb-3">📊</div>
-            <p class="text-sm font-medium text-gray-400">ยังไม่มีข้อมูลรายรับรายจ่าย</p>
-          </div>
-          <div v-else class="divide-y divide-gray-800/50">
-            <div
-              v-for="day in dailySummaries"
-              :key="day.date"
-              class="grid grid-cols-4 gap-2 px-5 py-3.5 hover:bg-gray-800/20 transition-all"
-            >
-              <div>
-                <p class="text-[11px] text-gray-500">วันที่</p>
-                <p class="text-sm font-medium text-white mt-0.5">{{ formatDate(day.date) }}</p>
-              </div>
-              <div>
-                <p class="text-[11px] text-gray-500">รายรับ</p>
-                <p class="text-sm font-semibold text-emerald-400 mt-0.5">+{{ formatCurrency(day.income) }}</p>
-              </div>
-              <div>
-                <p class="text-[11px] text-gray-500">รายจ่าย</p>
-                <p class="text-sm font-semibold text-rose-400 mt-0.5">-{{ formatCurrency(day.expense) }}</p>
-              </div>
-              <div>
-                <p class="text-[11px] text-gray-500">คงเหลือ</p>
-                <p class="text-sm font-semibold mt-0.5" :class="day.balance >= 0 ? 'text-sky-300' : 'text-amber-300'">
-                  {{ formatCurrency(day.balance) }}
-                </p>
+              <!-- Month Summary Bar (Total Inflow/Outflow/Net for the filtered month) -->
+              <div v-if="dailySummaries.length > 0" class="grid grid-cols-3 gap-2 mt-4 pt-3 border-t text-center" style="border-color: var(--border-subtle);">
+                <div class="p-2.5 rounded-xl" style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);">
+                  <p class="text-[10px]" style="color: var(--text-muted);">รับรวมเดือนนี้</p>
+                  <p class="num text-xs sm:text-sm font-bold mt-0.5" style="color: var(--ink-emerald);">
+                    +{{ formatCurrency(dailySummaryTotals.income) }}
+                  </p>
+                </div>
+                <div class="p-2.5 rounded-xl" style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);">
+                  <p class="text-[10px]" style="color: var(--text-muted);">จ่ายรวมเดือนนี้</p>
+                  <p class="num text-xs sm:text-sm font-bold mt-0.5" style="color: var(--ink-rose);">
+                    −{{ formatCurrency(dailySummaryTotals.expense) }}
+                  </p>
+                </div>
+                <div class="p-2.5 rounded-xl" style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);">
+                  <p class="text-[10px]" style="color: var(--text-muted);">สุทธิเดือนนี้</p>
+                  <p class="num text-xs sm:text-sm font-bold mt-0.5" :style="{ color: dailySummaryTotals.balance >= 0 ? 'var(--ink-emerald)' : 'var(--ink-rose)' }">
+                    {{ dailySummaryTotals.balance >= 0 ? '+' : '' }}{{ formatCurrency(dailySummaryTotals.balance) }}
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
-        </section>
+
+            <!-- Loading Skeleton -->
+            <div v-if="isLoading" class="p-5 space-y-3">
+              <div v-for="i in 3" :key="i" class="h-16 rounded-xl bg-gray-800/10 animate-pulse"></div>
+            </div>
+
+            <!-- Empty State -->
+            <div v-else-if="!dailySummaries.length" class="flex flex-col items-center justify-center py-12 text-center px-5">
+              <div class="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl mb-3" style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);">
+                📊
+              </div>
+              <p class="text-sm font-bold" style="color: var(--text-primary);">ไม่มีข้อมูลในช่วงเวลานี้</p>
+              <p class="text-xs mt-1" style="color: var(--text-muted);">ลองเลือกเดือนอื่น หรือกด "เพิ่มรายการ" เพื่อบันทึกรายรับ-รายจ่าย</p>
+            </div>
+
+            <!-- Daily Summaries List -->
+            <div v-else class="divide-y" style="border-color: var(--border-subtle);">
+              <div
+                v-for="day in dailySummaries"
+                :key="day.date"
+                class="px-4 sm:px-5 py-3.5 hover:bg-black/5 dark:hover:bg-white/5 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+              >
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-xl flex flex-col items-center justify-center shrink-0" style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);">
+                    <span class="num text-sm font-extrabold leading-none" style="color: var(--text-primary);">{{ new Date(day.date).getDate() }}</span>
+                    <span class="text-[9px] uppercase tracking-wide leading-none mt-0.5" style="color: var(--text-muted);">{{ new Date(day.date).toLocaleDateString('th-TH', { month: 'short' }) }}</span>
+                  </div>
+                  <div>
+                    <p class="text-sm font-bold" style="color: var(--text-primary);">{{ formatDate(day.date) }}</p>
+                    <p class="text-xs" style="color: var(--text-muted);">{{ new Date(day.date).toLocaleDateString('th-TH', { weekday: 'long' }) }}</p>
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-3 text-right sm:text-left sm:flex sm:items-center sm:gap-6">
+                  <div>
+                    <p class="text-[10px]" style="color: var(--text-muted);">รายรับ</p>
+                    <p class="num text-xs sm:text-sm font-semibold mt-0.5" style="color: var(--ink-emerald);">
+                      +{{ formatCurrency(day.income) }}
+                    </p>
+                  </div>
+                  <div>
+                    <p class="text-[10px]" style="color: var(--text-muted);">รายจ่าย</p>
+                    <p class="num text-xs sm:text-sm font-semibold mt-0.5" style="color: var(--ink-rose);">
+                      −{{ formatCurrency(day.expense) }}
+                    </p>
+                  </div>
+                  <div class="text-right min-w-[90px]">
+                    <p class="text-[10px]" style="color: var(--text-muted);">คงเหลือสุทธิ</p>
+                    <p class="num text-xs sm:text-sm font-bold mt-0.5" :style="{ color: day.balance >= 0 ? 'var(--text-primary)' : 'var(--ink-rose)' }">
+                      {{ day.balance >= 0 ? '+' : '' }}{{ formatCurrency(day.balance) }}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
         </div>
 
-        <!-- Transaction List (Ledger Style) -->
+        <!-- Tab 4: Transaction List (Ledger Style) -->
         <div v-show="activeTab === 'analytics'" class="space-y-5">
-        <section class="section-card">
-          <div class="flex flex-col gap-3 px-5 py-4" style="border-bottom: 1px solid var(--border-subtle);">
-            <div class="flex items-center justify-between">
-              <h2 class="text-base font-semibold" style="color: var(--text-primary);">รายการทั้งหมด</h2>
-              <span class="text-xs px-2.5 py-1 rounded-full" style="background: var(--bg-elevated); color: var(--text-secondary);">{{ transactionPageInfo }}</span>
-            </div>
-            <div class="flex items-center gap-2 flex-wrap">
-              <select
-                v-model="transactionFilterMode"
-                class="text-sm px-3 py-2 rounded-xl focus:outline-none transition-all"
-                style="background: var(--bg-elevated); border: 1px solid var(--border-default); color: var(--text-primary);"
-              >
-                <option value="month">รายเดือน</option>
-                <option value="day">รายวัน</option>
-              </select>
-              <input
-                v-if="transactionFilterMode === 'day'"
-                v-model="transactionFilterDate"
-                type="date"
-                class="text-sm px-3 py-2 rounded-xl focus:outline-none transition-all"
-                style="background: var(--bg-elevated); border: 1px solid var(--border-default); color: var(--text-primary);"
-              />
-              <input
-                v-if="transactionFilterMode === 'month'"
-                v-model="transactionFilterMonth"
-                type="month"
-                class="text-sm px-3 py-2 rounded-xl focus:outline-none transition-all"
-                style="background: var(--bg-elevated); border: 1px solid var(--border-default); color: var(--text-primary);"
-              />
-              <select
-                v-model.number="transactionItemsPerPage"
-                @change="transactionCurrentPage = 1"
-                class="text-sm px-3 py-2 rounded-xl ml-auto focus:outline-none transition-all"
-                style="background: var(--bg-elevated); border: 1px solid var(--border-default); color: var(--text-primary);"
-              >
-                <option value="10">10 วัน/หน้า</option>
-                <option value="20">20 วัน/หน้า</option>
-                <option value="50">50 วัน/หน้า</option>
-              </select>
-            </div>
-          </div>
-
-          <div v-if="!filteredTransactionsByDate.length" class="flex flex-col items-center justify-center py-12 text-center px-5">
-            <div class="w-12 h-12 rounded-xl flex items-center justify-center mb-3" style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);">
-              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
-            </div>
-            <p class="text-sm font-medium" style="color: var(--text-secondary);">ยังไม่มีรายการ</p>
-          </div>
-
-          <!-- Ledger Style Table -->
-          <div v-else class="overflow-x-auto">
-            <div v-for="dayGroup in paginatedLedgerGroups" :key="dayGroup.date" class="border-b" style="border-color: var(--border-subtle);">
-              <!-- Date Header -->
-              <div class="px-4 md:px-5 py-2.5" style="background: var(--bg-elevated);">
-                <div class="flex items-center justify-between mb-2">
-                  <div class="flex items-center gap-2">
-                    <span class="text-sm font-semibold" style="color: var(--text-primary);">{{ formatDate(dayGroup.date) }}</span>
-                    <span class="text-xs px-2 py-0.5 rounded" style="background: var(--bg-surface); color: var(--text-muted);">{{ dayGroup.items.length }} รายการ</span>
-                  </div>
-                  <div class="text-xs font-medium px-2.5 py-1 rounded-lg" style="background: var(--bg-surface); color: var(--text-secondary);">
-                    ยกมา: {{ formatCurrency(dayGroup.openingBalance) }}
-                  </div>
+          <section class="section-card">
+            <!-- Header & Filter Bar -->
+            <div class="flex flex-col gap-3.5 px-4 sm:px-5 py-4 border-b" style="border-color: var(--border-subtle);">
+              <div class="flex items-center justify-between flex-wrap gap-2">
+                <div>
+                  <h2 class="text-base font-bold" style="color: var(--text-primary);">สมุดบัญชีบันทึกรายการ (General Ledger)</h2>
+                  <p class="text-xs mt-0.5" style="color: var(--text-muted);">บันทึกรายละเอียด ยอดยกมา และยอดสะสมตามลำดับเวลา</p>
                 </div>
-                <div class="flex items-center gap-3 text-xs font-medium">
-                  <span style="color: var(--ink-emerald);">รับ: +{{ formatCurrency(dayGroup.totalIncome) }}</span>
-                  <span style="color: var(--ink-rose);">จ่าย: −{{ formatCurrency(dayGroup.totalExpense) }}</span>
-                  <span :style="{ color: dayGroup.balance >= 0 ? 'var(--ink-sky)' : 'var(--ink-amber)' }">
-                    สุทธิ: {{ dayGroup.balance >= 0 ? '+' : '' }}{{ formatCurrency(dayGroup.balance) }}
-                  </span>
-                  <span class="ml-auto font-semibold px-2.5 py-1 rounded-lg" :style="{
-                    background: 'var(--bg-surface)',
-                    color: dayGroup.closingBalance >= 0 ? 'var(--ink-emerald)' : 'var(--ink-rose)'
-                  }">
-                    ยกไป: {{ formatCurrency(dayGroup.closingBalance) }}
-                  </span>
-                </div>
+                <span class="num text-xs font-semibold px-2.5 py-1 rounded-full" style="background: var(--bg-elevated); color: var(--text-secondary); border: 1px solid var(--border-subtle);">
+                  {{ transactionPageInfo }}
+                </span>
               </div>
 
-              <!-- Ledger Table -->
-              <div class="hidden md:block">
-                <table class="w-full">
-                  <thead>
-                    <tr style="background: var(--bg-surface); border-bottom: 1px solid var(--border-subtle);">
-                      <th class="px-4 py-2 text-left text-xs font-semibold" style="color: var(--text-secondary); width: 35%;">รายละเอียด</th>
-                      <th class="px-4 py-2 text-right text-xs font-semibold" style="color: var(--ink-emerald); width: 18%;">รายรับ (+)</th>
-                      <th class="px-4 py-2 text-right text-xs font-semibold" style="color: var(--ink-rose); width: 18%;">รายจ่าย (−)</th>
-                      <th class="px-4 py-2 text-right text-xs font-semibold" style="color: var(--ink-sky); width: 18%;">คงเหลือ</th>
-                      <th class="px-4 py-2 text-center text-xs font-semibold" style="color: var(--text-secondary); width: 11%;"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <!-- Opening Balance Row -->
-                    <tr style="background: var(--bg-surface); border-bottom: 1px solid var(--border-subtle);">
-                      <td class="px-4 py-2.5">
-                        <p class="text-sm font-semibold italic" style="color: var(--text-secondary);">ยอดยกมา</p>
-                      </td>
-                      <td class="px-4 py-2.5 text-right">
-                        <span class="text-sm" style="color: var(--text-muted);">—</span>
-                      </td>
-                      <td class="px-4 py-2.5 text-right">
-                        <span class="text-sm" style="color: var(--text-muted);">—</span>
-                      </td>
-                      <td class="px-4 py-2.5 text-right">
-                        <span class="text-sm font-semibold" :style="{ color: dayGroup.openingBalance >= 0 ? 'var(--text-primary)' : 'var(--ink-amber)' }">
-                          {{ formatCurrency(dayGroup.openingBalance) }}
-                        </span>
-                      </td>
-                      <td class="px-4 py-2.5"></td>
-                    </tr>
-                    <!-- Transaction Rows -->
-                    <tr
+              <!-- Filter Options -->
+              <div class="flex items-center gap-2 flex-wrap">
+                <select
+                  v-model="transactionFilterMode"
+                  class="input-glass text-xs sm:text-sm py-1.5 px-3 min-h-[38px]"
+                >
+                  <option value="month">📅 รายเดือน</option>
+                  <option value="day">📆 รายวัน</option>
+                </select>
+
+                <input
+                  v-if="transactionFilterMode === 'day'"
+                  v-model="transactionFilterDate"
+                  type="date"
+                  class="input-glass text-xs sm:text-sm py-1.5 px-3 min-h-[38px]"
+                />
+                <input
+                  v-if="transactionFilterMode === 'month'"
+                  v-model="transactionFilterMonth"
+                  type="month"
+                  class="input-glass text-xs sm:text-sm py-1.5 px-3 min-h-[38px]"
+                />
+
+                <select
+                  v-model.number="transactionItemsPerPage"
+                  @change="transactionCurrentPage = 1"
+                  class="input-glass text-xs sm:text-sm py-1.5 px-3 min-h-[38px] ml-auto"
+                >
+                  <option value="10">10 วัน/หน้า</option>
+                  <option value="20">20 วัน/หน้า</option>
+                  <option value="50">50 วัน/หน้า</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Empty State -->
+            <div v-if="!filteredTransactionsByDate.length" class="flex flex-col items-center justify-center py-14 text-center px-5">
+              <div class="w-14 h-14 rounded-2xl flex items-center justify-center mb-3" style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);">
+                <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--text-muted);"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+              </div>
+              <p class="text-sm font-bold" style="color: var(--text-primary);">ยังไม่มีรายการในช่วงเวลานี้</p>
+              <p class="text-xs mt-1" style="color: var(--text-muted);">กดปุ่ม "+ เพิ่มรายการ" เพื่อเริ่มบันทึกรายรับหรือรายจ่าย</p>
+            </div>
+
+            <!-- Ledger Style Table & Mobile Cards -->
+            <div v-else class="overflow-x-auto">
+              <div v-for="dayGroup in paginatedLedgerGroups" :key="dayGroup.date" class="border-b" style="border-color: var(--border-subtle);">
+                <!-- Date Group Header Bar -->
+                <div class="px-4 md:px-5 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5" style="background: var(--bg-elevated);">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <span class="text-sm font-bold" style="color: var(--text-primary);">
+                      📅 {{ formatDate(dayGroup.date) }}
+                    </span>
+                    <span class="num text-[11px] font-semibold px-2 py-0.5 rounded-full" style="background: var(--bg-card); color: var(--text-secondary); border: 1px solid var(--border-subtle);">
+                      {{ dayGroup.items.length }} รายการ
+                    </span>
+                  </div>
+
+                  <!-- Balances Bar -->
+                  <div class="flex items-center gap-2.5 text-xs font-semibold flex-wrap">
+                    <span class="px-2 py-0.5 rounded-md" style="background: var(--bg-card); color: var(--text-secondary); border: 1px solid var(--border-subtle);">
+                      ยกมา: <span class="num">{{ formatCurrency(dayGroup.openingBalance) }}</span>
+                    </span>
+                    <span class="num" style="color: var(--ink-emerald);">+{{ formatCurrency(dayGroup.totalIncome) }}</span>
+                    <span class="num" style="color: var(--ink-rose);">−{{ formatCurrency(dayGroup.totalExpense) }}</span>
+                    <span class="num" :style="{ color: dayGroup.balance >= 0 ? 'var(--ink-emerald)' : 'var(--ink-rose)' }">
+                      {{ dayGroup.balance >= 0 ? '+' : '' }}{{ formatCurrency(dayGroup.balance) }}
+                    </span>
+                    <span class="px-2 py-0.5 rounded-md font-bold" :style="{
+                      background: 'var(--bg-card)',
+                      color: dayGroup.closingBalance >= 0 ? 'var(--ink-emerald)' : 'var(--ink-rose)',
+                      border: '1px solid var(--border-subtle)'
+                    }">
+                      ยกไป: <span class="num">{{ formatCurrency(dayGroup.closingBalance) }}</span>
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Desktop Table -->
+                <div class="hidden md:block">
+                  <table class="w-full">
+                    <thead>
+                      <tr style="background: var(--bg-surface); border-bottom: 1px solid var(--border-subtle);">
+                        <th class="px-4 py-2.5 text-left text-xs font-bold uppercase tracking-wider" style="color: var(--text-secondary); width: 36%;">รายละเอียด & หมวดหมู่</th>
+                        <th class="px-4 py-2.5 text-right text-xs font-bold uppercase tracking-wider" style="color: var(--ink-emerald); width: 17%;">รายรับ (+)</th>
+                        <th class="px-4 py-2.5 text-right text-xs font-bold uppercase tracking-wider" style="color: var(--ink-rose); width: 17%;">รายจ่าย (−)</th>
+                        <th class="px-4 py-2.5 text-right text-xs font-bold uppercase tracking-wider" style="color: var(--text-primary); width: 18%;">คงเหลือสะสม</th>
+                        <th class="px-4 py-2.5 text-center text-xs font-bold" style="color: var(--text-secondary); width: 12%;">จัดการ</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <!-- Opening Balance Row -->
+                      <tr style="background: var(--bg-surface); border-bottom: 1px solid var(--border-subtle);">
+                        <td class="px-4 py-2.5">
+                          <p class="text-xs font-bold italic" style="color: var(--text-secondary);">ยอดยกมา (Opening Balance)</p>
+                        </td>
+                        <td class="px-4 py-2.5 text-right">
+                          <span class="text-xs" style="color: var(--text-muted);">—</span>
+                        </td>
+                        <td class="px-4 py-2.5 text-right">
+                          <span class="text-xs" style="color: var(--text-muted);">—</span>
+                        </td>
+                        <td class="px-4 py-2.5 text-right">
+                          <span class="num text-xs font-bold" :style="{ color: dayGroup.openingBalance >= 0 ? 'var(--text-primary)' : 'var(--ink-amber)' }">
+                            {{ formatCurrency(dayGroup.openingBalance) }}
+                          </span>
+                        </td>
+                        <td class="px-4 py-2.5"></td>
+                      </tr>
+
+                      <!-- Transaction Rows -->
+                      <tr
+                        v-for="item in dayGroup.items"
+                        :key="item.id"
+                        class="group hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+                        style="border-bottom: 1px solid var(--border-subtle);"
+                      >
+                        <td class="px-4 py-3">
+                          <div class="flex items-center gap-2 flex-wrap">
+                            <span class="text-xs font-bold px-2 py-0.5 rounded-md" style="background: var(--bg-elevated); color: var(--text-primary); border: 1px solid var(--border-subtle);">
+                              {{ item.category || 'ไม่ระบุหมวดหมู่' }}
+                            </span>
+                            <span
+                              v-if="selectedBookId === 'all' && getBookById(item.book_id)"
+                              class="text-[10px] px-2 py-0.5 rounded-md font-medium shrink-0 flex items-center gap-1"
+                              :style="{
+                                backgroundColor: `${getBookById(item.book_id)?.color}15`,
+                                color: getBookById(item.book_id)?.color,
+                                border: `1px solid ${getBookById(item.book_id)?.color}35`
+                              }"
+                            >
+                              <span>{{ getBookById(item.book_id)?.icon }}</span>
+                              <span>{{ getBookById(item.book_id)?.name }}</span>
+                            </span>
+                          </div>
+                          <p v-if="item.description" class="text-xs mt-1" style="color: var(--text-muted);">
+                            {{ item.description }}
+                          </p>
+                        </td>
+                        <td class="px-4 py-3 text-right">
+                          <span v-if="item.type === 'income'" class="num text-sm font-bold" style="color: var(--ink-emerald);">
+                            +{{ formatCurrency(item.amount) }}
+                          </span>
+                          <span v-else class="text-xs" style="color: var(--text-muted);">—</span>
+                        </td>
+                        <td class="px-4 py-3 text-right">
+                          <span v-if="item.type === 'expense'" class="num text-sm font-bold" style="color: var(--ink-rose);">
+                            −{{ formatCurrency(item.amount) }}
+                          </span>
+                          <span v-else class="text-xs" style="color: var(--text-muted);">—</span>
+                        </td>
+                        <td class="px-4 py-3 text-right">
+                          <span class="num text-sm font-bold" :style="{ color: item.runningBalance >= 0 ? 'var(--text-primary)' : 'var(--ink-amber)' }">
+                            {{ formatCurrency(item.runningBalance) }}
+                          </span>
+                        </td>
+                        <td class="px-4 py-3">
+                          <div class="flex items-center justify-center gap-1.5 opacity-80 group-hover:opacity-100 transition-opacity">
+                            <button
+                              @click="openEditTransactionModal(item)"
+                              :disabled="isDeletingId === item.id"
+                              class="w-7 h-7 rounded-lg flex items-center justify-center disabled:opacity-50 transition-all tap-scale"
+                              style="background: var(--bg-card); border: 1px solid var(--border-subtle); color: var(--brand-ink);"
+                              title="แก้ไขรายการ"
+                              aria-label="แก้ไข"
+                            >
+                              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+                            </button>
+                            <button
+                              @click="deleteTransaction(item.id)"
+                              :disabled="isDeletingId === item.id"
+                              class="w-7 h-7 rounded-lg flex items-center justify-center disabled:opacity-50 transition-all tap-scale"
+                              style="background: var(--bg-card); border: 1px solid var(--border-subtle); color: var(--ink-rose);"
+                              title="ลบรายการ"
+                              aria-label="ลบ"
+                            >
+                              <svg v-if="isDeletingId !== item.id" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
+                              <span v-else class="inline-block w-3 h-3 border-2 rounded-full animate-spin" style="border-color: var(--border-strong); border-top-color: var(--ink-rose);"></span>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+
+                      <!-- Closing Balance Row -->
+                      <tr style="background: var(--bg-surface);">
+                        <td class="px-4 py-2.5">
+                          <p class="text-xs font-bold italic" style="color: var(--text-secondary);">ยอดยกไป (Closing Balance)</p>
+                        </td>
+                        <td class="px-4 py-2.5 text-right">
+                          <span class="num text-xs font-bold" style="color: var(--ink-emerald);">+{{ formatCurrency(dayGroup.totalIncome) }}</span>
+                        </td>
+                        <td class="px-4 py-2.5 text-right">
+                          <span class="num text-xs font-bold" style="color: var(--ink-rose);">−{{ formatCurrency(dayGroup.totalExpense) }}</span>
+                        </td>
+                        <td class="px-4 py-2.5 text-right">
+                          <span class="num text-xs font-extrabold" :style="{ color: dayGroup.closingBalance >= 0 ? 'var(--ink-emerald)' : 'var(--ink-rose)' }">
+                            {{ formatCurrency(dayGroup.closingBalance) }}
+                          </span>
+                        </td>
+                        <td class="px-4 py-2.5"></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <!-- Mobile Card View -->
+                <div class="md:hidden">
+                  <!-- Opening Balance -->
+                  <div class="px-4 py-2.5 flex items-center justify-between text-xs" style="background: var(--bg-surface); border-bottom: 1px solid var(--border-subtle);">
+                    <span class="font-bold italic" style="color: var(--text-secondary);">ยอดยกมา</span>
+                    <span class="num font-bold" :style="{ color: dayGroup.openingBalance >= 0 ? 'var(--text-primary)' : 'var(--ink-amber)' }">
+                      {{ formatCurrency(dayGroup.openingBalance) }}
+                    </span>
+                  </div>
+
+                  <!-- Transactions -->
+                  <div class="divide-y" style="border-color: var(--border-subtle);">
+                    <div
                       v-for="item in dayGroup.items"
                       :key="item.id"
-                      class="group hover:bg-gray-800/10 transition-colors"
-                      style="border-bottom: 1px solid var(--border-subtle);"
+                      class="px-4 py-3 flex items-start justify-between gap-3"
                     >
-                      <td class="px-4 py-3">
+                      <div class="flex-1 min-w-0">
                         <div class="flex items-center gap-2 flex-wrap">
-                          <p class="text-sm font-medium" style="color: var(--text-primary);">{{ item.category || 'ไม่ระบุหมวดหมู่' }}</p>
+                          <span class="text-xs font-bold px-2 py-0.5 rounded-md" style="background: var(--bg-elevated); color: var(--text-primary); border: 1px solid var(--border-subtle);">
+                            {{ item.category || 'ไม่ระบุหมวดหมู่' }}
+                          </span>
                           <span
                             v-if="selectedBookId === 'all' && getBookById(item.book_id)"
-                            class="text-[10px] px-2 py-0.5 rounded-md font-medium shrink-0 flex items-center gap-1"
+                            class="text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0 flex items-center gap-0.5"
                             :style="{
                               backgroundColor: `${getBookById(item.book_id)?.color}15`,
                               color: getBookById(item.book_id)?.color,
@@ -609,189 +1091,97 @@
                             <span>{{ getBookById(item.book_id)?.name }}</span>
                           </span>
                         </div>
-                        <p v-if="item.description" class="text-xs mt-0.5" style="color: var(--text-muted);">{{ item.description }}</p>
-                      </td>
-                      <td class="px-4 py-3 text-right">
-                        <span v-if="item.type === 'income'" class="text-sm font-semibold" style="color: var(--ink-emerald);">
-                          +{{ formatCurrency(item.amount) }}
-                        </span>
-                        <span v-else class="text-sm" style="color: var(--text-muted);">—</span>
-                      </td>
-                      <td class="px-4 py-3 text-right">
-                        <span v-if="item.type === 'expense'" class="text-sm font-semibold" style="color: var(--ink-rose);">
-                          −{{ formatCurrency(item.amount) }}
-                        </span>
-                        <span v-else class="text-sm" style="color: var(--text-muted);">—</span>
-                      </td>
-                      <td class="px-4 py-3 text-right">
-                        <span class="text-sm font-semibold" :style="{ color: item.runningBalance >= 0 ? 'var(--text-primary)' : 'var(--ink-amber)' }">
-                          {{ formatCurrency(item.runningBalance) }}
-                        </span>
-                      </td>
-                      <td class="px-4 py-3">
-                        <div class="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button
-                            @click="openEditTransactionModal(item)"
-                            :disabled="isDeletingId === item.id"
-                            class="w-7 h-7 rounded-lg flex items-center justify-center disabled:opacity-50 transition-all tap-scale"
-                            style="background: var(--bg-elevated); border: 1px solid var(--border-subtle); color: var(--ink-sky);"
-                            aria-label="แก้ไข"
-                          >
-                            <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
-                          </button>
-                          <button
-                            @click="deleteTransaction(item.id)"
-                            :disabled="isDeletingId === item.id"
-                            class="w-7 h-7 rounded-lg flex items-center justify-center disabled:opacity-50 transition-all tap-scale"
-                            style="background: var(--bg-elevated); border: 1px solid var(--border-subtle); color: var(--ink-rose);"
-                            aria-label="ลบ"
-                          >
-                            <svg v-if="isDeletingId !== item.id" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
-                            <span v-else class="inline-block w-3 h-3 border-2 rounded-full animate-spin" style="border-color: var(--border-strong); border-top-color: var(--ink-rose);"></span>
-                          </button>
+                        <p v-if="item.description" class="text-xs mt-1" style="color: var(--text-muted);">
+                          {{ item.description }}
+                        </p>
+                        <div class="flex items-center gap-3 mt-2 text-xs flex-wrap">
+                          <span v-if="item.type === 'income'" class="num font-bold" style="color: var(--ink-emerald);">
+                            +{{ formatCurrency(item.amount) }}
+                          </span>
+                          <span v-else class="num font-bold" style="color: var(--ink-rose);">
+                            −{{ formatCurrency(item.amount) }}
+                          </span>
+                          <span class="num text-[11px]" style="color: var(--text-muted);">
+                            สะสม: {{ formatCurrency(item.runningBalance) }}
+                          </span>
                         </div>
-                      </td>
-                    </tr>
-                    <!-- Closing Balance Row -->
-                    <tr style="background: var(--bg-surface);">
-                      <td class="px-4 py-2.5">
-                        <p class="text-sm font-semibold italic" style="color: var(--text-secondary);">ยอดยกไป</p>
-                      </td>
-                      <td class="px-4 py-2.5 text-right">
-                        <span class="text-sm font-semibold" style="color: var(--ink-emerald);">+{{ formatCurrency(dayGroup.totalIncome) }}</span>
-                      </td>
-                      <td class="px-4 py-2.5 text-right">
-                        <span class="text-sm font-semibold" style="color: var(--ink-rose);">−{{ formatCurrency(dayGroup.totalExpense) }}</span>
-                      </td>
-                      <td class="px-4 py-2.5 text-right">
-                        <span class="text-sm font-bold" :style="{ color: dayGroup.closingBalance >= 0 ? 'var(--ink-emerald)' : 'var(--ink-rose)' }">
-                          {{ formatCurrency(dayGroup.closingBalance) }}
-                        </span>
-                      </td>
-                      <td class="px-4 py-2.5"></td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-
-              <!-- Mobile Card View -->
-              <div class="md:hidden">
-                <!-- Opening Balance -->
-                <div class="px-4 py-3 flex items-center justify-between" style="background: var(--bg-surface); border-bottom: 1px solid var(--border-subtle);">
-                  <span class="text-sm font-semibold italic" style="color: var(--text-secondary);">ยอดยกมา</span>
-                  <span class="text-sm font-semibold" :style="{ color: dayGroup.openingBalance >= 0 ? 'var(--text-primary)' : 'var(--ink-amber)' }">
-                    {{ formatCurrency(dayGroup.openingBalance) }}
-                  </span>
-                </div>
-
-                <!-- Transactions -->
-                <div class="divide-y" style="border-color: var(--border-subtle);">
-                  <div
-                    v-for="item in dayGroup.items"
-                    :key="item.id"
-                    class="px-4 py-3 flex items-start justify-between gap-3"
-                  >
-                    <div class="flex-1 min-w-0">
-                      <div class="flex items-center gap-2 flex-wrap">
-                        <p class="text-sm font-medium" style="color: var(--text-primary);">{{ item.category || 'ไม่ระบุหมวดหมู่' }}</p>
-                        <span
-                          v-if="selectedBookId === 'all' && getBookById(item.book_id)"
-                          class="text-[10px] px-1.5 py-0.2 rounded-md font-medium shrink-0 flex items-center gap-0.5"
-                          :style="{
-                            backgroundColor: `${getBookById(item.book_id)?.color}15`,
-                            color: getBookById(item.book_id)?.color,
-                            border: `1px solid ${getBookById(item.book_id)?.color}35`
-                          }"
+                      </div>
+                      <div class="flex items-center gap-1.5 shrink-0 pt-0.5">
+                        <button
+                          @click="openEditTransactionModal(item)"
+                          :disabled="isDeletingId === item.id"
+                          class="w-8 h-8 rounded-lg flex items-center justify-center disabled:opacity-50 transition-all tap-scale"
+                          style="background: var(--bg-elevated); border: 1px solid var(--border-subtle); color: var(--brand-ink);"
+                          aria-label="แก้ไข"
                         >
-                          <span>{{ getBookById(item.book_id)?.icon }}</span>
-                          <span>{{ getBookById(item.book_id)?.name }}</span>
-                        </span>
+                          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+                        </button>
+                        <button
+                          @click="deleteTransaction(item.id)"
+                          :disabled="isDeletingId === item.id"
+                          class="w-8 h-8 rounded-lg flex items-center justify-center disabled:opacity-50 transition-all tap-scale"
+                          style="background: var(--bg-elevated); border: 1px solid var(--border-subtle); color: var(--ink-rose);"
+                          aria-label="ลบ"
+                        >
+                          <svg v-if="isDeletingId !== item.id" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
+                          <span v-else class="inline-block w-3 h-3 border-2 rounded-full animate-spin" style="border-color: var(--border-strong); border-top-color: var(--ink-rose);"></span>
+                        </button>
                       </div>
-                      <p v-if="item.description" class="text-xs mt-0.5" style="color: var(--text-muted);">{{ item.description }}</p>
-                      <div class="flex items-center gap-3 mt-2 text-xs">
-                        <span v-if="item.type === 'income'" style="color: var(--ink-emerald);">รายรับ: +{{ formatCurrency(item.amount) }}</span>
-                        <span v-else style="color: var(--ink-rose);">รายจ่าย: −{{ formatCurrency(item.amount) }}</span>
-                        <span style="color: var(--text-muted);">คงเหลือ: {{ formatCurrency(item.runningBalance) }}</span>
-                      </div>
-                    </div>
-                    <div class="flex items-center gap-1 shrink-0">
-                      <button
-                        @click="openEditTransactionModal(item)"
-                        :disabled="isDeletingId === item.id"
-                        class="w-8 h-8 rounded-lg flex items-center justify-center disabled:opacity-50 transition-all tap-scale"
-                        style="background: var(--bg-elevated); border: 1px solid var(--border-subtle); color: var(--ink-sky);"
-                        aria-label="แก้ไข"
-                      >
-                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
-                      </button>
-                      <button
-                        @click="deleteTransaction(item.id)"
-                        :disabled="isDeletingId === item.id"
-                        class="w-8 h-8 rounded-lg flex items-center justify-center disabled:opacity-50 transition-all tap-scale"
-                        style="background: var(--bg-elevated); border: 1px solid var(--border-subtle); color: var(--ink-rose);"
-                        aria-label="ลบ"
-                      >
-                        <svg v-if="isDeletingId !== item.id" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
-                        <span v-else class="inline-block w-3 h-3 border-2 rounded-full animate-spin" style="border-color: var(--border-strong); border-top-color: var(--ink-rose);"></span>
-                      </button>
                     </div>
                   </div>
-                </div>
 
-                <!-- Closing Balance -->
-                <div class="px-4 py-3 flex items-center justify-between" style="background: var(--bg-surface);">
-                  <div class="flex items-center gap-3">
-                    <span class="text-sm font-semibold italic" style="color: var(--text-secondary);">ยอดยกไป</span>
-                    <div class="flex items-center gap-2 text-xs">
-                      <span style="color: var(--ink-emerald);">+{{ formatCurrency(dayGroup.totalIncome) }}</span>
-                      <span style="color: var(--ink-rose);">−{{ formatCurrency(dayGroup.totalExpense) }}</span>
+                  <!-- Closing Balance -->
+                  <div class="px-4 py-2.5 flex items-center justify-between text-xs font-semibold" style="background: var(--bg-surface);">
+                    <div class="flex items-center gap-2">
+                      <span class="italic" style="color: var(--text-secondary);">ยอดยกไป</span>
+                      <span class="num text-[11px]" style="color: var(--ink-emerald);">+{{ formatCurrency(dayGroup.totalIncome) }}</span>
+                      <span class="num text-[11px]" style="color: var(--ink-rose);">−{{ formatCurrency(dayGroup.totalExpense) }}</span>
                     </div>
+                    <span class="num font-bold" :style="{ color: dayGroup.closingBalance >= 0 ? 'var(--ink-emerald)' : 'var(--ink-rose)' }">
+                      {{ formatCurrency(dayGroup.closingBalance) }}
+                    </span>
                   </div>
-                  <span class="text-sm font-bold" :style="{ color: dayGroup.closingBalance >= 0 ? 'var(--ink-emerald)' : 'var(--ink-rose)' }">
-                    {{ formatCurrency(dayGroup.closingBalance) }}
-                  </span>
                 </div>
               </div>
             </div>
-          </div>
 
-          <!-- Pagination Controls -->
-          <div v-if="transactionTotalPages > 1" class="flex items-center justify-center gap-2 px-5 py-4 border-t border-gray-800/60">
-            <button
-              @click="transactionCurrentPage = Math.max(1, transactionCurrentPage - 1)"
-              :disabled="transactionCurrentPage === 1"
-              class="px-3 py-2 rounded-lg text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed tap-scale touch-target"
-              style="background: var(--bg-elevated); border: 1px solid var(--border-default); color: var(--text-secondary);"
-              :style="transactionCurrentPage === 1 ? {} : { 'cursor': 'pointer', 'color': 'var(--text-primary)' }"
-            >
-              ← ก่อนหน้า
-            </button>
-            <div class="flex items-center gap-1">
+            <!-- Pagination Controls -->
+            <div v-if="transactionTotalPages > 1" class="flex items-center justify-center gap-2 px-5 py-4 border-t" style="border-color: var(--border-subtle);">
               <button
-                v-for="page in transactionTotalPages"
-                :key="page"
-                @click="transactionCurrentPage = page"
-                class="w-9 h-9 rounded-lg text-sm font-medium transition-all tap-scale touch-target"
-                :style="transactionCurrentPage === page
-                  ? { 'background': 'var(--brand)', 'color': 'white', 'border': '1px solid var(--brand)' }
-                  : { 'background': 'var(--bg-elevated)', 'border': '1px solid var(--border-default)', 'color': 'var(--text-secondary)' }"
+                @click="transactionCurrentPage = Math.max(1, transactionCurrentPage - 1)"
+                :disabled="transactionCurrentPage === 1"
+                class="px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed tap-scale touch-target"
+                style="background: var(--bg-elevated); border: 1px solid var(--border-default); color: var(--text-secondary);"
+                :style="transactionCurrentPage === 1 ? {} : { 'cursor': 'pointer', 'color': 'var(--text-primary)' }"
               >
-                {{ page }}
+                ← ก่อนหน้า
+              </button>
+              <div class="flex items-center gap-1 overflow-x-auto">
+                <button
+                  v-for="page in transactionTotalPages"
+                  :key="page"
+                  @click="transactionCurrentPage = page"
+                  class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl text-xs sm:text-sm font-bold transition-all tap-scale touch-target shrink-0"
+                  :style="transactionCurrentPage === page
+                    ? { 'background': 'var(--brand)', 'color': 'white', 'border': '1px solid var(--brand)' }
+                    : { 'background': 'var(--bg-elevated)', 'border': '1px solid var(--border-default)', 'color': 'var(--text-secondary)' }"
+                >
+                  {{ page }}
+                </button>
+              </div>
+              <button
+                @click="transactionCurrentPage = Math.min(transactionTotalPages, transactionCurrentPage + 1)"
+                :disabled="transactionCurrentPage === transactionTotalPages"
+                class="px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed tap-scale touch-target"
+                style="background: var(--bg-elevated); border: 1px solid var(--border-default); color: var(--text-secondary);"
+                :style="transactionCurrentPage === transactionTotalPages ? {} : { 'cursor': 'pointer', 'color': 'var(--text-primary)' }"
+              >
+                ต่อไป →
               </button>
             </div>
-            <button
-              @click="transactionCurrentPage = Math.min(transactionTotalPages, transactionCurrentPage + 1)"
-              :disabled="transactionCurrentPage === transactionTotalPages"
-              class="px-3 py-2 rounded-lg text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed tap-scale touch-target"
-              style="background: var(--bg-elevated); border: 1px solid var(--border-default); color: var(--text-secondary);"
-              :style="transactionCurrentPage === transactionTotalPages ? {} : { 'cursor': 'pointer', 'color': 'var(--text-primary)' }"
-            >
-              ต่อไป →
-            </button>
-          </div>
-        </section>
+          </section>
         </div>
-    </div>
+      </div>
     </div>
 
     <!-- Expense Ranking Modal -->
@@ -1584,7 +1974,7 @@
                           <h4 class="text-sm font-bold text-white truncate">{{ b.name }}</h4>
                           <span
                             v-if="b.isDefault"
-                            class="text-[10px] px-1.5 py-0.2 rounded font-semibold bg-violet-500/20 text-violet-300 border border-violet-500/30 shrink-0"
+                            class="text-[10px] px-1.5 py-0.5 rounded font-semibold bg-violet-500/20 text-violet-300 border border-violet-500/30 shrink-0"
                           >
                             สมุดหลัก
                           </span>
@@ -2674,6 +3064,19 @@ const indefiniteRecurringExpenses = computed(() => {
   return recurringExpenses.value.filter(r => r.isIndefinite || !r.endDate)
 })
 
+const recurringTotalMonthly = computed(() => recurringExpenses.value.reduce((s, r) => s + r.amount, 0))
+const recurringDueSoonCount = computed(() => recurringExpenses.value.filter(r => {
+  const info = getDueInfo(r)
+  return info.daysUntil <= 3
+}).length)
+
+const dailySummaryTotals = computed(() => {
+  const list = dailySummaries.value
+  const income = list.reduce((s, d) => s + d.income, 0)
+  const expense = list.reduce((s, d) => s + d.expense, 0)
+  return { income, expense, balance: income - expense }
+})
+
 const loadRecurringExpenses = async () => {
   isLoadingRecurring.value = true
   try {
@@ -3165,25 +3568,31 @@ const exportToPDF = async () => {
   padding: 0.35rem;
   overflow-x: auto;
   border: 1px solid var(--border-subtle);
-  border-radius: 0.85rem;
+  border-radius: 1rem;
   background: var(--bg-card);
-  box-shadow: 0 10px 24px -25px rgba(21, 46, 84, 0.65);
+  box-shadow: var(--shadow-sm);
 }
 
 .cashflow-view-tabs > div {
-  min-width: 420px;
+  min-width: 480px;
+}
+
+@media (min-width: 640px) {
+  .cashflow-view-tabs > div {
+    min-width: 0;
+  }
 }
 
 .tab-button {
-  @apply px-3 py-2.5 rounded-lg flex flex-row items-center justify-center gap-2 transition-all border;
+  @apply px-3 py-2.5 rounded-xl flex items-center justify-center gap-2 transition-all border text-xs sm:text-sm font-semibold;
   background: transparent;
   border-color: transparent;
   color: var(--text-secondary);
 }
 
 .tab-button:hover {
-  background: var(--bg-surface);
-  border-color: var(--border-default);
+  background: var(--bg-elevated);
+  border-color: var(--border-subtle);
   color: var(--text-primary);
 }
 
@@ -3195,14 +3604,17 @@ const exportToPDF = async () => {
   background: var(--brand-soft) !important;
   border-color: var(--brand-border) !important;
   color: var(--brand-ink) !important;
-  box-shadow: 0 1px 2px rgba(21, 46, 84, 0.08);
+  box-shadow: 0 1px 3px rgba(37, 99, 168, 0.12);
 }
 
-.cashflow-tab-icon { font-size: 0.95rem; line-height: 1; }
+.cashflow-tab-icon {
+  font-size: 1rem;
+  line-height: 1;
+}
 
 /* Book Selector Pills */
 .book-pill {
-  @apply px-3.5 py-2 rounded-xl text-xs transition-all flex items-center gap-2 shrink-0 border;
+  @apply px-3.5 py-2 rounded-xl text-xs transition-all flex items-center gap-2 shrink-0 border font-medium;
   background: var(--bg-elevated);
   border-color: var(--border-subtle);
   color: var(--text-secondary);
@@ -3222,11 +3634,11 @@ const exportToPDF = async () => {
   background: var(--brand) !important;
   border-color: var(--brand) !important;
   color: #ffffff !important;
-  box-shadow: 0 4px 14px rgba(59, 78, 240, 0.35);
+  box-shadow: 0 4px 14px rgba(37, 99, 168, 0.3);
 }
 
 .book-pill-selected {
-  box-shadow: 0 2px 10px rgba(139, 92, 246, 0.2);
+  box-shadow: 0 2px 10px rgba(139, 92, 246, 0.18);
 }
 
 .book-pill-badge {
@@ -3237,6 +3649,7 @@ const exportToPDF = async () => {
 
 .book-pill-active .book-pill-badge {
   background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
 }
 
 .book-default-badge {

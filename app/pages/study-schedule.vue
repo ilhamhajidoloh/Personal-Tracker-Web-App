@@ -1,779 +1,112 @@
 <template>
   <AppTabsLayout>
-    <div class="mx-auto w-full max-w-[1240px] px-4 md:px-6 py-6 md:py-8">
-      <!-- Page head -->
-      <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+    <main class="schedule-shell">
+      <header class="schedule-hero">
         <div>
-          <p class="eyebrow text-gray-500 uppercase tracking-widest text-[11px]">ตารางเรียน · TIMETABLE</p>
-          <h1 class="text-4xl md:text-5xl font-normal mt-1.5 font-itim text-white">ตารางเรียน</h1>
-          <p class="text-xs mt-2 text-gray-400 font-medium">{{ selectedTermName }} &bull; {{ uniqueSubjectsCount }} รายวิชา</p>
+          <p class="schedule-kicker">ACADEMIC PLANNER</p>
+          <h1>ตารางเรียนของฉัน</h1>
+          <p class="schedule-subtitle">จัดลำดับวันเรียนและเวลาให้เห็นภาพในมุมเดียว</p>
         </div>
-        <div class="flex items-center gap-2 shrink-0 flex-wrap">
-          <select
-            v-if="terms.length"
-            v-model="selectedTermId"
-            class="text-sm px-3 py-2 rounded-xl focus:outline-none transition-all"
-            style="background: var(--bg-elevated); border: 1px solid var(--border-default); color: var(--text-primary);"
-          >
-            <option v-for="t in terms" :key="t.id" :value="t.id">{{ t.termName }}</option>
+        <div class="hero-actions">
+          <select v-if="terms.length" v-model="selectedTermId" class="term-select">
+            <option v-for="term in terms" :key="term.id" :value="term.id">{{ term.termName }}</option>
           </select>
-          <button
-            v-if="selectedTermId"
-            type="button"
-            @click="openEditTermModal"
-            class="btn-secondary text-sm inline-flex items-center gap-2 tap-scale touch-target"
-          >แก้ไขภาคเรียน</button>
-          <button
-            type="button"
-            @click="openCreateTermModal"
-            class="btn-secondary text-sm inline-flex items-center gap-2 tap-scale touch-target"
-          >+ ภาคเรียน</button>
-          <button
-            type="button"
-            @click="openCreateScheduleModal"
-            :disabled="!selectedTermId"
-            class="btn-primary text-sm inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed tap-scale touch-target"
-          >
-            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-            เพิ่มคาบเรียน
-          </button>
-          <button
-            @click="loadSchedules"
-            :disabled="isLoading"
-            class="btn-secondary text-sm inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed tap-scale touch-target"
-          >
-            <svg class="w-4 h-4" :class="isLoading ? 'animate-spin' : ''" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5M21 12a9 9 0 0 1-15 6.7L3 16M3 21v-5h5"/></svg>
-            {{ isLoading ? 'กำลังโหลด...' : 'รีเฟรช' }}
-          </button>
+          <button v-if="selectedTermId" type="button" class="icon-action" title="แก้ไขภาคเรียน" @click="openEditTermModal">✎</button>
+          <button type="button" class="outline-action" @click="openCreateTermModal">+ ภาคเรียน</button>
+          <button type="button" class="primary-action" :disabled="!selectedTermId" @click="openCreateScheduleModal">+ เพิ่มคาบเรียน</button>
         </div>
-      </div>
+      </header>
 
-      <div class="space-y-5 mt-6">
-        <!-- Error -->
-        <div
-          v-if="errorMessage"
-          class="rounded-2xl px-4 py-3 text-sm flex items-center gap-2 font-medium"
-          style="background: rgba(182, 133, 42, 0.1); border: 1px solid rgba(182, 133, 42, 0.3); color: var(--ink-amber);"
-        >
-          <span>⚠️</span><span>{{ errorMessage }}</span>
-        </div>
+      <p v-if="errorMessage" class="schedule-error">{{ errorMessage }}</p>
 
-        <!-- No term yet -->
-        <div
-          v-if="!isLoading && !terms.length"
-          class="rounded-2xl px-4 py-3.5 text-sm flex items-center justify-between gap-3 flex-wrap"
-          style="background: var(--brand-soft); border: 1px solid var(--brand-border); color: var(--brand-ink);"
-        >
-          <span class="font-semibold">📚 ยังไม่มีภาคเรียน กรุณาสร้างภาคเรียนก่อนเพิ่มคาบเรียน</span>
-          <button
-            type="button"
-            @click="openCreateTermModal"
-            class="btn-primary text-xs py-1.5 px-3.5 rounded-xl flex items-center gap-1.5 tap-scale touch-target"
-          >+ สร้างภาคเรียนแรก</button>
-        </div>
+      <section v-if="!isLoading && !terms.length" class="welcome-panel">
+        <span class="welcome-mark">01</span>
+        <div><h2>เริ่มต้นด้วยภาคเรียน</h2><p>สร้างช่วงเวลาเรียนก่อน แล้วเพิ่มวิชาและคาบเรียนของคุณได้ทันที</p></div>
+        <button class="primary-action" @click="openCreateTermModal">สร้างภาคเรียน</button>
+      </section>
 
-        <!-- Today's Schedule Countdown Live Box -->
-        <section v-if="terms.length" class="section-card p-5 animate-slide-up">
-          <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
-            <div>
-              <h2 class="text-base font-bold text-white flex items-center gap-2">
-                📅 คาบเรียนวันนี้
-                <span v-if="isInActiveTerm" class="text-xs px-2.5 py-0.5 rounded-full font-bold bg-violet-500/20 text-violet-300 border border-violet-500/30">
-                  {{ todaysClasses.length }} คาบ
-                </span>
-              </h2>
-              <p class="text-xs text-gray-500 mt-1">
-                {{ isInActiveTerm ? (activeTermName || 'สถานะการเรียนและเวลานับถอยหลังแบบเรียลไทม์') : 'นับตามช่วงเวลาภาคเรียนปัจจุบัน' }}
-              </p>
-            </div>
-            <!-- Live Indicator -->
-            <div v-if="isInActiveTerm" class="flex items-center gap-1.5 text-xs text-emerald-600 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20 font-medium">
-              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
-              สด
-            </div>
+      <template v-else>
+        <section class="overview-strip">
+          <div class="overview-stat"><span>ภาคเรียนที่เลือก</span><strong>{{ selectedTermName }}</strong></div>
+          <div class="overview-stat"><span>รายวิชา</span><strong>{{ uniqueSubjectsCount }} <small>วิชา</small></strong></div>
+          <div class="overview-stat"><span>คาบเรียนทั้งหมด</span><strong>{{ totalClasses }} <small>คาบ</small></strong></div>
+          <button class="refresh-action" :disabled="isLoading" @click="loadSchedules">↻ {{ isLoading ? 'กำลังโหลด' : 'รีเฟรช' }}</button>
+        </section>
+
+        <section class="today-board">
+          <div class="today-heading">
+            <div><p class="schedule-kicker">TODAY / LIVE</p><h2>แผนของวันนี้</h2></div>
+            <span class="date-chip">{{ getDayLabel(todayWeekday) }}</span>
           </div>
-
-          <div v-if="!isInActiveTerm" class="flex flex-col items-center justify-center py-8 text-center rounded-2xl border border-dashed border-gray-800" style="background: var(--bg-elevated);">
-            <p class="text-sm font-semibold" style="color: var(--text-primary);">ไม่ได้อยู่ช่วงเวลาเรียน</p>
-            <p class="text-xs mt-1.5" style="color: var(--text-muted);">{{ offTermMessage }}</p>
-            <div
-              v-if="nextTermCountdown"
-              class="mt-4 w-full max-w-sm rounded-xl border px-4 py-3"
-              style="background: var(--brand-soft); border-color: var(--brand-border);"
-            >
-              <p class="text-[10px] font-semibold uppercase tracking-wider" style="color: var(--brand-ink);">ภาคเรียนถัดไป</p>
-              <p class="text-sm font-bold mt-1" style="color: var(--text-primary);">{{ nextTermCountdown.termName }}</p>
-              <p class="num text-xs mt-1 font-medium" style="color: var(--brand-ink);">เริ่มในอีก {{ nextTermCountdown.label }}</p>
-              <p class="text-[11px] mt-1" style="color: var(--text-muted);">{{ nextTermCountdown.dateLabel }}</p>
-            </div>
+          <div v-if="!isInActiveTerm" class="today-empty">
+            <strong>ยังไม่อยู่ในช่วงภาคเรียน</strong><span>{{ offTermMessage }}</span>
+            <em v-if="nextTermCountdown">{{ nextTermCountdown.termName }} · เริ่มในอีก {{ nextTermCountdown.label }}</em>
           </div>
-
-          <div v-else-if="!todaysClasses.length" class="flex flex-col items-center justify-center py-8 text-center rounded-2xl border border-dashed border-gray-800 transition-all duration-300"
-            :class="{ 'study-blinking-card border-solid border-indigo-500/60': isBlinking && nextClass }"
-            :style="!isBlinking ? { background: 'var(--bg-elevated)' } : {}">
-            <span class="text-2xl mb-1">🌴</span>
-            <p class="text-sm font-semibold" :class="{ 'animate-study-text-blink text-white': isBlinking && nextClass }" :style="!isBlinking ? { color: 'var(--text-secondary)' } : {}">
-              วันนี้ไม่มีคาบเรียน
-            </p>
-            <p v-if="nextClass" class="text-xs mt-1 flex items-center justify-center gap-1.5"
-              :class="{ 'animate-study-text-blink text-white font-bold': isBlinking }">
-              <span>คาบถัดไป: {{ nextClassTitle }} ({{ nextClassSubtitle }})</span>
-            </p>
-          </div>
-
-          <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div 
-              v-for="item in todaysClasses" 
+          <div v-else-if="!todaysClasses.length" class="today-empty"><strong>วันนี้ไม่มีคาบเรียน</strong><span>ใช้เวลานี้พักผ่อน หรือเคลียร์งานที่ค้างไว้</span></div>
+          <div v-else class="today-list">
+            <button
+              v-for="item in todaysClasses"
               :key="item.id"
-              class="relative rounded-2xl p-4 border transition-all duration-300 flex flex-col justify-between"
-              :class="{ 'study-blinking-card': isBlinkingCard(item) }"
-              :style="!isBlinkingCard(item) ? getClassCardStyle(item) : {}"
+              class="today-session"
+              :class="[
+                getClassStatus(item),
+                { 'is-focus': targetBlinkClass?.id === item.id }
+              ]"
+              :style="{ '--course': courseTint(item.course_name) }"
+              @click="openEditScheduleModal(item)"
             >
-              <div>
-                <!-- Header of the card -->
-                <div class="flex items-start justify-between gap-2 mb-2.5">
-                  <span class="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider transition-colors"
-                    :class="{ 'animate-study-text-blink text-white': isBlinkingCard(item) }"
-                    :style="!isBlinkingCard(item) ? { ...getStatusBadgeStyle(item), color: '#ffffff' } : { background: '#1e293b', color: '#ffffff' }">
-                    {{ getStatusLabel(item) }}
-                  </span>
-                  <span class="num text-[11px] font-semibold" 
-                    :class="{ 'animate-study-text-blink text-white': isBlinkingCard(item) }"
-                    :style="!isBlinkingCard(item) ? { color: 'var(--text-muted)' } : {}">
-                    🕒 {{ formatTimeRange(item.start_time, item.end_time) }}
-                  </span>
-                </div>
-
-                <!-- Course Title -->
-                <h3 class="text-sm font-bold leading-tight" 
-                  :class="{ 'animate-study-text-blink text-white': isBlinkingCard(item) }"
-                  :style="!isBlinkingCard(item) ? { 
-                    color: getClassStatus(item) === 'finished' ? 'var(--text-muted)' : 'var(--text-primary)',
-                    textDecoration: getClassStatus(item) === 'finished' ? 'line-through' : 'none'
-                  } : { color: '#ffffff' }">
-                  {{ item.course_name }}
-                </h3>
-
-                <!-- Location -->
-                <p v-if="item.location" class="text-xs mt-1.5 flex items-center gap-1"
-                  :class="{ 'animate-study-text-blink text-white': isBlinkingCard(item) }"
-                  :style="!isBlinkingCard(item) ? { color: 'var(--text-secondary)' } : { color: '#ffffff' }">
-                  <span>📍</span> <span>{{ item.location }}</span>
-                </p>
-              </div>
-
-              <!-- Footer with Countdown -->
-              <div class="mt-4 pt-3 flex items-center justify-between border-t"
-                :style="!isBlinkingCard(item) ? { borderColor: 'var(--border-subtle)' } : { borderColor: 'rgba(255, 255, 255, 0.2)' }">
-                <span class="text-xs font-semibold" 
-                  :class="{ 'animate-study-text-blink text-white': isBlinkingCard(item) }"
-                  :style="!isBlinkingCard(item) ? getCountdownTextStyle(item) : { color: '#ffffff' }">
-                  {{ getCountdownLabel(item) }}
-                </span>
-                <span class="text-[10px] font-bold" 
-                  :class="{ 'animate-study-text-blink text-white': isBlinkingCard(item) }"
-                  :style="!isBlinkingCard(item) ? { color: 'var(--text-muted)' } : { color: '#ffffff' }">
-                  {{ getClassStatus(item) === 'finished' ? '✓ เสร็จแล้ว' : '...' }}
-                </span>
-              </div>
-            </div>
+              <span class="session-time">{{ formatTimeRange(item.start_time, item.end_time) }}</span>
+              <span class="session-name">{{ item.course_name }}</span>
+              <span class="session-meta">{{ item.location || 'ไม่ระบุสถานที่' }}</span>
+              <span class="session-status">{{ getCountdownLabel(item) }}</span>
+              <span class="session-progress-head">
+                <span>{{ getProgressPhaseLabel(item) }}</span>
+                <span>{{ Math.round(getClassProgress(item)) }}%</span>
+              </span>
+              <span class="session-progress-track" aria-hidden="true">
+                <span
+                  class="session-progress-fill"
+                  :style="{ width: `${getClassProgress(item)}%` }"
+                ></span>
+              </span>
+            </button>
           </div>
         </section>
 
-        <!-- Schedule Grid Table -->
-        <section class="section-card">
-          <!-- Empty State -->
-          <div v-if="!schedules.length" class="flex flex-col items-center justify-center py-14 text-center px-5">
-            <div class="w-12 h-12 rounded-xl flex items-center justify-center mb-3" style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);">
-              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
-            </div>
-            <p class="text-sm font-medium" style="color: var(--text-secondary);">ยังไม่มีคาบเรียน</p>
-          </div>
-
-          <!-- Timeline Grid -->
-          <div v-else>
-            <!-- Mobile View (md:hidden) -->
-            <div class="block md:hidden">
-              <!-- Day tabs selector -->
-              <div class="flex items-center gap-1.5 px-3 py-2.5 border-b overflow-x-auto" style="border-color: var(--border-subtle); background: var(--bg-elevated); scrollbar-width: none;">
-                <button
-                  v-for="day in gridDays"
-                  :key="day.value"
-                  type="button"
-                  @click="selectedMobileDay = day.value"
-                  class="flex-1 min-w-[54px] py-2 rounded-xl flex flex-col items-center gap-0.5 transition-all tap-scale touch-target"
-                  :style="selectedMobileDay === day.value
-                    ? { background: 'var(--brand)', color: 'white', boxShadow: 'var(--brand-glow)' }
-                    : { background: 'var(--bg-hover)', color: 'var(--text-secondary)' }"
-                >
-                  <span class="text-[10px] font-medium opacity-85">{{ getDayLabelAbbr(day.value) }}</span>
-                  <span class="text-xs font-bold">{{ day.value === todayWeekday ? 'วันนี้' : (day.value === 4 ? 'พฤหัส' : day.label) }}</span>
+        <section class="week-section">
+          <div class="section-heading"><div><p class="schedule-kicker">WEEK AT A GLANCE</p><h2>ตารางประจำสัปดาห์</h2></div><span>{{ totalClasses }} คาบในภาคเรียนนี้</span></div>
+          <div v-if="!schedules.length" class="empty-schedule"><p>ยังไม่มีคาบเรียนในภาคนี้</p><button class="outline-action" @click="openCreateScheduleModal">เพิ่มคาบแรก</button></div>
+          <div v-else class="week-rail">
+            <article v-for="day in gridDays" :key="day.value" class="day-column" :class="{ 'is-today': day.value === todayWeekday }">
+              <header><span>{{ String(day.value).padStart(2, '0') }}</span><h3>{{ day.label }}</h3></header>
+              <div class="day-sessions">
+                <button v-for="item in getSchedulesForDay(day.value)" :key="item.id" class="course-line" :style="{ '--course': courseTint(item.course_name) }" @click="openEditScheduleModal(item)">
+                  <time>{{ formatTimeRange(item.start_time, item.end_time) }}</time><strong>{{ item.course_name }}</strong><small>{{ item.location || 'ไม่ระบุสถานที่' }}</small>
                 </button>
+                <p v-if="!getSchedulesForDay(day.value).length" class="free-note">ว่าง</p>
               </div>
-
-              <!-- Class Cards for Selected Day -->
-              <div class="p-4 space-y-3">
-                <div v-if="!getSchedulesForDay(selectedMobileDay).length" class="flex flex-col items-center justify-center py-10 text-center">
-                  <div class="w-11 h-11 rounded-full flex items-center justify-center text-lg mb-2" style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);">🌴</div>
-                  <p class="text-xs font-semibold" style="color: var(--text-secondary);">ไม่มีเรียนในวันนี้</p>
-                  <p class="text-[11px]" style="color: var(--text-muted);">พักผ่อนให้เต็มที่ หรือทำงานที่ค้างไว้!</p>
-                </div>
-
-                <div
-                  v-else
-                  v-for="item in getSchedulesForDay(selectedMobileDay)"
-                  :key="item.id"
-                  @click="openEditScheduleModal(item)"
-                  class="relative rounded-xl overflow-hidden p-4 border tap-scale cursor-pointer transition-all duration-200"
-                  :style="{
-                    background: 'color-mix(in srgb, ' + courseTint(item.course_name) + ' 7%, var(--bg-card))',
-                    borderColor: 'color-mix(in srgb, ' + courseTint(item.course_name) + ' 25%, var(--border-subtle))',
-                  }"
-                >
-                  <span class="absolute left-0 top-0 bottom-0 w-1" :style="{ background: courseTint(item.course_name) }"></span>
-                  <div class="flex items-start justify-between gap-2">
-                    <div>
-                      <h3 class="text-[14px] font-bold" :style="{ color: courseInk(item.course_name) }">{{ item.course_name }}</h3>
-                      <div class="flex items-center gap-3 mt-2 flex-wrap">
-                        <span class="num text-[11px] font-semibold flex items-center gap-1" style="color: var(--text-secondary);">
-                          🕒 {{ formatTimeRange(item.start_time, item.end_time) }}
-                        </span>
-                        <span v-if="item.location" class="num text-[11px] font-semibold flex items-center gap-1" style="color: var(--text-muted);">
-                          📍 {{ item.location }}
-                        </span>
-                      </div>
-                    </div>
-                    <span class="text-[10px] px-2 py-0.5 rounded border font-semibold" :style="{ color: courseInk(item.course_name), borderColor: 'color-mix(in srgb, ' + courseTint(item.course_name) + ' 35%, transparent)' }">
-                      แก้ไข
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Desktop View (hidden md:block) -->
-            <div class="hidden md:block overflow-x-auto">
-              <div class="min-w-[850px] w-full flex flex-col" style="background: var(--bg-card);">
-                
-                <!-- Grid Header Row -->
-                <div 
-                  class="grid border-b" 
-                  :style="{ 
-                    gridTemplateColumns: `80px repeat(${gridDays.length}, 1fr)`,
-                    borderColor: 'var(--border-subtle)',
-                    background: 'var(--bg-elevated)'
-                  }"
-                >
-                  <div class="py-3 px-3 text-center text-xs font-semibold select-none border-r" style="border-color: var(--border-subtle); color: var(--text-secondary);">เวลา</div>
-                  <div 
-                    v-for="day in gridDays" 
-                    :key="day.value" 
-                    class="py-3 px-3 text-center text-xs font-semibold select-none border-r last:border-r-0"
-                    :style="{ 
-                      color: day.value === todayWeekday ? 'var(--brand-ink)' : 'var(--text-secondary)',
-                      borderColor: 'var(--border-subtle)'
-                    }"
-                  >
-                    {{ day.value === 4 ? 'พฤหัส' : day.label }}
-                  </div>
-                </div>
-
-                <!-- Grid Body Container -->
-                <div class="relative w-full" :style="{ height: `${totalHours * hourHeight}px` }">
-                  <div class="grid h-full" :style="{ gridTemplateColumns: `80px repeat(${gridDays.length}, 1fr)` }">
-                    
-                    <!-- Time Column -->
-                    <div class="relative h-full border-r" style="border-color: var(--border-subtle);">
-                      <div 
-                        v-for="(hour, idx) in timelineHours" 
-                        :key="hour" 
-                        class="absolute left-0 right-0 num text-right pr-4 text-[11px] select-none flex items-center justify-end border-b"
-                        :style="{ 
-                          top: `${idx * hourHeight}px`, 
-                          height: `${hourHeight}px`,
-                          borderColor: 'var(--border-subtle)',
-                          background: 'var(--bg-elevated)',
-                          color: 'var(--text-muted)'
-                        }"
-                      >
-                        {{ formatHour(hour) }}
-                      </div>
-                    </div>
-
-                    <!-- Day Columns -->
-                    <div 
-                      v-for="day in gridDays" 
-                      :key="day.value" 
-                      class="relative h-full border-r last:border-r-0" 
-                      :style="{ 
-                        borderColor: 'var(--border-subtle)',
-                        background: day.value === todayWeekday ? 'var(--brand-soft)' : 'transparent'
-                      }"
-                    >
-                      <!-- Background slots -->
-                      <div 
-                        v-for="idx in totalHours" 
-                        :key="idx" 
-                        class="absolute left-0 right-0 border-b"
-                        :style="{ 
-                          top: `${(idx - 1) * hourHeight}px`, 
-                          height: `${hourHeight}px`,
-                          borderColor: 'var(--border-subtle)'
-                        }"
-                      ></div>
-
-                      <!-- Absolute Course Cards -->
-                      <div
-                        v-for="item in getPositionedSchedulesForDay(day.value)"
-                        :key="item.id"
-                        class="absolute transition-all duration-200 group cursor-pointer hover:z-20 p-[3px]"
-                        :style="{
-                          top: `${item.top}%`,
-                          height: `${item.height}%`,
-                          left: `${item.left}%`,
-                          width: `${item.width}%`,
-                        }"
-                        @click="openEditScheduleModal(item)"
-                      >
-                        <div 
-                          class="course-card-inner w-full h-full rounded-xl p-3 flex flex-col justify-between border select-none transition-all duration-200"
-                          :style="{
-                            background: 'color-mix(in srgb, ' + courseTint(item.course_name) + ' 10%, transparent)',
-                            borderColor: 'color-mix(in srgb, ' + courseTint(item.course_name) + ' 25%, transparent)',
-                            '--hover-bg': 'color-mix(in srgb, ' + courseTint(item.course_name) + ' 16%, transparent)',
-                            '--hover-border': 'color-mix(in srgb, ' + courseTint(item.course_name) + ' 45%, transparent)',
-                          }"
-                        >
-                          <div>
-                            <p class="text-[12.5px] font-bold leading-tight" :style="{ color: courseInk(item.course_name) }">
-                              {{ item.course_name }}
-                            </p>
-                            <p v-if="item.location" class="num text-[10px] mt-1.5 font-semibold" :style="{ color: courseInk(item.course_name), opacity: 0.8 }">
-                              {{ item.location }}
-                            </p>
-                          </div>
-                          <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 num text-[9px] font-semibold self-end" :style="{ color: courseInk(item.course_name), opacity: 0.6 }">
-                            {{ formatTimeRange(item.start_time, item.end_time) }}
-                          </span>
-                        </div>
-                      </div>
-
-                    </div>
-
-                  </div>
-                </div>
-
-              </div>
-            </div>
+            </article>
           </div>
         </section>
 
-        <!-- All Schedules Table -->
-        <section class="section-card">
-          <div class="flex flex-col gap-3 px-5 py-4 border-b border-gray-800/60">
-            <div class="flex items-center justify-between">
-              <h2 class="text-base font-semibold text-white">รายการคาบเรียนทั้งหมด</h2>
-              <span class="text-xs px-2.5 py-1 rounded-full" style="background: var(--bg-elevated); color: var(--text-secondary);">{{ schedulePageInfo }}</span>
-            </div>
-            <div class="flex items-center gap-2 flex-wrap">
-              <select
-                v-model.number="scheduleItemsPerPage"
-                @change="scheduleCurrentPage = 1"
-                class="text-sm px-3 py-2 rounded-xl ml-auto focus:outline-none transition-all"
-                style="background: var(--bg-elevated); border: 1px solid var(--border-default); color: var(--text-primary);"
-              >
-                <option value="10">10 รายการ/หน้า</option>
-                <option value="20">20 รายการ/หน้า</option>
-                <option value="50">50 รายการ/หน้า</option>
-              </select>
-            </div>
+        <section class="agenda-section">
+          <div class="section-heading"><div><p class="schedule-kicker">ALL SESSIONS</p><h2>รายการคาบเรียน</h2></div><span>{{ schedulePageInfo }}</span></div>
+          <div class="agenda-list">
+            <article v-for="item in paginatedSchedules" :key="item.id" class="agenda-row" :style="{ '--course': courseTint(item.course_name) }">
+              <time>{{ formatTimeRange(item.start_time, item.end_time) }}</time><div><strong>{{ item.course_name }}</strong><span>{{ getDayLabel(item.day_of_week) }}<i v-if="item.location"> · {{ item.location }}</i></span></div>
+              <div class="row-actions"><button @click="openEditScheduleModal(item)">แก้ไข</button><button class="delete" :disabled="isDeletingId === item.id" @click="deleteSchedule(item.id)">{{ isDeletingId === item.id ? 'กำลังลบ' : 'ลบ' }}</button></div>
+            </article>
           </div>
-
-          <div v-if="!schedules.length" class="flex flex-col items-center justify-center py-12 text-center px-5">
-            <div class="w-14 h-14 rounded-2xl bg-gray-800/70 flex items-center justify-center text-2xl mb-3">📚</div>
-            <p class="text-sm font-medium text-gray-400">ยังไม่มีคาบเรียน</p>
-            <button               @click="openCreateScheduleModal" class="mt-4 px-4 py-2 rounded-xl bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/30 text-sm font-medium text-violet-300 transition-all tap-scale touch-target">
-              + เพิ่มคาบแรก
-            </button>
-          </div>
-
-          <div v-else class="overflow-x-auto">
-            <table class="min-w-full text-sm">
-              <thead>
-                <tr class="border-b border-gray-800/60 bg-gray-800/20">
-                  <th class="text-left py-3 px-5 text-[11px] font-semibold text-gray-500 uppercase tracking-wide">วัน</th>
-                  <th class="text-left py-3 px-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide">วิชา</th>
-                  <th class="text-left py-3 px-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide">เวลา</th>
-                  <th class="text-left py-3 px-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide hidden sm:table-cell">สถานที่</th>
-                  <th class="text-right py-3 px-5 text-[11px] font-semibold text-gray-500 uppercase tracking-wide">จัดการ</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-gray-800/40">
-                <tr
-                  v-for="item in paginatedSchedules"
-                  :key="item.id"
-                  class="hover:bg-gray-800/20 transition-all"
-                  :class="editingScheduleId === item.id ? 'bg-violet-500/5' : ''"
-                >
-                  <td class="py-3 px-5">
-                    <span
-                      class="text-xs font-semibold px-2.5 py-1 rounded-full border"
-                      :class="item.day_of_week === todayWeekday
-                        ? 'border-sky-500/30 bg-sky-500/15 text-sky-300'
-                        : 'border-gray-700 bg-gray-800/60 text-gray-400'"
-                    >{{ getDayLabel(item.day_of_week) }}</span>
-                  </td>
-                  <td class="py-3 px-3 font-medium text-white">{{ item.course_name }}</td>
-                  <td class="py-3 px-3 text-gray-400 text-xs whitespace-nowrap">{{ formatTimeRange(item.start_time, item.end_time) }}</td>
-                  <td class="py-3 px-3 text-gray-500 text-xs hidden sm:table-cell">{{ item.location || '—' }}</td>
-                  <td class="py-3 px-5 text-right">
-                    <div class="flex items-center justify-end gap-1.5">
-                      <button
-                        @click="openEditScheduleModal(item)"
-                        :disabled="isDeletingId === item.id"
-                        class="px-3 py-1.5 rounded-lg text-xs bg-sky-500/15 text-sky-400 hover:bg-sky-500/25 border border-sky-500/20 disabled:opacity-50 transition-all font-medium tap-scale touch-target"
-                      >แก้ไข</button>
-                      <button
-                        @click="deleteSchedule(item.id)"
-                        :disabled="isDeletingId === item.id"
-                        class="px-3 py-1.5 rounded-lg text-xs bg-rose-500/15 text-rose-400 hover:bg-rose-500/25 border border-rose-500/20 disabled:opacity-50 transition-all font-medium tap-scale touch-target"
-                      >{{ isDeletingId === item.id ? 'ลบ...' : 'ลบ' }}</button>
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <!-- Pagination Controls -->
-          <div v-if="scheduleTotalPages > 1" class="flex items-center justify-center gap-2 px-5 py-4 border-t border-gray-800/60">
-            <button
-              @click="scheduleCurrentPage = Math.max(1, scheduleCurrentPage - 1)"
-              :disabled="scheduleCurrentPage === 1"
-              class="px-3 py-2 rounded-lg text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed tap-scale touch-target"
-              style="background: var(--bg-elevated); border: 1px solid var(--border-default); color: var(--text-secondary);"
-              :style="scheduleCurrentPage === 1 ? {} : { 'cursor': 'pointer', 'color': 'var(--text-primary)' }"
-            >
-              ← ก่อนหน้า
-            </button>
-            <div class="flex items-center gap-1">
-              <button
-                v-for="page in scheduleTotalPages"
-                :key="page"
-                @click="scheduleCurrentPage = page"
-                class="w-9 h-9 rounded-lg text-sm font-medium transition-all tap-scale touch-target"
-                :style="scheduleCurrentPage === page
-                  ? { 'background': 'var(--brand)', 'color': 'white', 'border': '1px solid var(--brand)' }
-                  : { 'background': 'var(--bg-elevated)', 'border': '1px solid var(--border-default)', 'color': 'var(--text-secondary)' }"
-              >
-                {{ page }}
-              </button>
-            </div>
-            <button
-              @click="scheduleCurrentPage = Math.min(scheduleTotalPages, scheduleCurrentPage + 1)"
-              :disabled="scheduleCurrentPage === scheduleTotalPages"
-              class="px-3 py-2 rounded-lg text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed tap-scale touch-target"
-              style="background: var(--bg-elevated); border: 1px solid var(--border-default); color: var(--text-secondary);"
-              :style="scheduleCurrentPage === scheduleTotalPages ? {} : { 'cursor': 'pointer', 'color': 'var(--text-primary)' }"
-            >
-              ต่อไป →
-            </button>
-          </div>
+          <nav v-if="scheduleTotalPages > 1" class="pager"><button :disabled="scheduleCurrentPage === 1" @click="scheduleCurrentPage--">ก่อนหน้า</button><button v-for="page in scheduleTotalPages" :key="page" :class="{ active: page === scheduleCurrentPage }" @click="scheduleCurrentPage = page">{{ page }}</button><button :disabled="scheduleCurrentPage === scheduleTotalPages" @click="scheduleCurrentPage++">ถัดไป</button></nav>
         </section>
-      </div>
-    </div>
+      </template>
+    </main>
 
-    <!-- Modal -->
-    <Teleport to="body">
-      <Transition name="backdrop">
-        <div
-          v-if="isScheduleModalOpen"
-          class="fixed inset-0 z-[90] flex items-center justify-center p-4"
-          style="background: rgba(3,5,12,0.62); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);"
-          @click.self="closeScheduleModal"
-        >
-          <Transition name="modal">
-            <div v-if="isScheduleModalOpen" class="relative z-10 w-full max-w-md bg-gray-900 border border-gray-700/80 rounded-2xl shadow-2xl overflow-hidden">
-          <!-- Modal Header -->
-          <div class="flex items-center justify-between px-6 py-4 border-b border-gray-800/80">
-            <div class="flex items-center gap-3">
-              <div class="w-9 h-9 rounded-xl bg-violet-500/20 flex items-center justify-center text-base">📚</div>
-              <div>
-                <h2 class="text-base font-semibold text-white">{{ formTitle }}</h2>
-                <p class="text-xs text-gray-500">{{ formSubtitle }}</p>
-              </div>
-            </div>
-            <button
-              type="button"
-              @click="closeScheduleModal"
-              class="w-8 h-8 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white flex items-center justify-center transition-all tap-scale touch-target"
-            >✕</button>
-          </div>
-
-          <!-- Modal Body -->
-          <form class="p-6 space-y-4" @submit.prevent="submitSchedule">
-            <div>
-              <label class="block text-xs font-medium text-gray-400 mb-1.5">ชื่อวิชา <span class="text-rose-400">*</span></label>
-              <input
-                v-model="form.courseName"
-                type="text"
-                maxlength="120"
-                placeholder="เช่น คณิตศาสตร์, ภาษาอังกฤษ..."
-                class="w-full bg-gray-800/80 border border-gray-700/60 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-600 outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 transition-all"
-              >
-            </div>
-
-            <!-- Multi-session toggle (for new schedules) -->
-            <div v-if="!isEditing" class="flex items-center gap-2 p-3 rounded-xl bg-violet-500/10 border border-violet-500/20">
-              <input
-                type="checkbox"
-                id="multiSessionMode"
-                v-model="isMultiSessionMode"
-                class="w-4 h-4 rounded accent-violet-500"
-              >
-              <label for="multiSessionMode" class="text-xs font-medium text-violet-300 cursor-pointer select-none">
-                เพิ่มหลายคาบพร้อมกัน (วิชาเดียวกัน หลายวัน/เวลา)
-              </label>
-            </div>
-
-            <!-- Multi-session toggle (for editing) -->
-            <div v-else-if="isEditing" class="space-y-2">
-              <div v-if="isMultiSessionMode" class="flex items-center gap-2 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
-                <span class="text-xs font-medium text-emerald-300">
-                  📚 แก้ไขทั้งหมด {{ multiSessions.length }} คาบของวิชานี้
-                </span>
-              </div>
-              <div v-else class="flex items-center gap-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
-                <input
-                  type="checkbox"
-                  id="multiSessionModeEdit"
-                  v-model="isMultiSessionMode"
-                  @change="toggleMultiSessionInEdit"
-                  class="w-4 h-4 rounded accent-amber-500"
-                >
-                <label for="multiSessionModeEdit" class="text-xs font-medium text-amber-300 cursor-pointer select-none">
-                  เปลี่ยนเป็นโหมดแก้ไขหลายคาบพร้อมกัน
-                </label>
-              </div>
-            </div>
-
-            <!-- Single Session Mode -->
-            <template v-if="!isMultiSessionMode">
-              <div>
-                <label class="block text-xs font-medium text-gray-400 mb-1.5">วันเรียน</label>
-                <select
-                  v-model.number="form.dayOfWeek"
-                  class="w-full bg-gray-800/80 border border-gray-700/60 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 transition-all"
-                >
-                  <option v-for="day in dayOptions" :key="day.value" :value="day.value">{{ day.label }}</option>
-                </select>
-              </div>
-
-              <div class="grid grid-cols-2 gap-3">
-                <div>
-                  <label class="block text-xs font-medium text-gray-400 mb-1.5">เวลาเริ่ม <span class="text-rose-400">*</span></label>
-                  <input
-                    v-model="form.startTime"
-                    type="time"
-                    class="w-full bg-gray-800/80 border border-gray-700/60 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 transition-all"
-                  >
-                </div>
-                <div>
-                  <label class="block text-xs font-medium text-gray-400 mb-1.5">เวลาสิ้นสุด <span class="text-rose-400">*</span></label>
-                  <input
-                    v-model="form.endTime"
-                    type="time"
-                    class="w-full bg-gray-800/80 border border-gray-700/60 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 transition-all"
-                  >
-                </div>
-              </div>
-            </template>
-
-            <!-- Multi-session Mode -->
-            <template v-else>
-              <div class="space-y-3">
-                <div class="flex items-center justify-between">
-                  <label class="block text-xs font-medium text-gray-400">คาบเรียนทั้งหมด ({{ multiSessions.length }} คาบ)</label>
-                  <button
-                    type="button"
-                    @click="addSession"
-                    class="text-xs px-3 py-1.5 rounded-lg bg-violet-500/20 text-violet-300 hover:bg-violet-500/30 border border-violet-500/30 transition-all tap-scale touch-target font-medium"
-                  >+ เพิ่มคาบ</button>
-                </div>
-
-                <div class="space-y-3 max-h-[320px] overflow-y-auto pr-1">
-                  <div
-                    v-for="(session, index) in multiSessions"
-                    :key="index"
-                    class="p-3 rounded-xl bg-gray-800/60 border border-gray-700/40 space-y-2.5"
-                  >
-                    <div class="flex items-center justify-between">
-                      <span class="text-xs font-semibold text-violet-300">คาบที่ {{ index + 1 }}</span>
-                      <button
-                        v-if="multiSessions.length > 1"
-                        type="button"
-                        @click="removeSession(index)"
-                        class="text-xs px-2 py-1 rounded-lg bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 border border-rose-500/30 transition-all tap-scale touch-target"
-                      >ลบ</button>
-                    </div>
-
-                    <div>
-                      <label class="block text-[11px] font-medium text-gray-500 mb-1">วันเรียน</label>
-                      <select
-                        v-model.number="session.dayOfWeek"
-                        class="w-full bg-gray-800/80 border border-gray-700/60 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 transition-all"
-                      >
-                        <option v-for="day in dayOptions" :key="day.value" :value="day.value">{{ day.label }}</option>
-                      </select>
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-2">
-                      <div>
-                        <label class="block text-[11px] font-medium text-gray-500 mb-1">เวลาเริ่ม</label>
-                        <input
-                          v-model="session.startTime"
-                          type="time"
-                          class="w-full bg-gray-800/80 border border-gray-700/60 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 transition-all"
-                        >
-                      </div>
-                      <div>
-                        <label class="block text-[11px] font-medium text-gray-500 mb-1">เวลาสิ้นสุด</label>
-                        <input
-                          v-model="session.endTime"
-                          type="time"
-                          class="w-full bg-gray-800/80 border border-gray-700/60 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 transition-all"
-                        >
-                      </div>
-                    </div>
-
-                    <div>
-                      <label class="block text-[11px] font-medium text-gray-500 mb-1">สถานที่</label>
-                      <input
-                        v-model="session.location"
-                        type="text"
-                        maxlength="120"
-                        placeholder="เช่น ห้อง 402, อาคาร A..."
-                        class="w-full bg-gray-800/80 border border-gray-700/60 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 transition-all"
-                      >
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </template>
-
-            <div>
-              <label class="block text-xs font-medium text-gray-400 mb-1.5">สถานที่ (ไม่บังคับ)</label>
-              <input
-                v-model="form.location"
-                type="text"
-                maxlength="120"
-                placeholder="เช่น ห้อง 402, อาคาร A..."
-                class="w-full bg-gray-800/80 border border-gray-700/60 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-600 outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 transition-all"
-              >
-            </div>
-
-            <div class="flex gap-3 pt-2">
-              <button
-                type="button"
-                @click="closeScheduleModal"
-                class="flex-1 py-2.5 rounded-xl bg-gray-800/80 hover:bg-gray-800 border border-gray-700/60 text-sm font-medium text-gray-300 hover:text-white transition-all tap-scale touch-target"
-              >ยกเลิก</button>
-              <button
-                type="submit"
-                :disabled="isSubmitting"
-                class="flex-1 btn-primary py-2.5 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed text-sm font-semibold flex items-center justify-center gap-2 tap-scale touch-target"
-              >
-                <span v-if="isSubmitting" class="inline-block w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
-                {{ submitButtonText }}
-              </button>
-            </div>
-          </form>
-        </div>
-          </Transition>
-          <div class="absolute inset-0 z-0 bg-black/70 backdrop-blur-sm" @click="closeScheduleModal"></div>
-        </div>
-      </Transition>
-    </Teleport>
-
-    <!-- Term Modal -->
-    <Teleport to="body">
-      <Transition name="backdrop">
-        <div
-          v-if="isTermModalOpen"
-          class="fixed inset-0 z-[90] flex items-center justify-center p-4"
-          style="background: rgba(3,5,12,0.62); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);"
-          @click.self="closeTermModal"
-        >
-          <Transition name="modal">
-            <div v-if="isTermModalOpen" class="relative z-10 w-full max-w-md bg-gray-900 border border-gray-700/80 rounded-2xl shadow-2xl overflow-hidden">
-              <div class="flex items-center justify-between px-6 py-4 border-b border-gray-800/80">
-                <div class="flex items-center gap-3">
-                  <div class="w-9 h-9 rounded-xl bg-violet-500/20 flex items-center justify-center text-base">📚</div>
-                  <div>
-                    <h2 class="text-base font-semibold text-white">{{ isEditingTerm ? 'แก้ไขภาคเรียน' : 'สร้างภาคเรียนใหม่' }}</h2>
-                    <p class="text-xs text-gray-500">{{ isEditingTerm ? 'ปรับชื่อและช่วงเวลาของภาคเรียน' : 'ใส่ชื่อและช่วงเวลาของภาคเรียน' }}</p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  @click="closeTermModal"
-                  class="w-8 h-8 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white flex items-center justify-center transition-all tap-scale touch-target"
-                >✕</button>
-              </div>
-
-              <form class="p-6 space-y-4" @submit.prevent="submitTerm">
-                <div>
-                  <label class="block text-xs font-medium text-gray-400 mb-1.5">ชื่อภาคเรียน <span class="text-rose-400">*</span></label>
-                  <input
-                    v-model="termForm.termName"
-                    type="text"
-                    maxlength="120"
-                    placeholder="เช่น ภาคเรียนที่ 1/2569"
-                    class="w-full bg-gray-800/80 border border-gray-700/60 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-600 outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 transition-all"
-                  >
-                </div>
-                <div class="grid grid-cols-2 gap-3">
-                  <div>
-                    <label class="block text-xs font-medium text-gray-400 mb-1.5">วันเริ่ม <span class="text-rose-400">*</span></label>
-                    <input
-                      v-model="termForm.startDate"
-                      type="date"
-                      class="w-full bg-gray-800/80 border border-gray-700/60 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 transition-all"
-                    >
-                  </div>
-                  <div>
-                    <label class="block text-xs font-medium text-gray-400 mb-1.5">วันสิ้นสุด <span class="text-rose-400">*</span></label>
-                    <input
-                      v-model="termForm.endDate"
-                      type="date"
-                      class="w-full bg-gray-800/80 border border-gray-700/60 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 transition-all"
-                    >
-                  </div>
-                </div>
-                <div class="flex gap-3 pt-2">
-                  <button
-                    type="button"
-                    @click="closeTermModal"
-                    class="flex-1 py-2.5 rounded-xl bg-gray-800/80 hover:bg-gray-800 border border-gray-700/60 text-sm font-medium text-gray-300 hover:text-white transition-all tap-scale touch-target"
-                  >ยกเลิก</button>
-                  <button
-                    type="submit"
-                    :disabled="isSubmittingTerm"
-                    class="flex-1 btn-primary py-2.5 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed text-sm font-semibold flex items-center justify-center gap-2 tap-scale touch-target"
-                  >
-                    <span v-if="isSubmittingTerm" class="inline-block w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
-                    {{ isSubmittingTerm ? 'กำลังบันทึก...' : (isEditingTerm ? 'บันทึกการแก้ไข' : 'สร้างภาคเรียน') }}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </Transition>
-          <div class="absolute inset-0 z-0 bg-black/70 backdrop-blur-sm" @click="closeTermModal"></div>
-        </div>
-      </Transition>
-    </Teleport>
+    <Teleport to="body"><div v-if="isScheduleModalOpen" class="dialog-backdrop" @click.self="closeScheduleModal"><form class="schedule-dialog" @submit.prevent="submitSchedule"><header><div><p class="schedule-kicker">CLASS DETAILS</p><h2>{{ formTitle }}</h2></div><button type="button" @click="closeScheduleModal">×</button></header><div class="dialog-body"><label>ชื่อวิชา<input v-model="form.courseName" required maxlength="120" placeholder="เช่น ภาษาอังกฤษ" /></label><label v-if="!isMultiSessionMode">วันเรียน<select v-model.number="form.dayOfWeek"><option v-for="day in dayOptions" :key="day.value" :value="day.value">{{ day.label }}</option></select></label><div v-if="!isMultiSessionMode" class="form-grid"><label>เริ่ม<input v-model="form.startTime" type="time" required /></label><label>สิ้นสุด<input v-model="form.endTime" type="time" required /></label></div><label v-if="!isMultiSessionMode">สถานที่<input v-model="form.location" maxlength="120" placeholder="ไม่บังคับ" /></label><label class="mode-toggle"><input v-model="isMultiSessionMode" type="checkbox" @change="isEditing && toggleMultiSessionInEdit" />เพิ่มหลายคาบสำหรับวิชาเดียวกัน</label><div v-if="isMultiSessionMode" class="multi-editor"><div v-for="(session, index) in multiSessions" :key="index" class="multi-row"><select v-model.number="session.dayOfWeek"><option v-for="day in dayOptions" :key="day.value" :value="day.value">{{ day.label }}</option></select><input v-model="session.startTime" type="time" /><input v-model="session.endTime" type="time" /><input v-model="session.location" placeholder="สถานที่" /><button type="button" @click="removeSession(index)">×</button></div><button type="button" class="outline-action" @click="addSession">+ เพิ่มคาบ</button></div></div><footer><button type="button" class="outline-action" @click="closeScheduleModal">ยกเลิก</button><button class="primary-action" :disabled="isSubmitting">{{ submitButtonText }}</button></footer></form></div></Teleport>
+    <Teleport to="body"><div v-if="isTermModalOpen" class="dialog-backdrop" @click.self="closeTermModal"><form class="schedule-dialog compact" @submit.prevent="submitTerm"><header><div><p class="schedule-kicker">TERM SETTINGS</p><h2>{{ isEditingTerm ? 'แก้ไขภาคเรียน' : 'สร้างภาคเรียน' }}</h2></div><button type="button" @click="closeTermModal">×</button></header><div class="dialog-body"><label>ชื่อภาคเรียน<input v-model="termForm.termName" required maxlength="120" /></label><div class="form-grid"><label>วันเริ่ม<input v-model="termForm.startDate" type="date" required /></label><label>วันสิ้นสุด<input v-model="termForm.endDate" type="date" required /></label></div></div><footer><button type="button" class="outline-action" @click="closeTermModal">ยกเลิก</button><button class="primary-action" :disabled="isSubmittingTerm">{{ isSubmittingTerm ? 'กำลังบันทึก' : 'บันทึก' }}</button></footer></form></div></Teleport>
   </AppTabsLayout>
 </template>
+
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
@@ -1221,6 +554,31 @@ const getClassStatus = (item: ScheduleRow) => {
   if (now >= endD) return 'finished'
   if (now >= startD && now < endD) return 'active'
   return 'upcoming'
+}
+
+const getClassProgress = (item: ScheduleRow) => {
+  const nowMs = currentTime.value.getTime()
+  const startMs = timeStringToDate(item.start_time).getTime()
+  const endMs = timeStringToDate(item.end_time).getTime()
+
+  if (nowMs >= endMs) return 0
+
+  if (nowMs < startMs) {
+    const preparationWindowMs = 12 * 60 * 60 * 1000
+    const elapsedPreparationMs = preparationWindowMs - (startMs - nowMs)
+    return Math.max(0, Math.min(100, (elapsedPreparationMs / preparationWindowMs) * 100))
+  }
+
+  const durationMs = Math.max(1, endMs - startMs)
+  const remainingMs = endMs - nowMs
+  return Math.max(0, Math.min(100, (remainingMs / durationMs) * 100))
+}
+
+const getProgressPhaseLabel = (item: ScheduleRow) => {
+  const status = getClassStatus(item)
+  if (status === 'active') return 'กำลังเรียน · เวลาคงเหลือ'
+  if (status === 'finished') return 'เรียนเสร็จแล้ว'
+  return getClassProgress(item) > 0 ? 'เตรียมเข้าเรียน' : 'รอเวลาเรียน'
 }
 
 const getClassCardStyle = (item: ScheduleRow) => {
@@ -1745,14 +1103,161 @@ onUnmounted(() => {
 <style scoped>
 @import url('https://fonts.googleapis.com/css2?family=Itim&display=swap');
 
-.font-itim {
-  font-family: 'Itim', cursive, sans-serif;
+.schedule-shell { max-width: 1180px; margin: 0 auto; padding: 32px 20px 64px; color: var(--text-primary); }
+.schedule-hero, .section-heading, .today-heading, .schedule-dialog header, .schedule-dialog footer { display:flex; align-items:center; justify-content:space-between; gap:16px; }
+.schedule-hero { padding: 12px 0 34px; border-bottom: 1px solid var(--border-subtle); }
+.schedule-kicker { margin:0 0 5px; color: var(--brand-ink); letter-spacing:.14em; font-size:10px; font-weight:800; }
+h1,h2,h3,p { margin-top:0; }.schedule-hero h1 { margin-bottom:8px; font: 400 clamp(34px,5vw,54px)/.95 'Itim', cursive; }.schedule-subtitle { margin-bottom:0; color:var(--text-muted); font-size:14px; }.hero-actions { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:8px; }
+.term-select,.primary-action,.outline-action,.refresh-action,.icon-action { border-radius:10px; border:1px solid var(--border-default); padding:10px 13px; font-size:13px; font-weight:700; transition:.2s ease; }.term-select { min-width:155px; background:var(--bg-elevated); color:var(--text-primary); }.primary-action { border-color:var(--brand); background:var(--brand); color:white; }.outline-action,.refresh-action,.icon-action { background:transparent; color:var(--text-secondary); }.icon-action { padding:10px 13px; }.primary-action:hover,.outline-action:hover,.refresh-action:hover,.icon-action:hover { transform:translateY(-1px); filter:brightness(1.12); }.primary-action:disabled,.refresh-action:disabled { opacity:.5; cursor:not-allowed; transform:none; }
+.schedule-error { margin:20px 0; padding:12px 14px; border-left:3px solid var(--ink-rose); background:color-mix(in srgb,var(--ink-rose) 10%,transparent); color:var(--text-secondary); }.welcome-panel { margin-top:28px; display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:22px; padding:30px; background:var(--bg-card); border:1px solid var(--border-subtle); }.welcome-mark { color:var(--brand-ink); font-size:32px; font-weight:800; }.welcome-panel h2 { margin-bottom:5px; }.welcome-panel p { margin:0; color:var(--text-muted); font-size:14px; }
+.overview-strip { display:grid; grid-template-columns:1.4fr 1fr 1fr auto; gap:1px; margin:26px 0; background:var(--border-subtle); border:1px solid var(--border-subtle); }.overview-stat,.refresh-action { padding:17px 20px; background:var(--bg-card); }.overview-stat span { display:block; color:var(--text-muted); font-size:11px; margin-bottom:5px; }.overview-stat strong { font-size:16px; }.overview-stat small { color:var(--text-muted); font-weight:500; }.refresh-action { border:0; border-radius:0; }
+.today-board { padding:26px; border:1px solid var(--border-subtle); background:linear-gradient(135deg,color-mix(in srgb,var(--brand) 10%,var(--bg-card)),var(--bg-card) 48%); }.today-heading { margin-bottom:20px; }.today-heading h2,.section-heading h2 { margin:0; font-size:20px; }.date-chip { padding:6px 10px; color:var(--brand-ink); border:1px solid var(--brand-border); font-size:12px; }.today-empty { display:flex; flex-direction:column; gap:5px; padding:25px 0 4px; color:var(--text-muted); font-size:13px; }.today-empty strong { color:var(--text-primary); font-size:16px; }.today-empty em { margin-top:8px; color:var(--brand-ink); font-style:normal; }.today-list { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:10px; }.today-session { text-align:left; padding:15px; border:1px solid color-mix(in srgb,var(--course) 32%,var(--border-subtle)); border-left:3px solid var(--course); background:var(--bg-card); color:var(--text-primary); }.today-session.active { background:color-mix(in srgb,var(--course) 12%,var(--bg-card)); }.today-session.finished { opacity:.55; }.session-time,.session-meta,.session-status { display:block; font-size:11px; color:var(--text-muted); }.session-name { display:block; padding:9px 0 4px; font-weight:800; font-size:14px; }.session-status { margin-top:10px; color:var(--brand-ink); }
+.week-section,.agenda-section { margin-top:28px; }.section-heading { margin:0 0 13px; }.section-heading > span { color:var(--text-muted); font-size:12px; }.week-rail { display:grid; grid-template-columns:repeat(5,minmax(150px,1fr)); overflow-x:auto; border:1px solid var(--border-subtle); }.day-column { min-height:230px; border-right:1px solid var(--border-subtle); background:var(--bg-card); }.day-column:last-child { border:0; }.day-column.is-today { background:color-mix(in srgb,var(--brand) 6%,var(--bg-card)); }.day-column header { display:flex; align-items:baseline; gap:8px; padding:13px; border-bottom:1px solid var(--border-subtle); }.day-column header span { color:var(--brand-ink); font-size:11px; font-weight:800; }.day-column h3 { margin:0; font-size:13px; }.day-sessions { padding:8px; }.course-line { display:block; width:100%; margin-bottom:7px; padding:10px; text-align:left; background:color-mix(in srgb,var(--course) 7%,transparent); border-left:2px solid var(--course); color:var(--text-primary); }.course-line time,.course-line small { display:block; color:var(--text-muted); font-size:10px; }.course-line strong { display:block; margin:4px 0; font-size:12px; }.free-note { padding:8px; color:var(--text-muted); font-size:12px; }.empty-schedule { padding:42px; text-align:center; border:1px dashed var(--border-default); color:var(--text-muted); }.empty-schedule .outline-action { margin-top:8px; }
+.agenda-list { border-top:1px solid var(--border-subtle); }.agenda-row { display:grid; grid-template-columns:150px 1fr auto; gap:20px; align-items:center; padding:16px; border-bottom:1px solid var(--border-subtle); border-left:3px solid var(--course); background:var(--bg-card); }.agenda-row time { color:var(--brand-ink); font-size:12px; font-weight:700; }.agenda-row strong,.agenda-row span { display:block; }.agenda-row span { margin-top:3px; color:var(--text-muted); font-size:12px; }.agenda-row i { font-style:normal; }.row-actions { display:flex; gap:7px; }.row-actions button,.pager button { padding:7px 10px; border:1px solid var(--border-default); background:transparent; color:var(--text-secondary); font-size:12px; }.row-actions .delete { color:var(--ink-rose); }.pager { display:flex; justify-content:center; gap:5px; padding:20px; }.pager button.active { background:var(--brand); color:#fff; border-color:var(--brand); }.pager button:disabled { opacity:.4; }
+.dialog-backdrop { position:fixed; inset:0; z-index:90; display:grid; place-items:center; padding:16px; background:rgba(4,8,16,.78); backdrop-filter:blur(8px); }.schedule-dialog { width:min(100%,560px); max-height:calc(100vh - 32px); overflow:auto; background:var(--bg-card); border:1px solid var(--border-default); box-shadow:0 24px 80px rgba(0,0,0,.4); }.schedule-dialog header,.schedule-dialog footer { padding:18px 20px; border-bottom:1px solid var(--border-subtle); }.schedule-dialog footer { border-top:1px solid var(--border-subtle); border-bottom:0; justify-content:flex-end; }.schedule-dialog h2 { margin:0; font-size:20px; }.schedule-dialog header button { font-size:24px; color:var(--text-muted); }.dialog-body { display:grid; gap:15px; padding:20px; }.dialog-body label { display:grid; gap:6px; color:var(--text-secondary); font-size:12px; font-weight:700; }.dialog-body input,.dialog-body select { width:100%; padding:10px; border:1px solid var(--border-default); background:var(--bg-elevated); color:var(--text-primary); }.form-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }.mode-toggle { display:flex !important; grid-template-columns:auto 1fr; align-items:center; padding-top:4px; }.mode-toggle input { width:auto; }.multi-editor { display:grid; gap:8px; }.multi-row { display:grid; grid-template-columns:1.3fr 1fr 1fr 1.4fr auto; gap:6px; }.multi-row button { color:var(--ink-rose); }
+@media (max-width:720px) { .schedule-shell { padding:22px 14px 48px; }.schedule-hero { align-items:flex-start; flex-direction:column; }.hero-actions { justify-content:flex-start; }.overview-strip { grid-template-columns:1fr 1fr; }.overview-strip .refresh-action { grid-column:span 2; }.week-rail { grid-template-columns:repeat(5,155px); }.agenda-row { grid-template-columns:1fr auto; gap:10px; }.agenda-row time { grid-column:span 2; }.row-actions { grid-column:2; grid-row:2; }.welcome-panel { grid-template-columns:auto 1fr; }.welcome-panel .primary-action { grid-column:span 2; }.multi-row { grid-template-columns:1fr 1fr; }.multi-row input[placeholder] { grid-column:span 2; }.multi-row button { grid-column:2; } }
+
+/* Modern workspace layer */
+.schedule-shell { max-width: 1560px; padding: clamp(24px, 3vw, 54px) clamp(18px, 3vw, 52px) 80px; }
+.schedule-shell::before { content:''; position:fixed; z-index:-1; width:58vw; height:58vw; right:-22vw; top:7vh; pointer-events:none; background:radial-gradient(circle, color-mix(in srgb,var(--brand) 16%,transparent), transparent 66%); filter:blur(12px); }
+.schedule-hero { min-height:180px; padding:30px clamp(24px,3vw,46px); border:1px solid color-mix(in srgb,var(--border-default) 75%,transparent); border-radius:28px; background:linear-gradient(115deg, color-mix(in srgb,var(--brand) 17%,var(--bg-card)), var(--bg-card) 44%, color-mix(in srgb,var(--brand-2) 11%,var(--bg-card))); box-shadow:0 20px 52px rgba(0,0,0,.12); }
+.schedule-hero h1 { font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif; font-weight:760; letter-spacing:-.055em; font-size:clamp(34px,4vw,62px); }
+.schedule-subtitle { max-width:520px; font-size:15px; line-height:1.65; }
+.hero-actions { gap:10px; }.term-select,.primary-action,.outline-action,.refresh-action,.icon-action { min-height:42px; border-radius:13px; padding:10px 15px; }.primary-action { box-shadow:0 8px 22px color-mix(in srgb,var(--brand) 30%,transparent); }.outline-action,.refresh-action,.icon-action { background:color-mix(in srgb,var(--bg-elevated) 74%,transparent); backdrop-filter:blur(10px); }
+.overview-strip { overflow:hidden; gap:0; margin:22px 0 26px; border-radius:20px; background:color-mix(in srgb,var(--border-default) 65%,transparent); box-shadow:0 12px 28px rgba(0,0,0,.06); }.overview-stat,.refresh-action { min-height:86px; display:flex; flex-direction:column; justify-content:center; padding:17px clamp(16px,2vw,28px); border-right:1px solid color-mix(in srgb,var(--border-default) 65%,transparent); background:color-mix(in srgb,var(--bg-card) 92%,transparent); }.overview-stat strong { font-size:19px; letter-spacing:-.025em; }.refresh-action { flex-direction:row; align-items:center; gap:7px; border-right:0; }
+.today-board { position:relative; overflow:hidden; padding:clamp(22px,3vw,34px); border-radius:24px; border-color:color-mix(in srgb,var(--brand) 27%,var(--border-subtle)); background:linear-gradient(130deg,color-mix(in srgb,var(--brand) 16%,var(--bg-card)),var(--bg-card) 48%,color-mix(in srgb,var(--brand-2) 8%,var(--bg-card))); box-shadow:0 16px 36px rgba(0,0,0,.08); }.today-board::after { content:'TODAY'; position:absolute; right:24px; bottom:-18px; color:color-mix(in srgb,var(--text-primary) 4%,transparent); font-size:clamp(72px,10vw,142px); font-weight:900; letter-spacing:-.1em; pointer-events:none; }.today-list { position:relative; z-index:1; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:12px; }.today-session { min-height:145px; border-radius:16px; border-left-width:4px; box-shadow:0 8px 18px rgba(0,0,0,.06); transition:transform .22s ease, box-shadow .22s ease; }.today-session:hover { transform:translateY(-4px); box-shadow:0 15px 25px rgba(0,0,0,.14); }.session-name { font-size:15px; }
+.session-progress-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:12px; color:var(--text-muted); font-size:10px; font-weight:700; }.session-progress-track { display:block; width:100%; height:6px; margin-top:6px; overflow:hidden; border-radius:999px; background:color-mix(in srgb,var(--text-muted) 15%,transparent); }.session-progress-fill { display:block; height:100%; border-radius:inherit; background:linear-gradient(90deg,var(--course),color-mix(in srgb,var(--course) 58%,white)); box-shadow:0 0 12px color-mix(in srgb,var(--course) 44%,transparent); transition:width 1s linear; }.today-session.active .session-progress-head { color:var(--course); }
+.today-session.is-focus { position:relative; isolation:isolate; animation:class-focus-pulse 1.35s ease-in-out infinite; }.today-session.is-focus::after { content:''; position:absolute; inset:-1px; z-index:-1; border:2px solid var(--course); border-radius:17px; pointer-events:none; animation:class-focus-ring 1.35s ease-out infinite; }.today-session.is-focus .session-name { color:color-mix(in srgb,var(--course) 72%,white); }
+@keyframes class-focus-pulse { 0%,100% { box-shadow:0 8px 18px rgba(0,0,0,.06),0 0 0 0 color-mix(in srgb,var(--course) 0%,transparent); } 50% { box-shadow:0 14px 32px rgba(0,0,0,.15),0 0 22px color-mix(in srgb,var(--course) 35%,transparent); } }
+@keyframes class-focus-ring { 0% { opacity:.9; transform:scale(1); } 70%,100% { opacity:0; transform:scale(1.035); } }
+@media (prefers-reduced-motion: reduce) { .today-session.is-focus,.today-session.is-focus::after { animation:none; }.today-session.is-focus { box-shadow:0 0 0 2px var(--course),0 12px 28px color-mix(in srgb,var(--course) 20%,transparent); } }
+.week-section,.agenda-section { margin-top:40px; }.section-heading { margin-bottom:16px; }.section-heading h2 { font-size:23px; letter-spacing:-.035em; }.week-rail { grid-template-columns:repeat(5,minmax(185px,1fr)); border-radius:22px; box-shadow:0 14px 35px rgba(0,0,0,.08); scrollbar-width:thin; }.day-column { min-height:290px; }.day-column header { padding:17px; }.day-column header span { display:grid; width:28px; height:28px; place-items:center; border-radius:9px; background:color-mix(in srgb,var(--brand) 15%,transparent); }.day-column.is-today header { background:color-mix(in srgb,var(--brand) 8%,transparent); }.day-sessions { padding:10px; }.course-line { border-radius:11px; border-left-width:3px; transition:transform .2s ease, background .2s ease; }.course-line:hover { transform:translateX(3px); background:color-mix(in srgb,var(--course) 14%,transparent); }
+.agenda-list { overflow:hidden; border:1px solid var(--border-subtle); border-radius:20px; box-shadow:0 12px 32px rgba(0,0,0,.06); }.agenda-row { min-height:78px; padding:17px 22px; transition:background .2s ease; }.agenda-row:hover { background:color-mix(in srgb,var(--bg-hover) 75%,var(--bg-card)); }.agenda-row time { font-size:13px; }.row-actions button { border-radius:9px; padding:8px 12px; }.pager button { border-radius:9px; }.welcome-panel { border-radius:24px; box-shadow:0 16px 38px rgba(0,0,0,.08); }
+.schedule-dialog { border-radius:24px; box-shadow:0 28px 100px rgba(0,0,0,.5); }.dialog-body input,.dialog-body select { border-radius:11px; }.dialog-backdrop { background:rgba(4,8,16,.7); }
+@media (max-width:1100px) { .schedule-shell { max-width:100%; }.schedule-hero { min-height:0; }.overview-strip { grid-template-columns:1.35fr 1fr 1fr auto; }.week-rail { grid-template-columns:repeat(5,180px); } }
+@media (max-width:820px) { .schedule-hero { align-items:flex-start; flex-direction:column; }.hero-actions { justify-content:flex-start; }.overview-strip { grid-template-columns:1fr 1fr; }.overview-strip .refresh-action { grid-column:span 2; flex-direction:row; align-items:center; }.today-list { grid-template-columns:repeat(2,minmax(0,1fr)); }.week-rail { grid-template-columns:repeat(5,170px); }.agenda-row { grid-template-columns:130px 1fr auto; } }
+@media (max-width:560px) { .schedule-shell { padding:16px 12px 50px; }.schedule-hero { padding:24px 20px; border-radius:21px; }.schedule-hero h1 { font-size:38px; }.hero-actions { width:100%; display:grid; grid-template-columns:1fr 1fr; }.term-select { grid-column:span 2; width:100%; }.primary-action,.outline-action,.icon-action { justify-content:center; }.overview-strip { border-radius:16px; }.overview-stat,.refresh-action { min-height:76px; padding:14px; }.overview-stat strong { font-size:15px; }.today-board { border-radius:20px; }.today-list { grid-template-columns:1fr; }.week-section,.agenda-section { margin-top:32px; }.agenda-row { grid-template-columns:1fr auto; padding:15px; }.agenda-row time { grid-column:span 2; }.agenda-row > div:not(.row-actions) { min-width:0; }.row-actions { grid-row:2; grid-column:2; }.section-heading { align-items:flex-end; }.section-heading > span { text-align:right; }.form-grid { grid-template-columns:1fr; } }
+
+/* Weekly schedule responsive layout */
+.week-rail {
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  overflow: visible;
+  gap: 1px;
+  background: var(--border-subtle);
+}
+.day-column {
+  min-width: 0;
+  border-right: 0;
+}
+.course-line strong,
+.course-line small {
+  overflow-wrap: anywhere;
 }
 
-.course-card-inner:hover {
-  background-color: var(--hover-bg) !important;
-  border-color: var(--hover-border) !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
-  transform: translateY(-1px);
+@media (min-width: 1181px) {
+  .schedule-shell {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding-right: clamp(24px, 2.25vw, 44px);
+    padding-left: clamp(24px, 2.25vw, 44px);
+  }
+  .week-rail {
+    width: 100%;
+    grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  }
+  .day-column {
+    min-height: clamp(290px, 34vh, 440px);
+  }
+  .day-column header {
+    padding: 18px clamp(14px, 1.2vw, 22px);
+  }
+  .day-sessions {
+    padding: clamp(10px, 1vw, 16px);
+  }
+  .course-line {
+    padding: clamp(11px, 1vw, 16px);
+  }
+}
+
+@media (min-width: 821px) and (max-width: 1180px) {
+  .week-rail {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    padding: 12px;
+    background: color-mix(in srgb, var(--bg-card) 88%, transparent);
+  }
+  .day-column {
+    min-height: 240px;
+    overflow: hidden;
+    border: 1px solid var(--border-subtle);
+    border-radius: 16px;
+  }
+}
+
+@media (max-width: 820px) {
+  .week-rail {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    padding: 10px;
+    overflow: visible;
+    background: color-mix(in srgb, var(--bg-card) 88%, transparent);
+  }
+  .day-column {
+    min-height: 210px;
+    overflow: hidden;
+    border: 1px solid var(--border-subtle);
+    border-radius: 15px;
+  }
+  .day-column header {
+    padding: 13px 14px;
+  }
+}
+
+@media (max-width: 560px) {
+  .week-section .section-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .week-section .section-heading > span {
+    text-align: left;
+  }
+  .week-rail {
+    grid-template-columns: 1fr;
+    gap: 9px;
+    padding: 9px;
+    border-radius: 18px;
+  }
+  .day-column {
+    min-height: 0;
+    border-radius: 14px;
+  }
+  .day-column header {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    padding: 12px 13px;
+  }
+  .day-sessions {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 7px;
+    padding: 9px;
+  }
+  .course-line {
+    margin-bottom: 0;
+    padding: 12px;
+  }
+  .course-line time {
+    font-size: 11px;
+  }
+  .course-line strong {
+    font-size: 13px;
+  }
+  .free-note {
+    margin: 0;
+    padding: 10px 12px;
+  }
 }
 </style>
