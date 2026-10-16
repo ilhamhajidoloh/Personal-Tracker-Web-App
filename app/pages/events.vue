@@ -1,834 +1,119 @@
 <template>
-  <AppTabsLayout>
-    <div class="mx-auto w-full max-w-[1240px] px-4 md:px-6 py-6 md:py-8">
-      <!-- Page head -->
-      <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+<AppTabsLayout>
+    <main class="events-board">
+      <header class="events-board__header">
         <div>
-          <p class="eyebrow">กิจกรรม · Events</p>
-          <h1 class="text-2xl md:text-[30px] font-extrabold tracking-tight mt-1.5" style="color: var(--text-primary);">กิจกรรมและนัดหมาย</h1>
-          <p class="text-xs mt-2 font-medium" style="color: var(--text-muted);">
-            <span v-if="ongoingEventsCount > 0" class="inline-flex items-center gap-1.5 font-semibold mr-1.5" style="color: var(--event-status-ongoing-ink);">
-              <span class="relative flex h-2 w-2">
-                <span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style="background: var(--event-status-ongoing-ink);"></span>
-                <span class="relative inline-flex rounded-full h-2 w-2" style="background: var(--event-status-ongoing-ink);"></span>
-              </span>
-              กำลังดำเนินอยู่ {{ ongoingEventsCount }}
-            </span>
-            <span v-if="ongoingEventsCount > 0">&bull; </span>
-            <span>กำลังจะมาถึง {{ upcomingEventsCount }}</span> &bull; 
-            <span>สิ้นสุดแล้ว {{ pastEventsCount }}</span>
-          </p>
+          <p class="events-board__eyebrow">PLANNER / EVENTS</p>
+          <h1>กิจกรรมของฉัน</h1>
+          <p class="events-board__intro">วางแผน ติดตาม และจัดการทุกนัดหมายจากพื้นที่เดียว</p>
         </div>
-        <div class="flex flex-wrap items-center gap-2 shrink-0">
-          <input
-            ref="icsFileInput"
-            type="file"
-            accept=".ics,text/calendar"
-            class="hidden"
-            @change="importIcsFile"
-          >
-          <button
-            type="button"
-            @click="icsFileInput?.click()"
-            :disabled="isImporting"
-            class="btn-secondary text-sm inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed tap-scale touch-target"
-            title="นำเข้ากิจกรรมจากไฟล์ปฏิทิน .ics"
-          >
-            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14"/></svg>
-            {{ isImporting ? 'กำลังนำเข้า...' : 'Import .ics' }}
-          </button>
-          <button
-            type="button"
-            @click="exportIcsFile"
-            :disabled="isExporting || !events.length"
-            class="btn-secondary text-sm inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed tap-scale touch-target"
-            title="ส่งออกกิจกรรมทั้งหมดเป็นไฟล์ปฏิทิน .ics"
-          >
-            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21V9m0 12-4-4m4 4 4-4M5 3h14"/></svg>
-            {{ isExporting ? 'กำลังส่งออก...' : 'Export .ics' }}
-          </button>
-          <button
-            type="button"
-            @click="exportPdfFile"
-            :disabled="isExportingPdf || !events.length"
-            class="btn-secondary text-sm inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed tap-scale touch-target"
-            title="ส่งออกรายงานกิจกรรมเป็นไฟล์ PDF"
-          >
-            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v5h5M9 16h6M9 12h3"/></svg>
-            {{ isExportingPdf ? 'กำลังส่งออก...' : 'Export PDF' }}
-          </button>
-          <button
-            @click="isEntryModalOpen = true"
-            class="btn-primary text-sm inline-flex items-center gap-2 tap-scale touch-target"
-          >
-            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-            เพิ่มกิจกรรม
-          </button>
-          <button
-            @click="loadEvents"
-            :disabled="isLoading"
-            class="btn-secondary text-sm inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed tap-scale touch-target"
-          >
-            <svg class="w-4 h-4" :class="isLoading ? 'animate-spin' : ''" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5M21 12a9 9 0 0 1-15 6.7L3 16M3 21v-5h5"/></svg>
-            {{ isLoading ? 'กำลังโหลด...' : 'รีเฟรช' }}
-          </button>
+        <div class="events-board__actions">
+          <input ref="icsFileInput" type="file" accept=".ics,text/calendar" class="hidden" @change="importIcsFile">
+          <button type="button" class="events-button events-button--quiet" :disabled="isImporting" @click="icsFileInput?.click()">{{ isImporting ? 'กำลังนำเข้า…' : 'นำเข้า .ics' }}</button>
+          <button type="button" class="events-button events-button--quiet" :disabled="isExporting || !events.length" @click="exportIcsFile">{{ isExporting ? 'กำลังส่งออก…' : 'ส่งออก .ics' }}</button>
+          <button type="button" class="events-button events-button--quiet" :disabled="isExportingPdf || !events.length" @click="exportPdfFile">{{ isExportingPdf ? 'กำลังสร้าง…' : 'PDF' }}</button>
+          <button type="button" class="events-button events-button--primary" @click="isEntryModalOpen = true">+ เพิ่มกิจกรรม</button>
         </div>
-      </div>
+      </header>
 
-      <div class="space-y-5 mt-6">
-        <!-- Error -->
-        <div
-          v-if="errorMessage"
-          class="rounded-2xl px-4 py-3 text-sm flex items-center gap-2 font-medium"
-          style="background: rgba(182, 133, 42, 0.1); border: 1px solid rgba(182, 133, 42, 0.3); color: var(--ink-amber);"
-        >
-          <span>⚠️</span><span>{{ errorMessage }}</span>
+      <div v-if="errorMessage" class="events-alert">{{ errorMessage }}</div>
+
+      <section class="events-summary">
+        <div class="events-summary__item"><span>ทั้งหมด</span><strong>{{ events.length }}</strong></div>
+        <div class="events-summary__item"><span>กำลังดำเนินอยู่</span><strong>{{ ongoingEventsCount }}</strong></div>
+        <div class="events-summary__item"><span>กำลังจะมาถึง</span><strong>{{ upcomingEventsCount }}</strong></div>
+        <div class="events-summary__item"><span>สิ้นสุดแล้ว</span><strong>{{ pastEventsCount }}</strong></div>
+      </section>
+
+      <section v-if="ongoingEvents.length" class="events-live" aria-label="กิจกรรมที่กำลังดำเนินอยู่">
+        <div class="events-live__heading">
+          <div><span class="events-live__signal"></span><p>HAPPENING NOW</p></div>
+          <strong>{{ ongoingEvents.length }} กิจกรรมกำลังดำเนินอยู่</strong>
         </div>
-
-        <!-- Ongoing Spotlight Banner -->
-        <div
-          v-if="ongoingEvents.length > 0"
-          class="relative overflow-hidden rounded-2xl p-5 md:p-6 transition-all"
-          style="background: var(--event-status-ongoing-soft); border: 1px solid var(--event-status-ongoing-border); box-shadow: var(--event-status-ongoing-shadow);"
-        >
-          <div class="flex items-center justify-between gap-3 mb-4">
-            <div class="flex items-center gap-2">
-              <span class="relative flex h-3 w-3">
-                <span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style="background: var(--event-status-ongoing-ink);"></span>
-                <span class="relative inline-flex rounded-full h-3 w-3" style="background: var(--event-status-ongoing-ink);"></span>
-              </span>
-              <span class="text-xs font-extrabold uppercase tracking-wider" style="color: var(--event-status-ongoing-ink);">
-                กิจกรรมที่กำลังดำเนินอยู่ (LIVE COUNTDOWN)
-              </span>
+        <div class="events-live__list">
+          <article v-for="item in ongoingEvents" :key="item.id" class="events-live__item">
+            <div class="events-live__content">
+              <span class="events-live__type">{{ getEventTypeName(item.event_type) }}</span>
+              <h2>{{ item.title }}</h2>
+              <p>{{ displayEventDateTime(item) }}</p>
             </div>
-            <span class="num text-xs font-semibold px-2.5 py-0.5 rounded-full" style="background: var(--bg-card); color: var(--event-status-ongoing-ink); border: 1px solid var(--event-status-ongoing-border);">
-              {{ ongoingEvents.length }} กิจกรรม
-            </span>
-          </div>
-
-          <div class="space-y-4">
-            <div
-              v-for="item in ongoingEvents"
-              :key="'spotlight-' + item.id"
-              class="rounded-xl p-4 md:p-5 flex flex-col gap-4 transition-all"
-              style="background: var(--bg-card); border: 1px solid var(--border-subtle);"
-            >
-              <!-- Top Row: Info & Countdown Box -->
-              <div class="flex flex-col md:flex-row md:items-start justify-between gap-4">
-                <div class="flex-1 min-w-0">
-                  <div class="flex items-center gap-2 flex-wrap mb-1.5">
-                    <span class="text-[10px] px-2.5 py-0.5 rounded-md font-bold whitespace-nowrap flex items-center gap-1.5" style="background: var(--event-status-ongoing-soft); color: var(--event-status-ongoing-ink); border: 1px solid var(--event-status-ongoing-border);">
-                      <span class="w-1.5 h-1.5 rounded-full" style="background: var(--event-status-ongoing-ink);"></span>
-                      กำลังดำเนินอยู่
-                    </span>
-                    <span class="text-[10px] px-2 py-0.5 rounded-md border font-semibold whitespace-nowrap" :class="getEventBadgeClass(item.event_type)">
-                      {{ getEventTypeName(item.event_type) }}
-                    </span>
-                    <span class="num text-[10px] px-2 py-0.5 rounded-md font-mono font-bold flex items-center gap-1 shadow-sm" style="background: var(--event-status-ongoing-soft); color: var(--event-status-ongoing-ink); border: 1px solid var(--event-status-ongoing-border);">
-                      ⚡ เหลือ {{ getOngoingEventDetails(item).progress }}%
-                    </span>
-                  </div>
-                  <h3 class="text-base md:text-lg font-bold truncate" style="color: var(--text-primary);">{{ item.title }}</h3>
-                  <p class="num text-xs mt-1 font-medium" style="color: var(--text-muted);">{{ displayEventDateTime(item) }}</p>
-                  <p v-if="item.description" class="text-xs mt-1.5 line-clamp-2" style="color: var(--text-secondary);">{{ item.description }}</p>
-                </div>
-
-                <!-- Live Countdown Box -->
-                <div class="shrink-0 flex flex-col items-start md:items-end gap-1 min-w-[220px]">
-                  <div class="text-xs flex items-center gap-1.5" style="color: var(--text-muted);">
-                    <span>⏱️ เหลือเวลาอีก</span>
-                    <span class="num font-mono font-bold text-xs" style="color: var(--event-status-ongoing-ink);">(เหลืออีก {{ getOngoingEventDetails(item).progress }}%)</span>
-                  </div>
-                  <div class="num text-base md:text-lg font-extrabold font-mono tracking-tight px-3.5 py-1.5 rounded-xl border flex items-center gap-1.5 shadow-sm" style="background: var(--bg-elevated); color: var(--event-status-ongoing-ink); border-color: var(--event-status-ongoing-border);">
-                    <span class="relative flex h-2 w-2">
-                      <span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style="background: var(--event-status-ongoing-ink);"></span>
-                      <span class="relative inline-flex rounded-full h-2 w-2" style="background: var(--event-status-ongoing-ink);"></span>
-                    </span>
-                    {{ getOngoingEventDetails(item).countdownText }}
-                  </div>
-                </div>
-              </div>
-
-              <!-- Informative Progress Bar Section -->
-              <div class="pt-2 border-t" style="border-color: var(--border-subtle);">
-                <!-- Timestamp markers above bar -->
-                <div class="flex items-center justify-between text-[11px] mb-1.5 font-medium" style="color: var(--text-muted);">
-                  <span class="flex items-center gap-1">
-                    <span class="w-1.5 h-1.5 rounded-full" style="background: var(--event-status-ongoing-ink);"></span>
-                    เริ่ม: <strong class="num" style="color: var(--text-primary);">{{ getOngoingEventDetails(item).startTimeFormatted }}</strong>
-                  </span>
-                  <span class="num font-mono font-extrabold text-xs px-2.5 py-0.5 rounded-lg flex items-center gap-1 shadow-sm" style="background: var(--event-status-ongoing-soft); color: var(--event-status-ongoing-ink); border: 1px solid var(--event-status-ongoing-border);">
-                    <span>⏳ เวลาที่เหลือ</span>
-                    <span class="text-sm font-black">{{ getOngoingEventDetails(item).progress }}%</span>
-                  </span>
-                  <span class="flex items-center gap-1">
-                    สิ้นสุด: <strong class="num" style="color: var(--text-primary);">{{ getOngoingEventDetails(item).endTimeFormatted }}</strong>
-                    <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
-                  </span>
-                </div>
-
-                <!-- Progress Bar -->
-                <div class="w-full h-2.5 rounded-full overflow-hidden relative" style="background: var(--bg-elevated-2);">
-                  <div
-                    class="h-full rounded-full transition-all duration-1000 ease-linear relative overflow-hidden"
-                    :style="{
-                      width: getOngoingEventDetails(item).progress + '%',
-                      background: 'linear-gradient(90deg, #10b981 0%, var(--event-status-ongoing-ink) 100%)',
-                      boxShadow: '0 0 10px rgba(10, 138, 92, 0.4)'
-                    }"
-                  >
-                    <div class="absolute inset-0 bg-white/20 opacity-30 animate-pulse"></div>
-                  </div>
-                </div>
-
-                <!-- Sub-info below bar -->
-                <div class="flex items-center justify-between text-[10.5px] mt-1.5" style="color: var(--text-muted);">
-                  <span>⏱️ ผ่านไปแล้ว {{ getOngoingEventDetails(item).elapsedText }}</span>
-                  <span class="num font-semibold" style="color: var(--event-status-ongoing-ink);">เหลืออีก {{ getOngoingEventDetails(item).countdownText }}</span>
-                </div>
-              </div>
+            <div class="events-live__countdown">
+              <span>เหลือเวลา</span>
+              <strong>{{ getOngoingEventDetails(item).countdownText }}</strong>
             </div>
-          </div>
+            <div class="events-live__progress" aria-hidden="true"><i :style="{ width: getOngoingEventDetails(item).progress + '%' }"></i></div>
+          </article>
         </div>
+      </section>
 
-        <!-- Next Upcoming Event Banner -->
-        <div
-          v-if="nextUpcomingEvent"
-          class="relative overflow-hidden rounded-2xl p-4 sm:p-5 md:p-6 transition-all"
-          style="background: rgba(59, 78, 240, 0.08); border: 1px solid rgba(59, 78, 240, 0.28); box-shadow: 0 0 20px rgba(59, 78, 240, 0.12);"
-        >
-          <div class="flex items-center justify-between gap-2 mb-3 sm:mb-4">
-            <div class="flex items-center gap-1.5 min-w-0">
-              <span class="text-sm shrink-0">⏳</span>
-              <span class="text-xs font-extrabold uppercase tracking-wider truncate" style="color: var(--brand-ink);">
-                กิจกรรมถัดไปที่กำลังจะถึง
-              </span>
-            </div>
-            <span class="num text-xs font-semibold px-2.5 py-0.5 rounded-full shrink-0 whitespace-nowrap" style="background: var(--bg-card); color: var(--brand-ink); border: 1px solid rgba(59, 78, 240, 0.28);">
-              {{ getUpcomingEventDetails(nextUpcomingEvent).progress }}%
-            </span>
-          </div>
-
-          <div
-            class="rounded-xl p-4 sm:p-5 flex flex-col gap-3.5 transition-all"
-            style="background: var(--bg-card); border: 1px solid var(--border-subtle);"
-          >
-            <!-- Top Row: Info & Countdown Box -->
-            <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-              <div class="flex-1 min-w-0">
-                <div class="flex items-center gap-1.5 flex-wrap mb-1.5">
-                  <span
-                    class="text-[10px] px-2 py-0.5 rounded-md font-bold whitespace-nowrap flex items-center gap-1"
-                    :style="getEventStatusBadgeStyle(nextUpcomingEvent)"
-                  >
-                    {{ getEventStatusText(nextUpcomingEvent) }}
-                  </span>
-                  <span class="text-[10px] px-2 py-0.5 rounded-md border font-semibold whitespace-nowrap" :class="getEventBadgeClass(nextUpcomingEvent.event_type)">
-                    {{ getEventTypeName(nextUpcomingEvent.event_type) }}
-                  </span>
-                  <span v-if="nextUpcomingEvent.reminder_minutes" class="text-[10px] px-2 py-0.5 rounded-md font-semibold text-amber-400 bg-amber-500/10 border border-amber-500/20 whitespace-nowrap">
-                    ⏰ เตือนก่อน {{ getReminderLabel(nextUpcomingEvent.reminder_minutes) }}
-                  </span>
-                </div>
-                <h3 class="text-base sm:text-lg font-bold truncate" style="color: var(--text-primary);">{{ nextUpcomingEvent.title }}</h3>
-                <p class="num text-xs mt-1 font-medium" style="color: var(--text-muted);">{{ displayEventDateTime(nextUpcomingEvent) }}</p>
-                <p v-if="nextUpcomingEvent.description" class="text-xs mt-1 line-clamp-2" style="color: var(--text-secondary);">{{ nextUpcomingEvent.description }}</p>
-              </div>
-
-              <!-- Countdown to Start -->
-              <div class="shrink-0 flex flex-col items-start sm:items-end gap-1 w-full sm:w-auto">
-                <div class="text-xs flex items-center gap-1.5" style="color: var(--text-muted);">
-                  <span>⏰ เริ่มในอีก</span>
-                </div>
-                <div class="num text-base sm:text-lg font-extrabold font-mono tracking-tight px-3.5 py-1.5 rounded-xl border flex items-center justify-center gap-1.5 shadow-sm w-full sm:w-auto" style="background: var(--bg-elevated); color: var(--brand-ink); border-color: rgba(59, 78, 240, 0.28);">
-                  <span>⏱️</span>
-                  {{ getUpcomingEventDetails(nextUpcomingEvent).countdownText }}
-                </div>
-              </div>
-            </div>
-
-            <!-- Timeline & Countdown Progress Bar -->
-            <div class="pt-2 border-t space-y-1.5" style="border-color: var(--border-subtle);">
-              <div class="flex items-center justify-between text-[11px] font-medium" style="color: var(--text-muted);">
-                <span class="flex items-center gap-1 shrink-0">
-                  <span class="w-1.5 h-1.5 rounded-full" style="background: var(--brand);"></span>
-                  รอบ 30 วัน
-                </span>
-                <span class="num font-bold text-xs shrink-0 px-2" style="color: var(--brand-ink);">
-                  {{ getUpcomingEventDetails(nextUpcomingEvent).progress }}%
-                </span>
-                <span class="flex items-center gap-1 truncate text-right">
-                  เริ่ม <strong class="num truncate" style="color: var(--text-primary);">{{ formatDate(nextUpcomingEvent.start_date) }} {{ nextUpcomingEvent.start_time ? formatTime(nextUpcomingEvent.start_time) : '' }}</strong>
-                </span>
-              </div>
-
-              <!-- Timeline Bar -->
-              <div class="w-full h-2 rounded-full overflow-hidden relative" style="background: var(--bg-elevated-2);">
-                <div
-                  class="h-full rounded-full transition-all duration-1000 ease-linear"
-                  :style="{
-                    width: getUpcomingEventDetails(nextUpcomingEvent).progress + '%',
-                    background: 'linear-gradient(90deg, #3b82f6 0%, var(--brand) 100%)'
-                  }"
-                ></div>
-              </div>
-
-              <div class="flex items-center justify-between text-[10.5px] pt-0.5" style="color: var(--text-muted);">
-                <span>🎯 ระยะเวลา: {{ getUpcomingEventDetails(nextUpcomingEvent).durationText }}</span>
-                <span class="num font-semibold" style="color: var(--brand-ink);">ความคืบหน้า {{ getUpcomingEventDetails(nextUpcomingEvent).progress }}%</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Events Content Section with Sub-tabs -->
-        <section class="section-card">
-          <!-- Top Bar: Sub-Tabs & Controls -->
-          <div class="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 p-3.5 sm:px-5 sm:py-4 border-b" style="border-color: var(--border-subtle);">
-            <!-- Segmented Sub-Tab Bar -->
-            <div class="w-full lg:w-auto grid grid-cols-3 p-1 rounded-xl sm:rounded-2xl" style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);">
-              <button
-                v-for="tab in subTabs"
-                :key="tab.value"
-                type="button"
-                @click="activeSubTab = tab.value"
-                class="py-2 px-1.5 sm:px-3 rounded-lg sm:rounded-xl text-xs font-semibold transition-all tap-scale flex items-center justify-center gap-1 sm:gap-1.5 text-center select-none"
-                :style="activeSubTab === tab.value
-                  ? { background: 'var(--brand)', color: '#ffffff', boxShadow: 'var(--brand-glow)' }
-                  : { color: 'var(--text-secondary)' }"
-              >
-                <span class="truncate text-[11.5px] sm:text-xs">
-                  <span class="sm:hidden">{{ tab.shortLabel }}</span>
-                  <span class="hidden sm:inline"><span class="mr-1">{{ tab.icon }}</span>{{ tab.label }}</span>
-                </span>
-                <span
-                  class="num text-[10px] sm:text-[11px] font-bold px-1.5 py-0.5 rounded-full shrink-0 leading-none"
-                  :style="activeSubTab === tab.value
-                    ? { background: 'rgba(255,255,255,0.25)', color: '#ffffff' }
-                    : { background: 'var(--bg-card)', color: 'var(--text-muted)', border: '1px solid var(--border-subtle)' }"
-                >
-                  {{ tab.count }}
-                </span>
-              </button>
-            </div>
-
-            <!-- Search box & Items per page -->
-            <div class="flex items-center gap-2 w-full lg:w-auto">
-              <div class="relative flex-1 lg:w-56">
-                <input
-                  v-model="searchQuery"
-                  type="text"
-                  placeholder="ค้นหากิจกรรม..."
-                  class="w-full text-xs pl-8 pr-3 py-2 rounded-xl transition-all focus:outline-none"
-                  style="background: var(--bg-elevated); border: 1px solid var(--border-default); color: var(--text-primary);"
-                />
-                <svg class="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2" style="color: var(--text-muted);" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-              </div>
-              <select
-                v-model.number="itemsPerPage"
-                @change="currentPage = 1"
-                class="text-xs px-2.5 py-2 rounded-xl focus:outline-none transition-all shrink-0"
-                style="background: var(--bg-elevated); border: 1px solid var(--border-default); color: var(--text-primary);"
-              >
-                <option :value="10">10 / หน้า</option>
-                <option :value="20">20 / หน้า</option>
-                <option :value="50">50 / หน้า</option>
-              </select>
-            </div>
-          </div>
-
-          <!-- Loading -->
-          <div v-if="isLoading" class="p-5 space-y-3">
-            <div v-for="i in 3" :key="i" class="h-20 rounded-xl animate-pulse" style="background: var(--bg-elevated);"></div>
-          </div>
-
-          <!-- Empty state -->
-          <div v-else-if="!filteredEvents.length" class="flex flex-col items-center justify-center py-16 text-center px-5">
-            <div class="w-16 h-16 rounded-2xl flex items-center justify-center text-2xl mb-4" style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);">
-              {{ activeSubTab === 'past' ? '🏁' : '🗓️' }}
-            </div>
-            <p class="text-base font-semibold" style="color: var(--text-primary);">
-              {{ activeSubTab === 'past' ? 'ยังไม่มีกิจกรรมที่สิ้นสุดแล้ว' : (searchQuery ? 'ไม่พบกิจกรรมที่ค้นหา' : (activeSubTab === 'upcoming' ? 'ไม่มีกิจกรรมที่ยังไม่ถึง' : 'ยังไม่มีกิจกรรม')) }}
-            </p>
-            <p class="text-sm mt-1" style="color: var(--text-muted);">
-              {{ activeSubTab === 'past' ? 'กิจกรรมที่สิ้นสุดแล้วหรือผ่านเวลามาแล้วจะปรากฏในแท็บนี้' : (searchQuery ? 'ลองเปลี่ยนคำค้นหาใหม่อีกครั้ง' : 'กดปุ่มด้านล่างเพื่อเพิ่มกิจกรรมใหม่') }}
-            </p>
-            <button
-              v-if="activeSubTab !== 'past' && !searchQuery"
-              @click="isEntryModalOpen = true"
-              class="mt-4 px-4 py-2 rounded-xl text-sm font-medium transition-all tap-scale touch-target"
-              style="background: var(--brand-soft); border: 1px solid var(--border-strong); color: var(--brand-ink);"
-            >
-              + เพิ่มกิจกรรม
-            </button>
-            <button
-              v-else-if="searchQuery"
-              @click="searchQuery = ''"
-              class="mt-4 px-3.5 py-1.5 rounded-xl text-xs font-medium transition-all tap-scale"
-              style="background: var(--bg-elevated); border: 1px solid var(--border-subtle); color: var(--text-secondary);"
-            >
-              ล้างคำค้นหา
+      <section class="events-workspace">
+        <div class="events-toolbar">
+          <div class="events-tabs" role="tablist" aria-label="ตัวกรองกิจกรรม">
+            <button v-for="tab in subTabs" :key="tab.value" type="button" :class="{ 'is-active': activeSubTab === tab.value }" @click="activeSubTab = tab.value">
+              {{ tab.label }} <b>{{ tab.count }}</b>
             </button>
           </div>
-
-          <!-- Timeline view -->
-          <div v-else class="p-3 sm:p-5 md:p-6">
-            <div class="relative max-w-4xl mx-auto events-timeline">
-              <!-- Timeline items -->
-              <div class="space-y-5 sm:space-y-6 timeline-list">
-                <div
-                  v-for="item in paginatedEvents"
-                  :key="item.id"
-                  class="relative flex items-start timeline-item group"
-                >
-                  <!-- Desktop Date Column (Hidden on mobile) -->
-                  <div class="hidden md:flex flex-col items-end w-24 sm:w-28 shrink-0 pr-4 pt-0.5 text-right select-none">
-                    <div
-                      class="w-full px-2 py-2 rounded-xl border text-center transition-all group-hover:scale-105"
-                      :style="{
-                        background: 'var(--bg-elevated)',
-                        borderColor: 'var(--border-subtle)',
-                        boxShadow: 'var(--shadow-sm)'
-                      }"
-                    >
-                      <div class="text-[10px] font-bold uppercase tracking-wider" :style="getEventStatusTextStyle(item)">
-                        {{ getMonthShort(getTimelineDate(item)) }}
-                      </div>
-                      <div class="num text-2xl font-black leading-none mt-1" style="color: var(--text-primary);">
-                        {{ getDay(getTimelineDate(item)) }}
-                      </div>
-                      <div class="text-[10px] font-medium mt-1" style="color: var(--text-muted);">
-                        {{ getDayOfWeek(getTimelineDate(item)) }}
-                      </div>
-                    </div>
-                    <span class="mt-1 text-[10px] font-medium px-1" style="color: var(--text-muted);">
-                      {{ getYearThai(getTimelineDate(item)) }}
-                    </span>
-                  </div>
-
-                  <!-- Spine Track & Node Dot -->
-                  <div class="relative flex flex-col items-center shrink-0 w-8 self-stretch timeline-track">
-                    <!-- Continuous vertical spine line -->
-                    <div
-                      class="timeline-track-line"
-                      :class="[
-                        `timeline-track-line--${getEventStatusMeta(item).status}`,
-                        { 'timeline-track-line--active': isActiveTimelineConnector(item) },
-                      ]"
-                    ></div>
-
-                    <!-- Node dot with status icon/animation -->
-                    <div
-                      class="relative z-10 mt-3 md:mt-3.5 flex items-center justify-center rounded-full transition-transform duration-200 group-hover:scale-110"
-                      :class="getEventStatusMeta(item).status === 'ongoing' ? 'w-6 h-6' : 'w-4 h-4'"
-                      :style="{
-                        background: getEventStatusTextStyle(item).color,
-                        boxShadow: getEventStatusMeta(item).status === 'ongoing'
-                          ? '0 0 0 4px var(--event-status-ongoing-soft), 0 0 12px var(--event-status-ongoing-ink)'
-                          : '0 0 0 3px var(--bg-card), 0 1px 3px rgba(0,0,0,0.1)'
-                      }"
-                    >
-                      <!-- Ongoing pulsating ring -->
-                      <span
-                        v-if="getEventStatusMeta(item).status === 'ongoing'"
-                        class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"
-                        :style="{ background: getEventStatusTextStyle(item).color }"
-                      ></span>
-                      <span
-                        v-if="getEventStatusMeta(item).status === 'ongoing'"
-                        class="relative w-2 h-2 rounded-full bg-white shadow-sm"
-                      ></span>
-                    </div>
-                  </div>
-
-                  <!-- Event Card Block -->
-                  <div class="flex-1 min-w-0 pl-2 sm:pl-3 relative">
-                    <div
-                      class="relative rounded-2xl p-4 sm:p-5 timeline-card"
-                      :class="[
-                        getEventStatusMeta(item).status === 'past' ? 'opacity-85 hover:opacity-100' : ''
-                      ]"
-                      :style="{
-                        background: 'var(--bg-card)',
-                        border: '1px solid var(--border-subtle)',
-                        borderLeft: `4px solid ${getEventStatusTextStyle(item).color}`,
-                        boxShadow: getEventStatusMeta(item).status === 'ongoing'
-                          ? 'var(--event-status-ongoing-shadow), var(--shadow-md)'
-                          : 'var(--shadow-md)'
-                      }"
-                    >
-                      <!-- Mobile Date capsule (visible on mobile only) -->
-                      <div class="flex md:hidden items-center gap-2 mb-2.5 pb-2 border-b" style="border-color: var(--border-subtle);">
-                        <div
-                          class="px-2 py-0.5 rounded-lg border text-center flex items-center gap-1.5"
-                          :style="{ background: 'var(--bg-elevated)', borderColor: 'var(--border-subtle)' }"
-                        >
-                          <span class="text-[10px] font-bold" :style="getEventStatusTextStyle(item)">{{ getMonthShort(getTimelineDate(item)) }}</span>
-                          <span class="num text-xs font-black" style="color: var(--text-primary);">{{ getDay(getTimelineDate(item)) }}</span>
-                        </div>
-                        <span class="text-[11px] font-medium" style="color: var(--text-secondary);">
-                          {{ formatDate(getTimelineDate(item)) }}
-                        </span>
-                        <span class="text-[10.5px] ml-auto font-medium" style="color: var(--text-muted);">
-                          {{ getDayOfWeek(getTimelineDate(item)) }}
-                        </span>
-                      </div>
-
-                      <!-- Top Header: Badges & Quick Actions -->
-                      <div class="flex items-start justify-between gap-2 mb-2">
-                        <div class="flex items-center gap-1.5 flex-wrap">
-                          <!-- Status badge -->
-                          <span
-                            class="text-[10.5px] px-2.5 py-0.5 rounded-full border font-semibold tracking-wide whitespace-nowrap flex items-center gap-1.5"
-                            :style="getEventStatusBadgeStyle(item)"
-                          >
-                            <span
-                              v-if="getEventStatusMeta(item).status === 'ongoing'"
-                              class="w-1.5 h-1.5 rounded-full animate-pulse"
-                              :style="{ background: getEventStatusTextStyle(item).color }"
-                            ></span>
-                            {{ getEventStatusText(item) }}
-                          </span>
-
-                          <!-- Type badge -->
-                          <span
-                            class="text-[10.5px] px-2 py-0.5 rounded-full border font-semibold whitespace-nowrap"
-                            :class="getEventBadgeClass(item.event_type)"
-                          >
-                            {{ getEventTypeName(item.event_type) }}
-                          </span>
-
-                          <!-- Google sync badge -->
-                          <span
-                            v-if="item.google_event_id"
-                            class="text-[10px] px-2 py-0.5 rounded-full font-medium inline-flex items-center gap-1"
-                            style="background: rgba(28, 111, 208, 0.1); color: var(--ink-sky); border: 1px solid rgba(28, 111, 208, 0.25);"
-                          >
-                            <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                            Google Calendar
-                          </span>
-                        </div>
-
-                        <!-- Quick Actions (Sync, Edit, Delete) -->
-                        <div class="flex items-center gap-1 shrink-0 -mt-1 -mr-1">
-                          <button
-                            @click="syncSingleEvent(item.id)"
-                            :disabled="isSyncingId === item.id || isDeletingId === item.id"
-                            class="w-8 h-8 rounded-lg flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed transition-all tap-scale hover:bg-black/5 dark:hover:bg-white/5"
-                            style="color: var(--ink-emerald);"
-                            :title="item.google_event_id ? 'ซิงค์ซ้ำเพื่ออัปเดต Google Calendar' : 'ซิงค์ไปยัง Google Calendar'"
-                          >
-                            <span v-if="isSyncingId === item.id" class="w-3.5 h-3.5 border-2 rounded-full animate-spin" style="border-color: var(--border-strong); border-top-color: var(--ink-emerald);"></span>
-                            <svg v-else class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5M21 12a9 9 0 0 1-15 6.7L3 16M3 21v-5h5"/></svg>
-                          </button>
-                          <button
-                            @click="openEditModal(item)"
-                            class="w-8 h-8 rounded-lg flex items-center justify-center transition-all tap-scale hover:bg-black/5 dark:hover:bg-white/5"
-                            style="color: var(--ink-sky);"
-                            title="แก้ไข"
-                          >
-                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
-                          </button>
-                          <button
-                            @click="deleteEvent(item.id)"
-                            :disabled="isDeletingId === item.id || isSyncingId === item.id"
-                            class="w-8 h-8 rounded-lg flex items-center justify-center disabled:opacity-50 transition-all tap-scale hover:bg-black/5 dark:hover:bg-white/5"
-                            style="color: var(--ink-rose);"
-                            title="ลบ"
-                          >
-                            <svg v-if="isDeletingId !== item.id" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
-                            <span v-else class="inline-block w-3.5 h-3.5 border-2 rounded-full animate-spin" style="border-color: var(--border-strong); border-top-color: var(--ink-rose);"></span>
-                          </button>
-                        </div>
-                      </div>
-
-                      <!-- Title -->
-                      <h3 class="text-[15px] sm:text-base font-bold tracking-tight line-clamp-2" style="color: var(--text-primary);">
-                        {{ item.title }}
-                      </h3>
-
-                      <!-- Time and Reminder line -->
-                      <div class="flex items-center gap-2.5 flex-wrap mt-1.5 text-xs font-medium">
-                        <span class="inline-flex items-center gap-1.5" :style="getEventStatusTextStyle(item)">
-                          <svg class="w-3.5 h-3.5 shrink-0 opacity-75" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                          <span class="num">{{ displayEventDateTime(item) }}</span>
-                        </span>
-                        <span
-                          v-if="item.reminder_minutes && getEventStatusMeta(item).status !== 'past'"
-                          class="num text-[11px] px-2 py-0.5 rounded-md inline-flex items-center gap-1"
-                          style="background: var(--event-status-soon-soft); color: var(--event-status-soon-ink);"
-                        >
-                          ⏰ เตือนก่อน {{ getReminderLabel(item.reminder_minutes) }}
-                        </span>
-                      </div>
-
-                      <!-- Description -->
-                      <p
-                        v-if="item.description"
-                        class="text-xs mt-2.5 line-clamp-2 p-2 rounded-lg"
-                        style="background: var(--bg-elevated); color: var(--text-secondary); border: 1px solid var(--border-subtle);"
-                      >
-                        {{ item.description }}
-                      </p>
-
-                      <!-- Ongoing countdown widget inside card -->
-                      <div
-                        v-if="getEventStatusMeta(item).status === 'ongoing'"
-                        class="mt-3.5 p-3.5 rounded-xl border flex flex-col gap-2 transition-all"
-                        style="background: var(--event-status-ongoing-soft); border-color: var(--event-status-ongoing-border); box-shadow: var(--event-status-ongoing-shadow);"
-                      >
-                        <div class="flex items-center justify-between">
-                          <span class="text-xs font-semibold flex items-center gap-1.5" style="color: var(--event-status-ongoing-ink);">
-                            <span class="relative flex h-2 w-2">
-                              <span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style="background: var(--event-status-ongoing-ink);"></span>
-                              <span class="relative inline-flex rounded-full h-2 w-2" style="background: var(--event-status-ongoing-ink);"></span>
-                            </span>
-                            กำลังดำเนินอยู่
-                          </span>
-                          <span class="num text-xs font-mono font-bold" style="color: var(--event-status-ongoing-ink);">
-                            {{ getOngoingEventDetails(item).progress }}%
-                          </span>
-                        </div>
-                        <div class="num text-sm md:text-base font-bold font-mono tracking-tight" style="color: var(--text-primary);">
-                          ⏱️ {{ getOngoingEventDetails(item).countdownText }}
-                        </div>
-                        <div class="w-full h-1.5 rounded-full overflow-hidden" style="background: rgba(0, 0, 0, 0.12);">
-                          <div class="h-full rounded-full transition-all duration-1000 ease-linear" :style="{ width: getOngoingEventDetails(item).progress + '%', background: 'var(--event-status-ongoing-ink)' }"></div>
-                        </div>
-                        <div class="flex items-center justify-between text-[10.5px]" style="color: var(--text-muted);">
-                          <span>เริ่ม {{ getOngoingEventDetails(item).startTimeFormatted }}</span>
-                          <span>สิ้นสุด {{ getOngoingEventDetails(item).endTimeFormatted }}</span>
-                        </div>
-                      </div>
-
-                      <!-- Upcoming countdown widget inside card -->
-                      <div
-                        v-else-if="getEventStatusMeta(item).status === 'soon' || (item.id === nextUpcomingEvent?.id && getEventStatusMeta(item).status !== 'past')"
-                        class="mt-3.5 p-3.5 rounded-xl border flex flex-col gap-2 transition-all"
-                        style="background: rgba(59, 78, 240, 0.06); border-color: rgba(59, 78, 240, 0.22);"
-                      >
-                        <div class="flex items-center justify-between text-xs">
-                          <span class="font-semibold flex items-center gap-1.5" style="color: var(--brand-ink);">
-                            <span>⏰</span>
-                            เริ่มในอีก
-                          </span>
-                          <span class="num text-xs font-mono font-bold" style="color: var(--brand-ink);">
-                            {{ getUpcomingEventDetails(item).progress }}%
-                          </span>
-                        </div>
-                        <div class="num text-sm md:text-base font-bold font-mono tracking-tight" style="color: var(--text-primary);">
-                          ⏱️ {{ getUpcomingEventDetails(item).countdownText }}
-                        </div>
-                        <div class="w-full h-1.5 rounded-full overflow-hidden" style="background: rgba(59, 78, 240, 0.15);">
-                          <div class="h-full rounded-full transition-all duration-1000 ease-linear" :style="{ width: getUpcomingEventDetails(item).progress + '%', background: 'var(--brand)' }"></div>
-                        </div>
-                        <div class="flex items-center justify-between text-[10.5px] gap-2" style="color: var(--text-muted);">
-                          <span class="shrink-0">รอบ 30 วัน</span>
-                          <span class="font-medium truncate text-right" style="color: var(--brand-ink);">เริ่ม {{ formatDate(item.start_date) }} {{ item.start_time ? formatTime(item.start_time) : '' }}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+          <div class="events-filter">
+            <input v-model="searchQuery" type="search" placeholder="ค้นหาชื่อหรือรายละเอียดกิจกรรม">
+            <select v-model.number="itemsPerPage" @change="currentPage = 1" aria-label="จำนวนรายการต่อหน้า">
+              <option :value="10">10 รายการ</option><option :value="20">20 รายการ</option><option :value="50">50 รายการ</option>
+            </select>
+            <button type="button" class="events-icon-button" :disabled="isLoading" title="รีเฟรช" @click="loadEvents">↻</button>
           </div>
+        </div>
 
-          <!-- Pagination Controls -->
-          <div v-if="totalPages > 1" class="flex flex-col sm:flex-row items-center justify-between gap-3 p-3.5 sm:px-5 sm:py-4 border-t" style="border-color: var(--border-subtle);">
-            <span class="text-xs font-medium text-center sm:text-left" style="color: var(--text-muted);">
-              {{ pageInfo }}
-            </span>
-            <div class="flex items-center gap-1.5 flex-wrap justify-center">
-              <button
-                @click="currentPage = Math.max(1, currentPage - 1)"
-                :disabled="currentPage === 1"
-                class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed tap-scale touch-target"
-                style="background: var(--bg-elevated); border: 1px solid var(--border-default); color: var(--text-secondary);"
-                :style="currentPage === 1 ? {} : { 'cursor': 'pointer', 'color': 'var(--text-primary)' }"
-              >
-                ← ก่อนหน้า
-              </button>
-              <div class="flex items-center gap-1">
-                <button
-                  v-for="page in totalPages"
-                  :key="page"
-                  @click="currentPage = page"
-                  class="w-8 h-8 rounded-lg text-xs font-semibold transition-all tap-scale touch-target"
-                  :style="currentPage === page
-                    ? { 'background': 'var(--brand)', 'color': 'white', 'border': '1px solid var(--brand)' }
-                    : { 'background': 'var(--bg-elevated)', 'border': '1px solid var(--border-default)', 'color': 'var(--text-secondary)' }"
-                >
-                  {{ page }}
-                </button>
+        <div v-if="isLoading" class="events-loading"><span></span><span></span><span></span></div>
+        <div v-else-if="!filteredEvents.length" class="events-empty">
+          <div>◌</div><h2>{{ searchQuery ? 'ไม่พบกิจกรรมที่ค้นหา' : 'ยังไม่มีรายการในมุมมองนี้' }}</h2>
+          <p>{{ searchQuery ? 'ลองเปลี่ยนคำค้นหา หรือเลือกตัวกรองอื่น' : 'เริ่มบันทึกนัดหมายหรือกิจกรรมแรกของคุณ' }}</p>
+          <button v-if="!searchQuery" type="button" class="events-button events-button--primary" @click="isEntryModalOpen = true">เพิ่มกิจกรรม</button>
+        </div>
+        <div v-else class="events-list">
+          <article v-for="item in paginatedEvents" :key="item.id" class="event-row" :class="`event-row--${getEventStatusMeta(item).status}`">
+            <div class="event-row__date"><span>{{ getMonthShort(getTimelineDate(item)) }}</span><strong>{{ getDay(getTimelineDate(item)) }}</strong></div>
+            <div class="event-row__body">
+              <div class="event-row__meta">
+                <span class="event-status" :style="getEventStatusBadgeStyle(item)">{{ getEventStatusText(item) }}</span>
+                <span class="event-type" :class="getEventBadgeClass(item.event_type)">{{ getEventTypeName(item.event_type) }}</span>
+                <span v-if="item.google_event_id" class="event-google">Google Calendar</span>
               </div>
-              <button
-                @click="currentPage = Math.min(totalPages, currentPage + 1)"
-                :disabled="currentPage === totalPages"
-                class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed tap-scale touch-target"
-                style="background: var(--bg-elevated); border: 1px solid var(--border-default); color: var(--text-secondary);"
-                :style="currentPage === totalPages ? {} : { 'cursor': 'pointer', 'color': 'var(--text-primary)' }"
-              >
-                ต่อไป →
-              </button>
+              <h2>{{ item.title }}</h2>
+              <p class="event-row__time">{{ formatDate(getTimelineDate(item)) }} · {{ displayEventDateTime(item) }}</p>
+              <p v-if="item.description" class="event-row__description">{{ item.description }}</p>
+              <div v-if="getEventStatusMeta(item).status === 'ongoing'" class="event-progress"><span>กำลังดำเนินอยู่ · เหลือ {{ getOngoingEventDetails(item).countdownText }}</span><i><b :style="{ width: getOngoingEventDetails(item).progress + '%' }"></b></i></div>
+              <div v-else-if="item.id === nextUpcomingEvent?.id" class="event-progress event-progress--next"><span>เริ่มในอีก {{ getUpcomingEventDetails(item).countdownText }}</span><i><b :style="{ width: getUpcomingEventDetails(item).progress + '%' }"></b></i></div>
             </div>
-          </div>
-        </section>
-      </div>
-    </div>
+            <div class="event-row__actions">
+              <button type="button" :disabled="isSyncingId === item.id || isDeletingId === item.id" title="ซิงค์ Google Calendar" @click="syncSingleEvent(item.id)">{{ isSyncingId === item.id ? '…' : 'Sync' }}</button>
+              <button type="button" title="แก้ไข" @click="openEditModal(item)">แก้ไข</button>
+              <button type="button" class="is-danger" :disabled="isDeletingId === item.id || isSyncingId === item.id" title="ลบ" @click="deleteEvent(item.id)">{{ isDeletingId === item.id ? '…' : 'ลบ' }}</button>
+            </div>
+          </article>
+        </div>
 
-    <!-- Modal -->
+        <footer v-if="totalPages > 1" class="events-pagination">
+          <span>{{ pageInfo }}</span>
+          <div><button type="button" :disabled="currentPage === 1" @click="currentPage = Math.max(1, currentPage - 1)">ก่อนหน้า</button><button v-for="page in totalPages" :key="page" type="button" :class="{ 'is-current': currentPage === page }" @click="currentPage = page">{{ page }}</button><button type="button" :disabled="currentPage === totalPages" @click="currentPage = Math.min(totalPages, currentPage + 1)">ถัดไป</button></div>
+        </footer>
+      </section>
+    </main>
+
     <Teleport to="body">
       <Transition name="backdrop">
-        <div
-          v-if="isEntryModalOpen"
-          class="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-hidden"
-          style="background: rgba(3,5,12,0.62); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);"
-        >
-          <Transition name="modal">
-            <div v-if="isEntryModalOpen" class="relative z-10 w-full max-w-lg rounded-2xl border border-gray-700/80 bg-gray-900 shadow-2xl flex flex-col max-h-[90vh]">
-          <!-- Modal Header -->
-          <div class="flex items-center justify-between px-6 py-4 border-b border-gray-800/80 shrink-0">
-            <div class="flex items-center gap-3">
-              <div class="w-9 h-9 rounded-xl bg-violet-500/20 flex items-center justify-center text-base">🗓️</div>
-              <h3 class="text-base font-semibold text-white">{{ isEditing ? 'แก้ไขกิจกรรม' : 'เพิ่มกิจกรรมใหม่' }}</h3>
+        <div v-if="isEntryModalOpen" class="event-editor" @click.self="isEntryModalOpen = false">
+          <form class="event-editor__panel" @submit.prevent="submitEvent">
+            <header><div><p>EVENT EDITOR</p><h2>{{ isEditing ? 'แก้ไขกิจกรรม' : 'สร้างกิจกรรมใหม่' }}</h2></div><button type="button" aria-label="ปิด" @click="() => { isEntryModalOpen = false; resetForm() }">×</button></header>
+            <div class="event-editor__content">
+              <label>ชื่อกิจกรรม<input v-model="form.title" type="text" maxlength="100" required placeholder="เช่น ประชุมทีม"></label>
+              <fieldset><legend>รูปแบบเวลา</legend><div class="event-type-picker"><label v-for="opt in eventTypeOptions" :key="opt.value" :class="{ 'is-selected': form.eventType === opt.value }"><input v-model="form.eventType" type="radio" :value="opt.value"><span>{{ opt.icon }}</span>{{ opt.label }}</label></div></fieldset>
+              <div v-if="form.eventType === 'same_day_time'" class="event-editor__grid"><label>วันที่<input v-model="form.startDate" type="date" required></label><label>เริ่ม<input v-model="form.startTime" type="time" required></label><label>สิ้นสุด<input v-model="form.endTime" type="time" required></label></div>
+              <div v-else-if="form.eventType === 'same_day_all_day'" class="event-editor__grid"><label>วันที่<input v-model="form.startDate" type="date" required></label></div>
+              <div v-else class="event-editor__grid"><label>วันเริ่ม<input v-model="form.startDate" type="date" required></label><label>เวลาเริ่ม<input v-model="form.startTime" type="time" required></label><label>วันสิ้นสุด<input v-model="form.endDate" type="date" required></label><label>เวลาสิ้นสุด<input v-model="form.endTime" type="time" required></label></div>
+              <label>รายละเอียด<textarea v-model="form.description" rows="3" placeholder="เพิ่มรายละเอียด (ถ้ามี)"></textarea></label>
+              <label>แจ้งเตือนล่วงหน้า<select v-model="form.reminderMinutes"><option v-for="opt in activeReminderOptions" :key="String(opt.value)" :value="opt.value">{{ opt.label }}</option></select></label>
             </div>
-            <button
-              @click="() => { isEntryModalOpen = false; resetForm() }"
-              class="w-8 h-8 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white flex items-center justify-center text-sm transition-all tap-scale touch-target"
-            >✕</button>
-          </div>
-
-          <!-- Modal Body -->
-          <div class="p-6 overflow-y-auto">
-            <form class="space-y-4" @submit.prevent="submitEvent">
-              <div>
-                <label class="block text-xs font-medium text-gray-400 mb-1.5">ชื่อกิจกรรม <span class="text-rose-400">*</span></label>
-                <input
-                  v-model="form.title"
-                  type="text"
-                  required
-                  maxlength="100"
-                  placeholder="เช่น นัดดูหนัง, ทริปต่างจังหวัด..."
-                  class="w-full bg-gray-800/80 border border-gray-700/60 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-600 outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 transition-all"
-                >
-              </div>
-
-              <!-- Event type selector -->
-              <div>
-                <label class="block text-xs font-medium text-gray-400 mb-1.5">รูปแบบเวลา</label>
-                <div class="grid grid-cols-3 gap-2">
-                  <label
-                    v-for="opt in eventTypeOptions"
-                    :key="opt.value"
-                    class="flex flex-col items-center gap-1.5 p-3 border rounded-xl cursor-pointer transition-all text-center"
-                    :class="form.eventType === opt.value
-                      ? 'border-violet-500/50 bg-violet-500/10 text-violet-300'
-                      : 'border-gray-700/60 bg-gray-800/60 text-gray-400 hover:border-gray-600'"
-                  >
-                    <input type="radio" :value="opt.value" v-model="form.eventType" class="sr-only">
-                    <span class="text-lg">{{ opt.icon }}</span>
-                    <span class="text-[11px] font-medium leading-tight">{{ opt.label }}</span>
-                  </label>
-                </div>
-              </div>
-
-              <!-- Date/time fields -->
-              <div class="bg-gray-800/40 border border-gray-800/60 rounded-xl p-4 space-y-3">
-                <!-- Same day with time -->
-                <template v-if="form.eventType === 'same_day_time'">
-                  <div>
-                    <label class="block text-xs font-medium text-gray-400 mb-1.5">วันที่ <span class="text-rose-400">*</span></label>
-                    <input v-model="form.startDate" type="date" required class="w-full bg-gray-800/80 border border-gray-700/60 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-violet-500 transition-all">
-                  </div>
-                  <div class="grid grid-cols-2 gap-3">
-                    <div>
-                      <label class="block text-xs font-medium text-gray-400 mb-1.5">เวลาเริ่ม</label>
-                      <input v-model="form.startTime" type="time" required class="w-full bg-gray-800/80 border border-gray-700/60 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-violet-500 transition-all">
-                    </div>
-                    <div>
-                      <label class="block text-xs font-medium text-gray-400 mb-1.5">เวลาสิ้นสุด</label>
-                      <input v-model="form.endTime" type="time" required class="w-full bg-gray-800/80 border border-gray-700/60 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-violet-500 transition-all">
-                    </div>
-                  </div>
-                </template>
-
-                <!-- All day -->
-                <template v-if="form.eventType === 'same_day_all_day'">
-                  <div>
-                    <label class="block text-xs font-medium text-gray-400 mb-1.5">วันที่ <span class="text-rose-400">*</span></label>
-                    <input v-model="form.startDate" type="date" required class="w-full bg-gray-800/80 border border-gray-700/60 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-violet-500 transition-all">
-                  </div>
-                </template>
-
-                <!-- Multi-day -->
-                <template v-if="form.eventType === 'multi_day'">
-                  <div class="grid grid-cols-2 gap-3">
-                    <div>
-                      <label class="block text-xs font-medium text-gray-400 mb-1.5">วันเริ่ม <span class="text-rose-400">*</span></label>
-                      <input v-model="form.startDate" type="date" required class="w-full bg-gray-800/80 border border-gray-700/60 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-violet-500 transition-all">
-                    </div>
-                    <div>
-                      <label class="block text-xs font-medium text-gray-400 mb-1.5">เวลาเริ่ม</label>
-                      <input v-model="form.startTime" type="time" required class="w-full bg-gray-800/80 border border-gray-700/60 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-violet-500 transition-all">
-                    </div>
-                    <div>
-                      <label class="block text-xs font-medium text-gray-400 mb-1.5">วันสิ้นสุด <span class="text-rose-400">*</span></label>
-                      <input v-model="form.endDate" type="date" required class="w-full bg-gray-800/80 border border-gray-700/60 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-violet-500 transition-all">
-                    </div>
-                    <div>
-                      <label class="block text-xs font-medium text-gray-400 mb-1.5">เวลาสิ้นสุด</label>
-                      <input v-model="form.endTime" type="time" required class="w-full bg-gray-800/80 border border-gray-700/60 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-violet-500 transition-all">
-                    </div>
-                  </div>
-                </template>
-              </div>
-
-              <div>
-                <label class="block text-xs font-medium text-gray-400 mb-1.5">รายละเอียดเพิ่มเติม</label>
-                <textarea
-                  v-model="form.description"
-                  rows="3"
-                  placeholder="บันทึกเพิ่มเติม..."
-                  class="w-full bg-gray-800/80 border border-gray-700/60 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-600 outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 transition-all resize-none"
-                ></textarea>
-              </div>
-
-              <!-- Reminder selector -->
-              <div>
-                <label class="block text-xs font-medium text-gray-400 mb-1.5">🔔 แจ้งเตือนล่วงหน้า (LINE)</label>
-                <select
-                  v-model="form.reminderMinutes"
-                  class="w-full bg-gray-800/80 border border-gray-700/60 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20 transition-all"
-                >
-                  <option
-                    v-for="opt in activeReminderOptions"
-                    :key="String(opt.value)"
-                    :value="opt.value"
-                  >{{ opt.label }}</option>
-                </select>
-              </div>
-
-              <div class="flex gap-3 pt-2">
-                <button
-                  type="button"
-                  @click="() => { isEntryModalOpen = false; resetForm() }"
-                  class="flex-1 py-2.5 rounded-xl bg-gray-800/80 hover:bg-gray-800 border border-gray-700/60 text-sm font-medium text-gray-300 hover:text-white transition-all tap-scale touch-target"
-                >ยกเลิก</button>
-                <button
-                  type="submit"
-                  :disabled="isSubmitting"
-                  class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 disabled:opacity-50 text-sm font-semibold text-white shadow-md shadow-violet-500/20 transition-all flex items-center justify-center gap-2 tap-scale touch-target"
-                >
-                  <span v-if="isSubmitting" class="inline-block w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
-                  {{ isSubmitting ? 'กำลังบันทึก...' : 'บันทึกกิจกรรม' }}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-          </Transition>
-          <div class="absolute inset-0 z-0 bg-black/70 backdrop-blur-sm" @click="isEntryModalOpen = false"></div>
+            <footer><button type="button" class="events-button events-button--quiet" @click="() => { isEntryModalOpen = false; resetForm() }">ยกเลิก</button><button type="submit" class="events-button events-button--primary" :disabled="isSubmitting">{{ isSubmitting ? 'กำลังบันทึก…' : 'บันทึกกิจกรรม' }}</button></footer>
+          </form>
         </div>
       </Transition>
     </Teleport>
@@ -1722,136 +1007,20 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.events-timeline {
-  --timeline-axis: var(--border-default);
-}
 
-.timeline-track-line {
-  position: absolute;
-  top: 1.875rem;
-  bottom: -1.75rem;
-  width: 2px;
-  background: linear-gradient(180deg, var(--border-default) 0%, var(--border-strong) 50%, var(--border-default) 100%);
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 1;
-}
-
-/* Keep elapsed and upcoming sections visually distinct on the timeline. */
-.timeline-track-line--past {
-  background: linear-gradient(180deg, var(--event-status-past-border) 0%, var(--event-status-past-ink) 50%, var(--event-status-past-border) 100%);
-  opacity: 0.55;
-}
-
-.timeline-track-line--ongoing {
-  background: linear-gradient(180deg, var(--event-status-ongoing-border) 0%, var(--event-status-ongoing-ink) 50%, var(--event-status-ongoing-border) 100%);
-}
-
-.timeline-track-line--soon {
-  background: linear-gradient(180deg, var(--event-status-soon-border) 0%, var(--event-status-soon-ink) 50%, var(--event-status-soon-border) 100%);
-}
-
-.timeline-track-line--future {
-  background: linear-gradient(180deg, var(--event-status-future-border) 0%, var(--event-status-future-ink) 50%, var(--event-status-future-border) 100%);
-}
-
-.timeline-track-line--active {
-  width: 5px;
-  overflow: hidden;
-  border-radius: 999px;
-  background: linear-gradient(
-    180deg,
-    var(--event-status-ongoing-border) 0%,
-    var(--event-status-ongoing-ink) 50%,
-    var(--event-status-ongoing-border) 100%
-  );
-  box-shadow: 0 0 10px var(--event-status-ongoing-ink), 0 0 18px var(--event-status-ongoing-soft);
-}
-
-.timeline-track-line--active::after {
-  content: '';
-  position: absolute;
-  top: -42%;
-  left: 0;
-  width: 100%;
-  height: 42%;
-  border-radius: inherit;
-  background: linear-gradient(
-    180deg,
-    transparent 0%,
-    var(--event-status-ongoing-ink) 35%,
-    var(--brand) 60%,
-    transparent 100%
-  );
-  box-shadow: 0 0 12px var(--event-status-ongoing-ink), 0 0 20px var(--brand);
-  animation: timeline-flow-down 2.6s ease-in-out infinite;
-  will-change: transform;
-}
-
-@keyframes timeline-flow-down {
-  from { transform: translateY(0); }
-  to { transform: translateY(342%); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .timeline-track-line--active::after {
-    animation: none;
-    transform: translateY(160%);
-  }
-}
-
-.timeline-item:last-child .timeline-track-line {
-  bottom: auto;
-  height: 1.5rem;
-}
-
-/* Active connector begins beneath the larger ongoing-status node. */
-.timeline-item .timeline-track-line--active {
-  top: 2.375rem;
-}
-
-@media (max-width: 767px) {
-  .timeline-track-line {
-    top: 1.75rem;
-  }
-
-  .timeline-item .timeline-track-line--active {
-    top: 2.25rem;
-  }
-}
-
-.timeline-card {
-  position: relative;
-  z-index: 2;
-  min-width: 0;
-  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, border-color 0.2s ease;
-}
-
-.timeline-card:hover {
-  transform: translateY(-2px);
-}
-
-/* Horizontal connector line linking node track to the card */
-.timeline-card::before {
-  content: '';
-  position: absolute;
-  top: 1.25rem;
-  left: -0.5rem;
-  width: 0.5rem;
-  height: 2px;
-  background: var(--border-default);
-  z-index: 1;
-  transition: background-color 0.2s ease;
-}
-
-@media (min-width: 640px) {
-  .timeline-card::before {
-    left: -0.75rem;
-    width: 0.75rem;
-  }
-}
-
-.timeline-item:hover .timeline-card::before {
-  background: var(--border-strong);
-}
+.events-board { max-width: 1200px; margin: 0 auto; padding: 2rem 1.25rem 4rem; color: var(--text-primary); }
+.events-board__header { display: flex; justify-content: space-between; gap: 2rem; align-items: flex-start; padding: 1.5rem 0 2rem; border-bottom: 1px solid var(--border-subtle); }
+.events-board__eyebrow, .event-editor header p { margin: 0; color: var(--brand-ink); font: 800 .68rem/1.2 ui-monospace, monospace; letter-spacing: .16em; }
+.events-board h1 { margin: .5rem 0; font-size: clamp(2rem, 4vw, 3.25rem); letter-spacing: -.06em; line-height: 1; }
+.events-board__intro { margin: 0; color: var(--text-muted); }.events-board__actions { display: flex; gap: .5rem; flex-wrap: wrap; justify-content: flex-end; }
+.events-button, .events-icon-button, .events-tabs button, .event-row__actions button, .events-pagination button { border: 0; cursor: pointer; font: inherit; transition: .18s ease; }.events-button { padding: .7rem .9rem; border-radius: .65rem; font-size: .8rem; font-weight: 700; }.events-button:disabled, button:disabled { cursor: not-allowed; opacity: .5; }.events-button--primary { background: var(--brand); color: #fff; box-shadow: var(--brand-glow); }.events-button--quiet { color: var(--text-secondary); background: var(--bg-elevated); border: 1px solid var(--border-subtle); }
+.events-alert { padding: .8rem 1rem; margin-top: 1rem; border-radius: .7rem; color: var(--ink-amber); background: var(--event-status-soon-soft); border: 1px solid var(--event-status-soon-border); }
+.events-summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; margin: 1.25rem 0; background: var(--border-subtle); border: 1px solid var(--border-subtle); border-radius: 1rem; overflow: hidden; }.events-summary__item { background: var(--bg-card); padding: 1rem 1.2rem; }.events-summary span { display:block; color:var(--text-muted); font-size:.72rem; }.events-summary strong { display:block; margin-top:.25rem; font-size:1.55rem; }
+.events-live { margin: 0 0 1.25rem; padding: 1rem; border: 1px solid var(--event-status-ongoing-border); border-radius: 1rem; background: var(--event-status-ongoing-soft); box-shadow: var(--event-status-ongoing-shadow); }.events-live__heading { display:flex; align-items:center; justify-content:space-between; gap:1rem; margin:0 0 .8rem; }.events-live__heading>div{display:flex;align-items:center;gap:.55rem}.events-live__heading p{margin:0;font:800 .68rem/1 ui-monospace,monospace;letter-spacing:.12em;color:var(--event-status-ongoing-ink)}.events-live__heading strong{font-size:.72rem;color:var(--event-status-ongoing-ink)}.events-live__signal{width:.55rem;height:.55rem;border-radius:50%;background:var(--event-status-ongoing-ink);box-shadow:0 0 0 0 var(--event-status-ongoing-ink);animation:events-live-pulse 1.5s infinite}@keyframes events-live-pulse{70%{box-shadow:0 0 0 .55rem transparent}100%{box-shadow:0 0 0 0 transparent}}.events-live__list{display:grid;gap:.6rem}.events-live__item{position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:.75rem;padding:.9rem;background:var(--bg-card);border:1px solid var(--event-status-ongoing-border);border-radius:.7rem;overflow:hidden}.events-live__type{font-size:.65rem;font-weight:800;color:var(--event-status-ongoing-ink)}.events-live__content h2{margin:.3rem 0 .15rem;font-size:1rem}.events-live__content p,.events-live__countdown span{margin:0;color:var(--text-muted);font-size:.72rem}.events-live__countdown{text-align:right}.events-live__countdown strong{display:block;margin-top:.2rem;font-family:ui-monospace,monospace;font-size:1rem;color:var(--event-status-ongoing-ink)}.events-live__progress{position:absolute;bottom:0;left:0;width:100%;height:3px;background:var(--bg-elevated-2)}.events-live__progress i{display:block;height:100%;background:var(--event-status-ongoing-ink);transition:width 1s linear}
+.events-workspace { overflow:hidden; border: 1px solid var(--border-subtle); border-radius: 1rem; background: var(--bg-card); }.events-toolbar { display:flex; justify-content:space-between; gap:1rem; padding: .85rem; border-bottom:1px solid var(--border-subtle); }.events-tabs { display:flex; gap:.25rem; overflow:auto; }.events-tabs button { white-space:nowrap; padding:.55rem .7rem; border-radius:.55rem; background:transparent; color:var(--text-muted); font-size:.78rem; }.events-tabs button.is-active { background:var(--bg-elevated); color:var(--text-primary); }.events-tabs b { margin-left:.25rem; color:var(--brand-ink); }.events-filter { display:flex; gap:.45rem; }.events-filter input, .events-filter select, .event-editor input, .event-editor select, .event-editor textarea { min-width:0; color:var(--text-primary); background:var(--bg-elevated); border:1px solid var(--border-default); border-radius:.55rem; outline:none; }.events-filter input { width:16rem; padding:.55rem .7rem; font-size:.78rem; }.events-filter select { padding:0 .45rem; font-size:.75rem; }.events-icon-button { width:2.2rem; border-radius:.55rem; background:var(--bg-elevated); color:var(--text-primary); border:1px solid var(--border-default); }
+.events-loading { padding: 2rem; display:grid; gap:.7rem; }.events-loading span { height:5rem; border-radius:.75rem; background:var(--bg-elevated); animation:events-pulse 1.2s infinite alternate; }@keyframes events-pulse{to{opacity:.45}}.events-empty { padding:5rem 1rem; text-align:center; }.events-empty>div{font-size:3rem;color:var(--brand-ink)}.events-empty h2{margin:.5rem 0}.events-empty p{color:var(--text-muted);margin:0 0 1rem}
+.events-list { padding: .75rem; display:grid; gap:.55rem; }.event-row { display:grid; grid-template-columns:4rem minmax(0,1fr) auto; gap:1rem; align-items:start; padding:1rem; border:1px solid var(--border-subtle); border-left:3px solid var(--border-default); border-radius:.8rem; }.event-row--ongoing{border-left-color:var(--event-status-ongoing-ink)}.event-row--soon{border-left-color:var(--event-status-soon-ink)}.event-row__date{text-align:center;padding:.35rem;background:var(--bg-elevated);border-radius:.55rem}.event-row__date span{display:block;text-transform:uppercase;font-size:.65rem;color:var(--text-muted)}.event-row__date strong{font-size:1.45rem}.event-row__meta{display:flex;gap:.4rem;flex-wrap:wrap}.event-status,.event-type,.event-google{font-size:.65rem;font-weight:700;padding:.22rem .45rem;border-radius:99px;border:1px solid}.event-google{color:var(--ink-sky);border-color:rgba(28,111,208,.25);background:rgba(28,111,208,.1)}.event-row h2{margin:.45rem 0 .2rem;font-size:1rem}.event-row__time,.event-row__description{margin:.15rem 0;color:var(--text-muted);font-size:.78rem}.event-row__description{color:var(--text-secondary)}.event-progress{margin-top:.7rem;font-size:.72rem;color:var(--event-status-ongoing-ink)}.event-progress--next{color:var(--brand-ink)}.event-progress i{display:block;height:4px;margin-top:.35rem;background:var(--bg-elevated-2);border-radius:99px;overflow:hidden}.event-progress b{display:block;height:100%;background:currentColor}.event-row__actions{display:flex;gap:.25rem}.event-row__actions button{padding:.4rem .5rem;border-radius:.45rem;background:var(--bg-elevated);color:var(--text-secondary);font-size:.7rem}.event-row__actions .is-danger{color:var(--ink-rose)}
+.events-pagination{display:flex;justify-content:space-between;gap:1rem;align-items:center;padding:1rem;border-top:1px solid var(--border-subtle);font-size:.75rem;color:var(--text-muted)}.events-pagination div{display:flex;gap:.25rem}.events-pagination button{min-width:2rem;padding:.4rem;border-radius:.4rem;background:var(--bg-elevated);color:var(--text-secondary)}.events-pagination button.is-current{background:var(--brand);color:#fff}
+.event-editor{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:1rem;background:rgba(4,8,18,.68);backdrop-filter:blur(10px)}.event-editor__panel{width:min(100%,42rem);max-height:calc(100vh - 2rem);display:flex;flex-direction:column;overflow:hidden;background:var(--bg-card);border:1px solid var(--border-strong);border-radius:1rem;box-shadow:var(--shadow-lg)}.event-editor header,.event-editor footer{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border-bottom:1px solid var(--border-subtle)}.event-editor header h2{margin:.25rem 0 0;font-size:1.15rem}.event-editor header button{font-size:1.4rem;background:none;border:0;color:var(--text-muted)}.event-editor__content{overflow:auto;padding:1.25rem;display:grid;gap:1rem}.event-editor label,.event-editor legend{font-size:.75rem;font-weight:700;color:var(--text-secondary)}.event-editor input,.event-editor select,.event-editor textarea{box-sizing:border-box;display:block;width:100%;margin-top:.4rem;padding:.65rem;font:inherit}.event-editor textarea{resize:vertical}.event-editor fieldset{border:0;padding:0;margin:0}.event-type-picker{display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;margin-top:.4rem}.event-type-picker label{margin:0;padding:.65rem .35rem;text-align:center;border:1px solid var(--border-subtle);border-radius:.6rem;background:var(--bg-elevated);font-size:.68rem}.event-type-picker label.is-selected{border-color:var(--brand);color:var(--brand-ink)}.event-type-picker input{position:absolute;opacity:0}.event-type-picker span{display:block;font-size:1.1rem}.event-editor__grid{display:grid;grid-template-columns:repeat(2,1fr);gap:.75rem}.event-editor footer{border-top:1px solid var(--border-subtle);border-bottom:0;justify-content:flex-end}
+@media(max-width:760px){.events-board{padding:1rem 1rem 3rem}.events-board__header,.events-toolbar{flex-direction:column}.events-board__actions{justify-content:flex-start}.events-summary{grid-template-columns:repeat(2,1fr)}.events-live__item{grid-template-columns:1fr}.events-live__countdown{text-align:left}.events-filter{width:100%}.events-filter input{width:100%;flex:1}.event-row{grid-template-columns:3.3rem minmax(0,1fr)}.event-row__actions{grid-column:2;justify-content:flex-start}.events-pagination{flex-direction:column}.event-editor__grid{grid-template-columns:1fr}.event-type-picker{grid-template-columns:1fr}}
 </style>
