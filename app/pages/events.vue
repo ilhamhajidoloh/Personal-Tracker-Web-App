@@ -41,7 +41,10 @@
               <span>เหลือเวลา</span>
               <strong>{{ getOngoingEventDetails(item).countdownText }}</strong>
             </div>
-            <div class="events-live__progress" aria-hidden="true"><i :style="{ width: getOngoingEventDetails(item).progress + '%' }"></i></div>
+            <div class="events-live__progress-wrap">
+              <div class="events-live__progress" aria-label="ความคืบหน้า"><i :style="{ width: getOngoingEventDetails(item).progress + '%' }"></i></div>
+              <span>เวลาคงเหลือ {{ getOngoingEventDetails(item).progress }}%</span>
+            </div>
           </article>
         </div>
       </section>
@@ -55,19 +58,38 @@
           </div>
           <div class="events-filter">
             <input v-model="searchQuery" type="search" placeholder="ค้นหาชื่อหรือรายละเอียดกิจกรรม">
-            <select v-model.number="itemsPerPage" @change="currentPage = 1" aria-label="จำนวนรายการต่อหน้า">
+            <select v-if="viewMode === 'list'" v-model.number="itemsPerPage" @change="currentPage = 1" aria-label="จำนวนรายการต่อหน้า">
               <option :value="10">10 รายการ</option><option :value="20">20 รายการ</option><option :value="50">50 รายการ</option>
             </select>
+            <div class="events-view-switch" aria-label="มุมมอง"><button type="button" :class="{ 'is-active': viewMode === 'list' }" @click="viewMode = 'list'">รายการ</button><button type="button" :class="{ 'is-active': viewMode === 'calendar' }" @click="viewMode = 'calendar'">ปฏิทิน</button></div>
             <button type="button" class="events-icon-button" :disabled="isLoading" title="รีเฟรช" @click="loadEvents">↻</button>
           </div>
         </div>
 
         <div v-if="isLoading" class="events-loading"><span></span><span></span><span></span></div>
-        <div v-else-if="!filteredEvents.length" class="events-empty">
+        <div v-else-if="!filteredEvents.length && viewMode === 'list'" class="events-empty">
           <div>◌</div><h2>{{ searchQuery ? 'ไม่พบกิจกรรมที่ค้นหา' : 'ยังไม่มีรายการในมุมมองนี้' }}</h2>
           <p>{{ searchQuery ? 'ลองเปลี่ยนคำค้นหา หรือเลือกตัวกรองอื่น' : 'เริ่มบันทึกนัดหมายหรือกิจกรรมแรกของคุณ' }}</p>
           <button v-if="!searchQuery" type="button" class="events-button events-button--primary" @click="isEntryModalOpen = true">เพิ่มกิจกรรม</button>
         </div>
+        <section v-else-if="viewMode === 'calendar'" class="events-calendar" :class="`events-calendar--${calendarLayout}`">
+          <header class="events-calendar__header">
+            <button type="button" :aria-label="`ก่อนหน้า${calendarLayoutLabel}`" @click="moveCalendarMonth(-1)">‹</button>
+            <div><h2>{{ calendarMonthLabel }}</h2><p>{{ calendarLayoutLabel }}</p><button type="button" @click="goToCurrentMonth">วันนี้</button></div>
+            <button type="button" :aria-label="`ถัดไป${calendarLayoutLabel}`" @click="moveCalendarMonth(1)">›</button>
+          </header>
+          <div v-if="calendarLayout !== 'day'" class="events-calendar__weekdays"><span v-for="day in calendarVisibleWeekdays" :key="day">{{ day }}</span></div>
+          <div class="events-calendar__grid">
+            <article v-for="day in calendarDays" :key="day.key" class="events-calendar__day" :class="{ 'is-outside': !day.isCurrentMonth, 'is-today': day.isToday }">
+              <span class="events-calendar__date">{{ day.day }}</span>
+              <div class="events-calendar__items">
+                <button v-for="item in getCalendarEvents(day.key)" :key="item.id" type="button" class="events-calendar__event" :class="`events-calendar__event--${getEventStatusMeta(item).status}`" :title="`${item.title} · ${displayEventDateTime(item)}`" @click="openEditModal(item)">
+                  <b>{{ item.start_time ? formatTime(item.start_time) : 'ทั้งวัน' }}</b><span>{{ item.title }}</span>
+                </button>
+              </div>
+            </article>
+          </div>
+        </section>
         <div v-else class="events-list">
           <article v-for="item in paginatedEvents" :key="item.id" class="event-row" :class="`event-row--${getEventStatusMeta(item).status}`">
             <div class="event-row__date"><span>{{ getMonthShort(getTimelineDate(item)) }}</span><strong>{{ getDay(getTimelineDate(item)) }}</strong></div>
@@ -80,8 +102,8 @@
               <h2>{{ item.title }}</h2>
               <p class="event-row__time">{{ formatDate(getTimelineDate(item)) }} · {{ displayEventDateTime(item) }}</p>
               <p v-if="item.description" class="event-row__description">{{ item.description }}</p>
-              <div v-if="getEventStatusMeta(item).status === 'ongoing'" class="event-progress"><span>กำลังดำเนินอยู่ · เหลือ {{ getOngoingEventDetails(item).countdownText }}</span><i><b :style="{ width: getOngoingEventDetails(item).progress + '%' }"></b></i></div>
-              <div v-else-if="item.id === nextUpcomingEvent?.id" class="event-progress event-progress--next"><span>เริ่มในอีก {{ getUpcomingEventDetails(item).countdownText }}</span><i><b :style="{ width: getUpcomingEventDetails(item).progress + '%' }"></b></i></div>
+              <div v-if="getEventStatusMeta(item).status === 'ongoing'" class="event-progress"><span>กำลังดำเนินอยู่ · เหลือ {{ getOngoingEventDetails(item).countdownText }}</span><i><b :style="{ width: getOngoingEventDetails(item).progress + '%' }"></b></i><em>เวลาคงเหลือ {{ getOngoingEventDetails(item).progress }}%</em></div>
+              <div v-else-if="item.id === nextUpcomingEvent?.id" class="event-progress event-progress--next"><span>เริ่มในอีก {{ getUpcomingEventDetails(item).countdownText }}</span><i><b :style="{ width: getUpcomingEventDetails(item).progress + '%' }"></b></i><em>ผ่านรอบนับถอยหลัง {{ getUpcomingEventDetails(item).progress }}%</em></div>
             </div>
             <div class="event-row__actions">
               <button type="button" :disabled="isSyncingId === item.id || isDeletingId === item.id" title="ซิงค์ Google Calendar" @click="syncSingleEvent(item.id)">{{ isSyncingId === item.id ? '…' : 'Sync' }}</button>
@@ -91,7 +113,7 @@
           </article>
         </div>
 
-        <footer v-if="totalPages > 1" class="events-pagination">
+        <footer v-if="viewMode === 'list' && totalPages > 1" class="events-pagination">
           <span>{{ pageInfo }}</span>
           <div><button type="button" :disabled="currentPage === 1" @click="currentPage = Math.max(1, currentPage - 1)">ก่อนหน้า</button><button v-for="page in totalPages" :key="page" type="button" :class="{ 'is-current': currentPage === page }" @click="currentPage = page">{{ page }}</button><button type="button" :disabled="currentPage === totalPages" @click="currentPage = Math.min(totalPages, currentPage + 1)">ถัดไป</button></div>
         </footer>
@@ -182,10 +204,14 @@ const events = ref<EventRow[]>([])
 const icsFileInput = ref<HTMLInputElement | null>(null)
 type EventSubTab = 'upcoming' | 'past' | 'all'
 const activeSubTab = ref<EventSubTab>('upcoming')
+type EventViewMode = 'list' | 'calendar'
+const viewMode = ref<EventViewMode>('list')
 const searchQuery = ref('')
 const currentPage = ref(1)
 const itemsPerPage = ref(10)
 const currentTime = ref(new Date())
+const viewportWidth = ref(1024)
+const calendarMonth = ref(new Date(currentTime.value.getFullYear(), currentTime.value.getMonth(), 1))
 const soonThresholdMinutes = 7 * 24 * 60
 
 const getApiErrorMessage = (error: any, fallback: string) => error?.data?.message || error?.message || fallback
@@ -434,6 +460,78 @@ const filteredEvents = computed(() => {
 
   return list
 })
+
+const calendarWeekdays = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส']
+const calendarLayout = computed<'month' | 'week' | 'day'>(() => {
+  if (viewportWidth.value < 600) return 'day'
+  if (viewportWidth.value < 960) return 'week'
+  return 'month'
+})
+
+const calendarLayoutLabel = computed(() => {
+  if (calendarLayout.value === 'day') return 'รายวัน'
+  if (calendarLayout.value === 'week') return 'รายสัปดาห์'
+  return 'รายเดือน'
+})
+
+const calendarVisibleWeekdays = computed(() => {
+  if (calendarLayout.value !== 'week') return calendarWeekdays
+  const start = new Date(calendarMonth.value)
+  start.setDate(start.getDate() - start.getDay())
+  return Array.from({ length: 7 }, (_, index) => calendarWeekdays[(start.getDay() + index) % 7])
+})
+
+const calendarMonthLabel = computed(() => calendarMonth.value.toLocaleDateString('th-TH', {
+  ...(calendarLayout.value === 'day'
+    ? { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }
+    : calendarLayout.value === 'week'
+      ? { day: 'numeric', month: 'short', year: 'numeric' }
+      : { month: 'long', year: 'numeric' }),
+}))
+
+const toCalendarDateKey = (date: Date) => {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+const calendarDays = computed(() => {
+  const cursor = new Date(calendarMonth.value)
+  const monthStart = new Date(cursor.getFullYear(), cursor.getMonth(), 1)
+  const gridStart = calendarLayout.value === 'month' ? new Date(monthStart) : new Date(cursor)
+  if (calendarLayout.value === 'month' || calendarLayout.value === 'week') gridStart.setDate(gridStart.getDate() - gridStart.getDay())
+  const todayKey = toCalendarDateKey(currentTime.value)
+  const length = calendarLayout.value === 'month' ? 42 : calendarLayout.value === 'week' ? 7 : 1
+
+  return Array.from({ length }, (_, index) => {
+    const date = new Date(gridStart)
+    date.setDate(gridStart.getDate() + index)
+    return {
+      key: toCalendarDateKey(date),
+      day: date.getDate(),
+      isCurrentMonth: date.getMonth() === calendarMonth.value.getMonth(),
+      isToday: toCalendarDateKey(date) === todayKey,
+    }
+  })
+})
+
+const getCalendarEvents = (dateKey: string) => filteredEvents.value.filter((item) => {
+  const endDate = item.end_date || item.start_date
+  return item.start_date <= dateKey && endDate >= dateKey
+})
+
+const moveCalendarMonth = (amount: number) => {
+  const cursor = new Date(calendarMonth.value)
+  if (calendarLayout.value === 'month') cursor.setMonth(cursor.getMonth() + amount)
+  else if (calendarLayout.value === 'week') cursor.setDate(cursor.getDate() + amount * 7)
+  else cursor.setDate(cursor.getDate() + amount)
+  calendarMonth.value = cursor
+}
+
+const goToCurrentMonth = () => {
+  calendarMonth.value = new Date(currentTime.value)
+}
 
 const totalPages = computed(() => Math.max(1, Math.ceil(filteredEvents.value.length / itemsPerPage.value)))
 
@@ -993,9 +1091,14 @@ const syncSingleEvent = async (id: string) => {
 }
 
 let clockTimer: ReturnType<typeof setInterval> | null = null
+const updateViewportWidth = () => {
+  viewportWidth.value = window.innerWidth
+}
 
 onMounted(() => {
   loadEvents()
+  updateViewportWidth()
+  window.addEventListener('resize', updateViewportWidth, { passive: true })
   clockTimer = setInterval(() => {
     currentTime.value = new Date()
   }, 1000)
@@ -1003,12 +1106,13 @@ onMounted(() => {
 
 onUnmounted(() => {
   if (clockTimer) clearInterval(clockTimer)
+  window.removeEventListener('resize', updateViewportWidth)
 })
 </script>
 
 <style scoped>
 
-.events-board { max-width: 1200px; margin: 0 auto; padding: 2rem 1.25rem 4rem; color: var(--text-primary); }
+.events-board { max-width: 1200px; min-width: 0; margin: 0 auto; padding: 2rem 1.25rem 4rem; color: var(--text-primary); overflow-x: clip; }
 .events-board__header { display: flex; justify-content: space-between; gap: 2rem; align-items: flex-start; padding: 1.5rem 0 2rem; border-bottom: 1px solid var(--border-subtle); }
 .events-board__eyebrow, .event-editor header p { margin: 0; color: var(--brand-ink); font: 800 .68rem/1.2 ui-monospace, monospace; letter-spacing: .16em; }
 .events-board h1 { margin: .5rem 0; font-size: clamp(2rem, 4vw, 3.25rem); letter-spacing: -.06em; line-height: 1; }
@@ -1016,11 +1120,15 @@ onUnmounted(() => {
 .events-button, .events-icon-button, .events-tabs button, .event-row__actions button, .events-pagination button { border: 0; cursor: pointer; font: inherit; transition: .18s ease; }.events-button { padding: .7rem .9rem; border-radius: .65rem; font-size: .8rem; font-weight: 700; }.events-button:disabled, button:disabled { cursor: not-allowed; opacity: .5; }.events-button--primary { background: var(--brand); color: #fff; box-shadow: var(--brand-glow); }.events-button--quiet { color: var(--text-secondary); background: var(--bg-elevated); border: 1px solid var(--border-subtle); }
 .events-alert { padding: .8rem 1rem; margin-top: 1rem; border-radius: .7rem; color: var(--ink-amber); background: var(--event-status-soon-soft); border: 1px solid var(--event-status-soon-border); }
 .events-summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; margin: 1.25rem 0; background: var(--border-subtle); border: 1px solid var(--border-subtle); border-radius: 1rem; overflow: hidden; }.events-summary__item { background: var(--bg-card); padding: 1rem 1.2rem; }.events-summary span { display:block; color:var(--text-muted); font-size:.72rem; }.events-summary strong { display:block; margin-top:.25rem; font-size:1.55rem; }
-.events-live { margin: 0 0 1.25rem; padding: 1rem; border: 1px solid var(--event-status-ongoing-border); border-radius: 1rem; background: var(--event-status-ongoing-soft); box-shadow: var(--event-status-ongoing-shadow); }.events-live__heading { display:flex; align-items:center; justify-content:space-between; gap:1rem; margin:0 0 .8rem; }.events-live__heading>div{display:flex;align-items:center;gap:.55rem}.events-live__heading p{margin:0;font:800 .68rem/1 ui-monospace,monospace;letter-spacing:.12em;color:var(--event-status-ongoing-ink)}.events-live__heading strong{font-size:.72rem;color:var(--event-status-ongoing-ink)}.events-live__signal{width:.55rem;height:.55rem;border-radius:50%;background:var(--event-status-ongoing-ink);box-shadow:0 0 0 0 var(--event-status-ongoing-ink);animation:events-live-pulse 1.5s infinite}@keyframes events-live-pulse{70%{box-shadow:0 0 0 .55rem transparent}100%{box-shadow:0 0 0 0 transparent}}.events-live__list{display:grid;gap:.6rem}.events-live__item{position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:.75rem;padding:.9rem;background:var(--bg-card);border:1px solid var(--event-status-ongoing-border);border-radius:.7rem;overflow:hidden}.events-live__type{font-size:.65rem;font-weight:800;color:var(--event-status-ongoing-ink)}.events-live__content h2{margin:.3rem 0 .15rem;font-size:1rem}.events-live__content p,.events-live__countdown span{margin:0;color:var(--text-muted);font-size:.72rem}.events-live__countdown{text-align:right}.events-live__countdown strong{display:block;margin-top:.2rem;font-family:ui-monospace,monospace;font-size:1rem;color:var(--event-status-ongoing-ink)}.events-live__progress{position:absolute;bottom:0;left:0;width:100%;height:3px;background:var(--bg-elevated-2)}.events-live__progress i{display:block;height:100%;background:var(--event-status-ongoing-ink);transition:width 1s linear}
-.events-workspace { overflow:hidden; border: 1px solid var(--border-subtle); border-radius: 1rem; background: var(--bg-card); }.events-toolbar { display:flex; justify-content:space-between; gap:1rem; padding: .85rem; border-bottom:1px solid var(--border-subtle); }.events-tabs { display:flex; gap:.25rem; overflow:auto; }.events-tabs button { white-space:nowrap; padding:.55rem .7rem; border-radius:.55rem; background:transparent; color:var(--text-muted); font-size:.78rem; }.events-tabs button.is-active { background:var(--bg-elevated); color:var(--text-primary); }.events-tabs b { margin-left:.25rem; color:var(--brand-ink); }.events-filter { display:flex; gap:.45rem; }.events-filter input, .events-filter select, .event-editor input, .event-editor select, .event-editor textarea { min-width:0; color:var(--text-primary); background:var(--bg-elevated); border:1px solid var(--border-default); border-radius:.55rem; outline:none; }.events-filter input { width:16rem; padding:.55rem .7rem; font-size:.78rem; }.events-filter select { padding:0 .45rem; font-size:.75rem; }.events-icon-button { width:2.2rem; border-radius:.55rem; background:var(--bg-elevated); color:var(--text-primary); border:1px solid var(--border-default); }
+.events-live { margin: 0 0 1.25rem; padding: 1rem; border: 1px solid var(--event-status-ongoing-border); border-radius: 1rem; background: var(--event-status-ongoing-soft); box-shadow: var(--event-status-ongoing-shadow); }.events-live__heading { display:flex; align-items:center; justify-content:space-between; gap:1rem; margin:0 0 .8rem; }.events-live__heading>div{display:flex;align-items:center;gap:.55rem}.events-live__heading p{margin:0;font:800 .68rem/1 ui-monospace,monospace;letter-spacing:.12em;color:var(--event-status-ongoing-ink)}.events-live__heading strong{font-size:.72rem;color:var(--event-status-ongoing-ink)}.events-live__signal{width:.55rem;height:.55rem;border-radius:50%;background:var(--event-status-ongoing-ink);box-shadow:0 0 0 0 var(--event-status-ongoing-ink);animation:events-live-pulse 1.5s infinite}@keyframes events-live-pulse{70%{box-shadow:0 0 0 .55rem transparent}100%{box-shadow:0 0 0 0 transparent}}.events-live__list{display:grid;gap:.6rem}.events-live__item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:.75rem;padding:.9rem;background:var(--bg-card);border:1px solid var(--event-status-ongoing-border);border-radius:.7rem}.events-live__type{font-size:.65rem;font-weight:800;color:var(--event-status-ongoing-ink)}.events-live__content h2{margin:.3rem 0 .15rem;font-size:1rem}.events-live__content p,.events-live__countdown span{margin:0;color:var(--text-muted);font-size:.72rem}.events-live__countdown{text-align:right}.events-live__countdown strong{display:block;margin-top:.2rem;font-family:ui-monospace,monospace;font-size:1rem;color:var(--event-status-ongoing-ink)}.events-live__progress-wrap{grid-column:1/-1}.events-live__progress-wrap span{display:block;margin-top:.35rem;text-align:right;font-size:.66rem;font-weight:700;color:var(--event-status-ongoing-ink)}.events-live__progress{width:100%;height:4px;background:var(--bg-elevated-2);border-radius:99px;overflow:hidden}.events-live__progress i{display:block;height:100%;background:var(--event-status-ongoing-ink);transition:width 1s linear}
+.events-workspace { min-width:0; overflow:hidden; border: 1px solid var(--border-subtle); border-radius: 1rem; background: var(--bg-card); }.events-toolbar { display:flex; justify-content:space-between; gap:1rem; padding: .85rem; border-bottom:1px solid var(--border-subtle); }.events-tabs { min-width:0; max-width:100%; display:flex; gap:.25rem; overflow:auto; }.events-tabs button { white-space:nowrap; padding:.55rem .7rem; border-radius:.55rem; background:transparent; color:var(--text-muted); font-size:.78rem; }.events-tabs button.is-active { background:var(--bg-elevated); color:var(--text-primary); }.events-tabs b { margin-left:.25rem; color:var(--brand-ink); }.events-filter { min-width:0; display:flex; gap:.45rem; }.events-filter input, .events-filter select, .event-editor input, .event-editor select, .event-editor textarea { min-width:0; color:var(--text-primary); background:var(--bg-elevated); border:1px solid var(--border-default); border-radius:.55rem; outline:none; }.events-filter input { width:16rem; padding:.55rem .7rem; font-size:.78rem; }.events-filter select { padding:0 .45rem; font-size:.75rem; }.events-icon-button { flex:0 0 2.2rem; width:2.2rem; border-radius:.55rem; background:var(--bg-elevated); color:var(--text-primary); border:1px solid var(--border-default); }
+.events-view-switch{display:flex;padding:.18rem;background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:.6rem}.events-view-switch button{padding:.35rem .5rem;border:0;border-radius:.4rem;background:transparent;color:var(--text-muted);font-size:.7rem;font-weight:700;white-space:nowrap}.events-view-switch button.is-active{color:#fff;background:var(--brand)}
+.events-calendar{padding:1rem}.events-calendar__header{display:grid;grid-template-columns:2.4rem 1fr 2.4rem;align-items:center;gap:.75rem;margin-bottom:1rem;text-align:center}.events-calendar__header>button{width:2.4rem;height:2.4rem;border:1px solid var(--border-default);border-radius:.55rem;background:var(--bg-elevated);color:var(--text-primary);font-size:1.4rem}.events-calendar__header h2{margin:0;font-size:1rem}.events-calendar__header div button{margin-top:.2rem;border:0;background:transparent;color:var(--brand-ink);font-size:.7rem;font-weight:700}.events-calendar__weekdays,.events-calendar__grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr))}.events-calendar__weekdays{margin-bottom:.35rem}.events-calendar__weekdays span{padding:.35rem;text-align:center;color:var(--text-muted);font-size:.67rem;font-weight:800}.events-calendar__grid{border-top:1px solid var(--border-subtle);border-left:1px solid var(--border-subtle)}.events-calendar__day{min-width:0;min-height:7.8rem;padding:.38rem;border-right:1px solid var(--border-subtle);border-bottom:1px solid var(--border-subtle);background:var(--bg-card)}.events-calendar__day.is-outside{background:var(--bg-elevated);opacity:.56}.events-calendar__day.is-today .events-calendar__date{color:#fff;background:var(--brand)}.events-calendar__date{display:grid;place-items:center;width:1.55rem;height:1.55rem;margin-bottom:.28rem;border-radius:50%;font-size:.7rem;font-weight:800}.events-calendar__items{display:grid;gap:.2rem}.events-calendar__event{min-width:0;padding:.25rem .3rem;border:0;border-left:2px solid var(--border-default);border-radius:.2rem;background:var(--bg-elevated);color:var(--text-primary);text-align:left;cursor:pointer;font-size:.62rem;line-height:1.25}.events-calendar__event b{margin-right:.2rem;font-size:.58rem;color:var(--text-muted)}.events-calendar__event span{display:inline}.events-calendar__event--ongoing{border-left-color:var(--event-status-ongoing-ink)}.events-calendar__event--soon{border-left-color:var(--event-status-soon-ink)}.events-calendar__event--past{border-left-color:var(--event-status-past-ink)}
+.events-calendar__header p{margin:.1rem 0 0;color:var(--text-muted);font-size:.62rem}.events-calendar--day .events-calendar__grid{grid-template-columns:1fr}.events-calendar--day .events-calendar__day{min-height:clamp(22rem,55vh,36rem);padding:.75rem}.events-calendar--day .events-calendar__date{width:2rem;height:2rem;font-size:.85rem}.events-calendar--day .events-calendar__event{padding:.45rem .55rem;font-size:.78rem}.events-calendar--day .events-calendar__event b{font-size:.7rem}.events-calendar--day .events-calendar__event span{display:inline}
 .events-loading { padding: 2rem; display:grid; gap:.7rem; }.events-loading span { height:5rem; border-radius:.75rem; background:var(--bg-elevated); animation:events-pulse 1.2s infinite alternate; }@keyframes events-pulse{to{opacity:.45}}.events-empty { padding:5rem 1rem; text-align:center; }.events-empty>div{font-size:3rem;color:var(--brand-ink)}.events-empty h2{margin:.5rem 0}.events-empty p{color:var(--text-muted);margin:0 0 1rem}
-.events-list { padding: .75rem; display:grid; gap:.55rem; }.event-row { display:grid; grid-template-columns:4rem minmax(0,1fr) auto; gap:1rem; align-items:start; padding:1rem; border:1px solid var(--border-subtle); border-left:3px solid var(--border-default); border-radius:.8rem; }.event-row--ongoing{border-left-color:var(--event-status-ongoing-ink)}.event-row--soon{border-left-color:var(--event-status-soon-ink)}.event-row__date{text-align:center;padding:.35rem;background:var(--bg-elevated);border-radius:.55rem}.event-row__date span{display:block;text-transform:uppercase;font-size:.65rem;color:var(--text-muted)}.event-row__date strong{font-size:1.45rem}.event-row__meta{display:flex;gap:.4rem;flex-wrap:wrap}.event-status,.event-type,.event-google{font-size:.65rem;font-weight:700;padding:.22rem .45rem;border-radius:99px;border:1px solid}.event-google{color:var(--ink-sky);border-color:rgba(28,111,208,.25);background:rgba(28,111,208,.1)}.event-row h2{margin:.45rem 0 .2rem;font-size:1rem}.event-row__time,.event-row__description{margin:.15rem 0;color:var(--text-muted);font-size:.78rem}.event-row__description{color:var(--text-secondary)}.event-progress{margin-top:.7rem;font-size:.72rem;color:var(--event-status-ongoing-ink)}.event-progress--next{color:var(--brand-ink)}.event-progress i{display:block;height:4px;margin-top:.35rem;background:var(--bg-elevated-2);border-radius:99px;overflow:hidden}.event-progress b{display:block;height:100%;background:currentColor}.event-row__actions{display:flex;gap:.25rem}.event-row__actions button{padding:.4rem .5rem;border-radius:.45rem;background:var(--bg-elevated);color:var(--text-secondary);font-size:.7rem}.event-row__actions .is-danger{color:var(--ink-rose)}
+.events-list { padding: .75rem; display:grid; gap:.55rem; }.event-row { display:grid; grid-template-columns:4rem minmax(0,1fr) auto; gap:1rem; align-items:start; padding:1rem; border:1px solid var(--border-subtle); border-left:3px solid var(--border-default); border-radius:.8rem; }.event-row--ongoing{border-left-color:var(--event-status-ongoing-ink)}.event-row--soon{border-left-color:var(--event-status-soon-ink)}.event-row__date{text-align:center;padding:.35rem;background:var(--bg-elevated);border-radius:.55rem}.event-row__date span{display:block;text-transform:uppercase;font-size:.65rem;color:var(--text-muted)}.event-row__date strong{font-size:1.45rem}.event-row__meta{display:flex;gap:.4rem;flex-wrap:wrap}.event-status,.event-type,.event-google{font-size:.65rem;font-weight:700;padding:.22rem .45rem;border-radius:99px;border:1px solid}.event-google{color:var(--ink-sky);border-color:rgba(28,111,208,.25);background:rgba(28,111,208,.1)}.event-row h2{margin:.45rem 0 .2rem;font-size:1rem}.event-row__time,.event-row__description{margin:.15rem 0;color:var(--text-muted);font-size:.78rem}.event-row__description{color:var(--text-secondary)}.event-progress{margin-top:.7rem;font-size:.72rem;color:var(--event-status-ongoing-ink)}.event-progress--next{color:var(--brand-ink)}.event-progress i{display:block;height:4px;margin-top:.35rem;background:var(--bg-elevated-2);border-radius:99px;overflow:hidden}.event-progress b{display:block;height:100%;background:currentColor}.event-progress em{display:block;margin-top:.35rem;font-size:.66rem;font-style:normal;font-weight:700}.event-row__actions{display:flex;gap:.25rem}.event-row__actions button{padding:.4rem .5rem;border-radius:.45rem;background:var(--bg-elevated);color:var(--text-secondary);font-size:.7rem}.event-row__actions .is-danger{color:var(--ink-rose)}
 .events-pagination{display:flex;justify-content:space-between;gap:1rem;align-items:center;padding:1rem;border-top:1px solid var(--border-subtle);font-size:.75rem;color:var(--text-muted)}.events-pagination div{display:flex;gap:.25rem}.events-pagination button{min-width:2rem;padding:.4rem;border-radius:.4rem;background:var(--bg-elevated);color:var(--text-secondary)}.events-pagination button.is-current{background:var(--brand);color:#fff}
 .event-editor{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:1rem;background:rgba(4,8,18,.68);backdrop-filter:blur(10px)}.event-editor__panel{width:min(100%,42rem);max-height:calc(100vh - 2rem);display:flex;flex-direction:column;overflow:hidden;background:var(--bg-card);border:1px solid var(--border-strong);border-radius:1rem;box-shadow:var(--shadow-lg)}.event-editor header,.event-editor footer{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border-bottom:1px solid var(--border-subtle)}.event-editor header h2{margin:.25rem 0 0;font-size:1.15rem}.event-editor header button{font-size:1.4rem;background:none;border:0;color:var(--text-muted)}.event-editor__content{overflow:auto;padding:1.25rem;display:grid;gap:1rem}.event-editor label,.event-editor legend{font-size:.75rem;font-weight:700;color:var(--text-secondary)}.event-editor input,.event-editor select,.event-editor textarea{box-sizing:border-box;display:block;width:100%;margin-top:.4rem;padding:.65rem;font:inherit}.event-editor textarea{resize:vertical}.event-editor fieldset{border:0;padding:0;margin:0}.event-type-picker{display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;margin-top:.4rem}.event-type-picker label{margin:0;padding:.65rem .35rem;text-align:center;border:1px solid var(--border-subtle);border-radius:.6rem;background:var(--bg-elevated);font-size:.68rem}.event-type-picker label.is-selected{border-color:var(--brand);color:var(--brand-ink)}.event-type-picker input{position:absolute;opacity:0}.event-type-picker span{display:block;font-size:1.1rem}.event-editor__grid{display:grid;grid-template-columns:repeat(2,1fr);gap:.75rem}.event-editor footer{border-top:1px solid var(--border-subtle);border-bottom:0;justify-content:flex-end}
-@media(max-width:760px){.events-board{padding:1rem 1rem 3rem}.events-board__header,.events-toolbar{flex-direction:column}.events-board__actions{justify-content:flex-start}.events-summary{grid-template-columns:repeat(2,1fr)}.events-live__item{grid-template-columns:1fr}.events-live__countdown{text-align:left}.events-filter{width:100%}.events-filter input{width:100%;flex:1}.event-row{grid-template-columns:3.3rem minmax(0,1fr)}.event-row__actions{grid-column:2;justify-content:flex-start}.events-pagination{flex-direction:column}.event-editor__grid{grid-template-columns:1fr}.event-type-picker{grid-template-columns:1fr}}
+@media(max-width:960px){.events-calendar__day{min-height:6.5rem}.events-calendar__event b{display:none}.events-calendar__event span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
+@media(max-width:760px){.events-board{width:100%;box-sizing:border-box;padding:1rem 1rem 3rem}.events-board__header,.events-toolbar{flex-direction:column}.events-board__actions{justify-content:flex-start}.events-summary{grid-template-columns:repeat(2,1fr)}.events-live__item{grid-template-columns:minmax(0,1fr)}.events-live__content,.event-row__body{min-width:0}.events-live__countdown{text-align:left}.events-filter{width:100%;max-width:100%}.events-filter input{width:100%;flex:1}.events-filter select{max-width:6.4rem}.events-view-switch{flex:0 0 auto}.events-tabs{width:100%;scrollbar-width:none}.events-tabs::-webkit-scrollbar{display:none}.event-row{grid-template-columns:3.3rem minmax(0,1fr)}.event-row__actions{grid-column:2;justify-content:flex-start;flex-wrap:wrap}.events-pagination{flex-direction:column}.events-pagination>div{max-width:100%;overflow-x:auto}.events-calendar{padding:.55rem}.events-calendar__header{margin-bottom:.6rem}.events-calendar__weekdays span{padding:.25rem 0;font-size:.58rem}.events-calendar__day{min-height:4.7rem;padding:.22rem}.events-calendar__date{width:1.3rem;height:1.3rem;margin-bottom:.15rem;font-size:.62rem}.events-calendar__items{gap:.12rem}.events-calendar__event{padding:.16rem .2rem;font-size:.55rem}.events-calendar__event span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.event-editor{padding:.65rem}.event-editor__panel{max-width:100%}.event-editor__grid{grid-template-columns:1fr}.event-type-picker{grid-template-columns:1fr}}
 </style>
