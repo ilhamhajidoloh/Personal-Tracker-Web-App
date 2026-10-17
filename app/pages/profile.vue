@@ -1,38 +1,594 @@
 <template>
   <AppTabsLayout>
-    <div class="mx-auto w-full max-w-5xl px-4 md:px-6 py-6 md:py-8">
-      <!-- Page head -->
-      <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-        <div>
-          <p class="eyebrow">โปรไฟล์ · Account</p>
-          <h1 class="text-2xl md:text-[30px] font-extrabold tracking-tight mt-1.5" style="color: var(--text-primary);">โปรไฟล์</h1>
-          <p class="text-xs mt-2" style="color: var(--text-muted);">ข้อมูลบัญชีผู้ใช้และการตั้งค่า</p>
-        </div>
-        <div class="flex items-center gap-2 shrink-0 flex-wrap">
-          <button
-            @click="openEditProfileModal"
-            class="px-3.5 py-2 rounded-xl bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/30 text-xs sm:text-sm font-semibold text-violet-300 transition-all tap-scale touch-target flex items-center gap-1.5"
-          >
-            ✏️ แก้ไขโปรไฟล์
-          </button>
-          <button
-            @click="openChangePasswordModal"
-            class="px-3.5 py-2 rounded-xl bg-gray-800 hover:bg-gray-700 border border-gray-700/60 text-xs sm:text-sm font-semibold text-gray-300 hover:text-white transition-all tap-scale touch-target flex items-center gap-1.5"
-          >
-            🔑 {{ userHasPassword ? 'เปลี่ยนรหัสผ่าน' : 'ตั้งรหัสผ่าน' }}
-          </button>
-          <button
-            @click="loadProfile"
-            :disabled="isLoading"
-            class="btn-secondary text-xs sm:text-sm inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed tap-scale touch-target"
-          >
-            <svg class="w-4 h-4" :class="isLoading ? 'animate-spin' : ''" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5M21 12a9 9 0 0 1-15 6.7L3 16M3 21v-5h5"/></svg>
-            {{ isLoading ? 'กำลังโหลด...' : 'รีเฟรช' }}
-          </button>
+    <div class="min-h-screen relative">
+      <!-- Hero Header -->
+      <div class="relative overflow-hidden">
+        <div class="absolute inset-0 bg-gradient-to-br from-violet-600/10 via-indigo-600/5 to-purple-600/10"></div>
+        <div class="relative mx-auto w-full max-w-6xl px-4 md:px-8 py-8 md:py-12">
+          <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+            <div class="flex items-center gap-5">
+              <!-- Avatar -->
+              <div class="relative group">
+                <div class="w-20 h-20 md:w-24 md:h-24 rounded-3xl overflow-hidden shadow-2xl shadow-violet-500/30 relative flex items-center justify-center border-2 border-violet-500/40 bg-gradient-to-br from-violet-600/40 to-indigo-700/40">
+                  <img
+                    v-if="profileImageUrl"
+                    :src="profileImageUrl"
+                    :alt="displayName"
+                    class="w-full h-full object-cover"
+                    @error="userMe ? userMe.profileImageUrl = null : null"
+                  />
+                  <div
+                    v-else
+                    class="w-full h-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-4xl font-bold text-white"
+                  >
+                    {{ avatarFallback }}
+                  </div>
+                  <div
+                    v-if="isUploadingAvatar || isDeletingAvatar"
+                    class="absolute inset-0 bg-black/70 backdrop-blur-sm flex flex-col items-center justify-center gap-1.5 text-white text-xs font-medium"
+                  >
+                    <span class="inline-block w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                    <span>{{ isUploadingAvatar ? 'กำลังอัปโหลด...' : 'กำลังลบ...' }}</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  @click="triggerSelectAvatar"
+                  :disabled="isUploadingAvatar || isDeletingAvatar"
+                  class="absolute -bottom-1 -right-1 w-8 h-8 rounded-xl bg-violet-600 hover:bg-violet-500 text-white shadow-lg flex items-center justify-center border-2 border-gray-900 transition-transform active:scale-95 disabled:opacity-50"
+                >
+                  <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                </button>
+                <input
+                  ref="avatarFileInput"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  class="hidden"
+                  @change="handleAvatarFileChange"
+                />
+              </div>
+              <!-- User Info -->
+              <div>
+                <h1 class="text-2xl md:text-3xl font-bold text-white">{{ displayName }}</h1>
+                <p class="text-sm text-gray-400 mt-1">{{ currentUser?.email || '-' }}</p>
+                <div class="flex items-center gap-2 mt-2">
+                  <span v-if="profileImageUrl" class="inline-flex items-center gap-1 text-[10px] px-2.5 py-1 rounded-full bg-violet-500/15 border border-violet-500/30 text-violet-300 font-medium">
+                    ☁️ Oracle Storage
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <button
+                @click="openEditProfileModal"
+                class="px-4 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-sm font-semibold text-white transition-all tap-scale shadow-lg shadow-violet-600/30"
+              >
+                ✏️ แก้ไข
+              </button>
+              <button
+                v-if="profileImageUrl"
+                @click="handleDeleteAvatar"
+                :disabled="isUploadingAvatar || isDeletingAvatar"
+                class="px-4 py-2.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 text-sm font-semibold text-rose-300 transition-all tap-scale disabled:opacity-50"
+              >
+                🗑️ ลบรูป
+              </button>
+              <button
+                @click="loadProfile"
+                :disabled="isLoading"
+                class="px-4 py-2.5 rounded-xl bg-gray-800/80 hover:bg-gray-700 border border-gray-700/60 text-sm font-semibold text-gray-300 hover:text-white transition-all tap-scale disabled:opacity-50"
+              >
+                <svg class="w-4 h-4 inline-block" :class="isLoading ? 'animate-spin' : ''" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5M21 12a9 9 0 0 1-15 6.7L3 16M3 21v-5h5"/></svg>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div class="space-y-5 mt-6">
+      <!-- Main Content -->
+      <div class="mx-auto w-full max-w-6xl px-4 md:px-8 py-6 space-y-8">
+
+        <!-- Error Message -->
+        <div v-if="errorMessage" class="rounded-2xl px-5 py-4 text-sm flex items-center gap-3 font-medium border-2 border-amber-500/30 bg-amber-500/10">
+          <span class="text-2xl">⚠️</span>
+          <span class="text-amber-200">{{ errorMessage }}</span>
+        </div>
+
+        <!-- Loading State -->
+        <div v-if="isLoading" class="flex flex-col items-center justify-center py-20 gap-4">
+          <span class="inline-block w-12 h-12 border-4 border-violet-400/30 border-t-violet-400 rounded-full animate-spin"></span>
+          <span class="text-gray-400 text-lg">กำลังโหลดข้อมูลโปรไฟล์...</span>
+        </div>
+
+        <template v-else>
+
+          <!-- Account Details Grid -->
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div class="space-y-3">
+              <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider">ข้อมูลส่วนตัว</div>
+              <div class="space-y-2">
+                <div class="flex items-center justify-between py-3 px-4 rounded-xl bg-gray-800/40 border border-gray-700/50">
+                  <span class="text-sm text-gray-400">ชื่อ</span>
+                  <span class="text-sm font-medium text-white">{{ firstName }}</span>
+                </div>
+                <div class="flex items-center justify-between py-3 px-4 rounded-xl bg-gray-800/40 border border-gray-700/50">
+                  <span class="text-sm text-gray-400">นามสกุล</span>
+                  <span class="text-sm font-medium text-white">{{ lastName }}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="space-y-3">
+              <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider">บัญชี</div>
+              <div class="space-y-2">
+                <div class="flex items-center justify-between py-3 px-4 rounded-xl bg-gray-800/40 border border-gray-700/50">
+                  <span class="text-sm text-gray-400">อีเมล</span>
+                  <span class="text-xs font-medium text-white break-all text-right">{{ currentUser?.email || '-' }}</span>
+                </div>
+                <div class="py-3 px-4 rounded-xl bg-gray-800/40 border border-gray-700/50">
+                  <div class="flex items-center justify-between mb-2">
+                    <span class="text-sm text-gray-400">รหัสผ่าน</span>
+                    <button
+                      @click="openChangePasswordModal"
+                      class="text-xs font-semibold text-violet-400 hover:text-violet-300"
+                    >
+                      {{ userHasPassword ? 'เปลี่ยน' : 'ตั้งค่า' }}
+                    </button>
+                  </div>
+                  <span class="text-xs text-gray-500">{{ userHasPassword ? '•••••••• (ตั้งค่าแล้ว)' : 'ยังไม่ได้ตั้งรหัสผ่าน' }}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="space-y-3">
+              <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider">การดำเนินการ</div>
+              <div class="space-y-2">
+                <button
+                  @click="triggerSelectAvatar"
+                  :disabled="isUploadingAvatar || isDeletingAvatar"
+                  class="w-full py-3 px-4 rounded-xl bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/40 text-sm font-semibold text-violet-300 transition-all tap-scale disabled:opacity-50 text-left flex items-center gap-2"
+                >
+                  <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                  {{ profileImageUrl ? 'เปลี่ยนรูปโปรไฟล์' : 'อัปโหลดรูปโปรไฟล์' }}
+                </button>
+                <button
+                  @click="openEditProfileModal"
+                  class="w-full py-3 px-4 rounded-xl bg-gray-800/60 hover:bg-gray-800 border border-gray-700/60 text-sm font-semibold text-gray-300 hover:text-white transition-all tap-scale text-left flex items-center gap-2"
+                >
+                  ✏️ แก้ไขข้อมูลโปรไฟล์
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- App Modules Section -->
+          <div>
+            <div class="flex items-center justify-between mb-5">
+              <div>
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                  <span class="text-2xl">✨</span>
+                  จัดการฟังก์ชันการใช้งาน
+                </h2>
+                <p class="text-sm text-gray-500 mt-1">เปิดหรือปิดโมดูลที่คุณต้องการใช้งาน</p>
+              </div>
+              <div class="flex items-center gap-2">
+                <button
+                  @click="handleEnableAllModules"
+                  class="text-xs font-semibold px-3 py-2 rounded-xl bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/40 text-violet-300 transition-all tap-scale"
+                >
+                  ✓ เปิดทั้งหมด
+                </button>
+                <button
+                  @click="handleEnableOnlyCashflow"
+                  class="text-xs font-semibold px-3 py-2 rounded-xl bg-gray-800/60 hover:bg-gray-800 border border-gray-700/60 text-gray-400 hover:text-white transition-all tap-scale"
+                >
+                  ⚡ เฉพาะการเงิน
+                </button>
+              </div>
+            </div>
+
+            <div class="mb-4 px-4 py-3 rounded-xl bg-gray-800/30 border border-gray-700/50 flex items-center justify-between">
+              <span class="text-sm text-gray-400">
+                เปิดใช้งาน <span class="text-violet-400 font-bold">{{ enabledModules.length }}</span> / {{ allModules.length }} ฟังก์ชัน
+              </span>
+              <span class="text-xs text-gray-500">การเปลี่ยนแปลงมีผลทันที</span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+              <div
+                v-for="mod in allModules"
+                :key="mod.id"
+                @click="handleToggleModule(mod.id, mod.shortLabel)"
+                class="relative p-4 rounded-2xl border transition-all duration-200 cursor-pointer tap-scale select-none overflow-hidden group"
+                :class="isModuleEnabled(mod.id)
+                  ? 'bg-gradient-to-br from-violet-600/15 via-violet-600/10 to-violet-600/5 border-violet-500/40 shadow-lg shadow-violet-500/10'
+                  : 'bg-gray-800/30 border-gray-700/50 opacity-60 hover:opacity-80'"
+              >
+                <div class="absolute top-3 right-3">
+                  <div
+                    class="w-12 h-6 rounded-full transition-all duration-300 flex items-center"
+                    :style="{
+                      padding: '2px',
+                      backgroundColor: isModuleEnabled(mod.id) ? '#8b5cf6' : '#4b5563'
+                    }"
+                  >
+                    <div
+                      class="w-5 h-5 rounded-full bg-white shadow-md transition-transform duration-300"
+                      :style="{
+                        transform: isModuleEnabled(mod.id) ? 'translateX(24px)' : 'translateX(0px)'
+                      }"
+                    />
+                  </div>
+                </div>
+
+                <div class="pr-16">
+                  <div class="text-3xl mb-2">{{ mod.icon }}</div>
+                  <h3 class="text-base font-bold text-white mb-1">{{ mod.label }}</h3>
+                  <p class="text-xs text-gray-400 leading-relaxed">{{ mod.description }}</p>
+                </div>
+
+                <div class="mt-3 pt-3 border-t border-gray-700/30">
+                  <span
+                    class="text-[10px] px-2.5 py-1 rounded-full font-bold uppercase tracking-wide"
+                    :class="isModuleEnabled(mod.id)
+                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                      : 'bg-gray-700/30 text-gray-500 border border-gray-600/30'"
+                  >
+                    {{ isModuleEnabled(mod.id) ? 'Active' : 'Inactive' }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Integrations Section -->
+          <div>
+            <h2 class="text-xl font-bold text-white mb-5 flex items-center gap-2">
+              <span class="text-2xl">🔗</span>
+              การเชื่อมต่อและการแจ้งเตือน
+            </h2>
+
+            <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+
+              <!-- LINE Integration Card -->
+              <div class="rounded-2xl border border-gray-700/60 bg-gradient-to-br from-green-500/5 to-green-600/5 overflow-hidden">
+                <div class="p-5 border-b border-gray-700/60 flex items-center justify-between">
+                  <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center text-2xl">💬</div>
+                    <div>
+                      <h3 class="text-base font-bold text-white">LINE Integration</h3>
+                      <p class="text-xs text-gray-500 mt-0.5">รับแจ้งเตือนผ่าน LINE</p>
+                    </div>
+                  </div>
+                  <span
+                    class="text-xs px-3 py-1.5 rounded-full font-semibold border"
+                    :class="lineStatusBadgeClass"
+                  >
+                    {{ lineStatus.connected ? '✓ เชื่อมต่อแล้ว' : '○ ยังไม่เชื่อมต่อ' }}
+                  </span>
+                </div>
+
+                <div class="p-5">
+                  <div v-if="isLineLoading" class="flex items-center gap-2 text-sm text-gray-400 py-8 justify-center">
+                    <span class="inline-block w-5 h-5 border-2 border-violet-400/30 border-t-violet-400 rounded-full animate-spin"></span>
+                    กำลังตรวจสอบ...
+                  </div>
+
+                  <div v-else class="space-y-4">
+                    <!-- Status Info -->
+                    <div v-if="lineStatus.connected" class="space-y-2">
+                      <div class="flex items-center justify-between py-2 px-3 rounded-lg bg-gray-800/40">
+                        <span class="text-xs text-gray-500">LINE User ID</span>
+                        <span class="text-xs text-gray-300 font-mono">{{ lineStatus.lineUserId.substring(0, 8) }}...</span>
+                      </div>
+                      <div class="flex items-center justify-between py-2 px-3 rounded-lg bg-gray-800/40">
+                        <span class="text-xs text-gray-500">การแจ้งเตือน</span>
+                        <span class="text-xs font-semibold" :class="lineStatus.notificationsEnabled ? 'text-emerald-400' : 'text-gray-400'">
+                          {{ lineStatus.notificationsEnabled ? '✓ เปิด' : '○ ปิด' }}
+                        </span>
+                      </div>
+                    </div>
+
+                    <!-- Quick Connect -->
+                    <div v-if="!lineStatus.connected" class="p-4 rounded-xl bg-sky-500/10 border border-sky-500/20 space-y-3">
+                      <p class="text-sm font-medium text-white">เชื่อมต่อแบบง่าย</p>
+                      <p class="text-xs text-sky-300 leading-relaxed">กดสร้างโค้ด แล้วส่งข้อความไปที่ {{ lineBotDisplayName }}</p>
+                      <div class="flex flex-wrap gap-2">
+                        <button
+                          @click="generateLineLinkCode()"
+                          :disabled="isGeneratingLineCode"
+                          class="flex-1 px-3 py-2 rounded-lg bg-violet-600 hover:bg-violet-500 text-xs font-semibold text-white transition-all tap-scale disabled:opacity-50"
+                        >
+                          {{ isGeneratingLineCode ? 'กำลังสร้าง...' : 'สร้างโค้ด' }}
+                        </button>
+                        <button
+                          @click="openLineForConnection"
+                          class="flex-1 px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-xs font-semibold text-white transition-all tap-scale"
+                        >
+                          เปิด LINE
+                        </button>
+                      </div>
+                      <div v-if="lineLinkCode" class="mt-3 p-3 rounded-lg bg-gray-900/60 border border-gray-700/60">
+                        <p class="text-[10px] text-gray-500 uppercase mb-2">ข้อความที่ต้องส่ง</p>
+                        <textarea
+                          :value="lineLinkCode.code"
+                          rows="2"
+                          readonly
+                          class="w-full bg-gray-800/70 border border-gray-700/60 rounded-lg px-2 py-1.5 text-xs text-gray-200 outline-none resize-none font-mono"
+                        ></textarea>
+                        <div class="mt-2 flex items-center justify-between">
+                          <span class="text-[10px] text-gray-500">หมดอายุ {{ lineLinkCodeExpiresAtText }}</span>
+                          <button
+                            @click="copyLineLinkCode"
+                            class="px-2 py-1 rounded text-[10px] bg-gray-800 hover:bg-gray-700 text-gray-300"
+                          >คัดลอก</button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Settings -->
+                    <div v-if="lineStatus.connected" class="space-y-3">
+                      <label class="flex items-center gap-2 p-3 rounded-lg bg-gray-800/40 cursor-pointer hover:bg-gray-800/60 transition">
+                        <input v-model="lineNotificationsEnabled" type="checkbox" class="accent-violet-500">
+                        <span class="text-xs text-gray-300">แจ้งเตือนงาน/กิจกรรม</span>
+                      </label>
+                      <label class="flex items-center gap-2 p-3 rounded-lg bg-gray-800/40 cursor-pointer hover:bg-gray-800/60 transition">
+                        <input v-model="lineClassRemindersEnabled" type="checkbox" class="accent-violet-500">
+                        <span class="text-xs text-gray-300">แจ้งเตือนคาบเรียน</span>
+                      </label>
+                      <div v-if="lineClassRemindersEnabled" class="pl-6">
+                        <select
+                          v-model.number="lineClassReminderMinutes"
+                          class="w-full bg-gray-800 border border-gray-700/60 rounded-lg px-3 py-2 text-xs text-white"
+                        >
+                          <option :value="5">5 นาที</option>
+                          <option :value="10">10 นาที</option>
+                          <option :value="15">15 นาที</option>
+                          <option :value="30">30 นาที</option>
+                          <option :value="60">1 ชั่วโมง</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="flex flex-wrap gap-2 pt-2">
+                      <button
+                        v-if="lineStatus.connected"
+                        @click="saveLinePreferences"
+                        :disabled="isSavingLine"
+                        class="flex-1 px-3 py-2 rounded-lg bg-violet-600 hover:bg-violet-500 text-xs font-semibold text-white transition-all tap-scale disabled:opacity-50"
+                      >
+                        {{ isSavingLine ? 'กำลังบันทึก...' : 'บันทึก' }}
+                      </button>
+                      <button
+                        v-if="lineStatus.connected"
+                        @click="sendLineTestMessage"
+                        :disabled="isTestingLine"
+                        class="px-3 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 border border-gray-700/60 text-xs text-gray-300 transition-all tap-scale disabled:opacity-50"
+                      >
+                        ทดสอบ
+                      </button>
+                      <button
+                        v-if="lineStatus.connected"
+                        @click="disconnectLine"
+                        class="px-3 py-2 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 text-xs text-rose-300 transition-all tap-scale"
+                      >
+                        ยกเลิก
+                      </button>
+                      <button
+                        @click="refreshLineStatus"
+                        :disabled="isLineLoading"
+                        class="px-3 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 border border-gray-700/60 text-xs text-gray-400 transition-all tap-scale disabled:opacity-50"
+                      >
+                        รีเฟรช
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Google Calendar Card -->
+              <div class="rounded-2xl border border-gray-700/60 bg-gradient-to-br from-sky-500/5 to-sky-600/5 overflow-hidden">
+                <div class="p-5 border-b border-gray-700/60 flex items-center justify-between">
+                  <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-xl bg-sky-500/20 flex items-center justify-center text-2xl">📅</div>
+                    <div>
+                      <h3 class="text-base font-bold text-white">Google Calendar</h3>
+                      <p class="text-xs text-gray-500 mt-0.5">ซิงค์กิจกรรมอัตโนมัติ</p>
+                    </div>
+                  </div>
+                  <span
+                    class="text-xs px-3 py-1.5 rounded-full font-semibold border"
+                    :class="googleStatusBadgeClass"
+                  >
+                    {{ googleStatus.connected ? '✓ เชื่อมต่อแล้ว' : '○ ยังไม่เชื่อมต่อ' }}
+                  </span>
+                </div>
+
+                <div class="p-5">
+                  <div v-if="isGoogleLoading" class="flex items-center gap-2 text-sm text-gray-400 py-8 justify-center">
+                    <span class="inline-block w-5 h-5 border-2 border-violet-400/30 border-t-violet-400 rounded-full animate-spin"></span>
+                    กำลังตรวจสอบ...
+                  </div>
+
+                  <div v-else class="space-y-4">
+                    <div v-if="!googleStatus.connected" class="text-center py-8">
+                      <p class="text-sm text-gray-400 mb-4">เชื่อมต่อเพื่อซิงค์กิจกรรมไปยัง Google Calendar</p>
+                      <a
+                        href="/api/google/auth"
+                        class="inline-block px-4 py-2.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-sm font-semibold text-white transition-all tap-scale shadow-lg shadow-violet-600/30"
+                      >
+                        เชื่อมต่อ Google
+                      </a>
+                    </div>
+
+                    <div v-else class="space-y-3">
+                      <div class="p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                        <p class="text-sm font-medium text-emerald-300">✓ เชื่อมต่อสำเร็จ</p>
+                        <p class="text-xs text-emerald-400/70 mt-1">กิจกรรมใหม่จะถูกซิงค์อัตโนมัติ</p>
+                      </div>
+
+                      <div class="flex flex-wrap gap-2">
+                        <button
+                          @click="syncAllEvents"
+                          :disabled="isSyncingAllGoogle"
+                          class="flex-1 px-3 py-2 rounded-lg bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/40 text-xs font-semibold text-violet-300 transition-all tap-scale disabled:opacity-50"
+                        >
+                          {{ isSyncingAllGoogle ? 'กำลังซิงค์...' : 'ซิงค์ย้อนหลัง' }}
+                        </button>
+                        <button
+                          @click="disconnectGoogle"
+                          :disabled="isDisconnectingGoogle"
+                          class="px-3 py-2 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 text-xs text-rose-300 transition-all tap-scale disabled:opacity-50"
+                        >
+                          ยกเลิก
+                        </button>
+                        <button
+                          @click="refreshGoogleStatus"
+                          :disabled="isGoogleLoading"
+                          class="px-3 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 border border-gray-700/60 text-xs text-gray-400 transition-all tap-scale disabled:opacity-50"
+                        >
+                          รีเฟรช
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Email Notification Card (Full Width) -->
+            <div class="rounded-2xl border border-gray-700/60 bg-gradient-to-br from-rose-500/5 to-rose-600/5 overflow-hidden">
+              <div class="p-5 border-b border-gray-700/60 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  <div class="w-12 h-12 rounded-xl bg-rose-500/20 flex items-center justify-center text-2xl">✉️</div>
+                  <div>
+                    <h3 class="text-base font-bold text-white">Email Notification</h3>
+                    <p class="text-xs text-gray-500 mt-0.5">Gmail SMTP แจ้งเตือนอัตโนมัติ</p>
+                  </div>
+                </div>
+                <span
+                  class="text-xs px-3 py-1.5 rounded-full font-semibold border"
+                  :class="emailStatusBadgeClass"
+                >
+                  {{ emailStatusLabel }}
+                </span>
+              </div>
+
+              <div class="p-5">
+                <div v-if="isEmailLoading" class="flex items-center gap-2 text-sm text-gray-400 py-8 justify-center">
+                  <span class="inline-block w-5 h-5 border-2 border-violet-400/30 border-t-violet-400 rounded-full animate-spin"></span>
+                  กำลังตรวจสอบ...
+                </div>
+
+                <div v-else class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                  <!-- Left: Configuration -->
+                  <div class="space-y-4">
+                    <div class="space-y-2">
+                      <div class="flex items-center justify-between py-2 px-3 rounded-lg bg-gray-800/40">
+                        <span class="text-xs text-gray-500">Gmail Sender</span>
+                        <span class="text-xs text-gray-300 font-mono">{{ emailStatus.smtpUserMasked || 'ไม่ได้ตั้งค่า' }}</span>
+                      </div>
+                      <div class="flex items-center justify-between py-2 px-3 rounded-lg bg-gray-800/40">
+                        <span class="text-xs text-gray-500">สถานะ</span>
+                        <span class="text-xs font-semibold" :class="emailPrefs.enabled && isEmailConfigured ? 'text-emerald-400' : 'text-gray-400'">
+                          {{ isEmailConfigured ? (emailPrefs.enabled ? '✓ เปิด' : '○ ปิด') : 'ไม่พร้อม' }}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label class="block text-xs font-medium text-gray-400 mb-1.5">ส่งไปยังอีเมล</label>
+                      <input
+                        v-model="emailPrefs.recipientEmail"
+                        type="email"
+                        :placeholder="currentUser?.email || 'your_email@gmail.com'"
+                        class="w-full bg-gray-800/80 border border-gray-700/60 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 outline-none focus:border-violet-500"
+                      >
+                    </div>
+
+                    <label class="flex items-center gap-2 p-3 rounded-lg bg-gray-800/40 cursor-pointer hover:bg-gray-800/60 transition">
+                      <input v-model="emailPrefs.enabled" type="checkbox" class="accent-violet-500">
+                      <span class="text-xs text-gray-300 font-medium">เปิดรับการแจ้งเตือนทาง Email</span>
+                    </label>
+                  </div>
+
+                  <!-- Right: Categories -->
+                  <div class="space-y-3">
+                    <p class="text-xs font-semibold text-gray-400 uppercase">หมวดหมู่การแจ้งเตือน</p>
+                    <label class="flex items-start gap-2 p-2.5 rounded-lg bg-gray-800/40 cursor-pointer hover:bg-gray-800/60 transition">
+                      <input v-model="emailPrefs.classReminders" type="checkbox" class="mt-0.5 accent-violet-500">
+                      <div class="flex-1">
+                        <span class="text-xs text-gray-200 font-medium">📚 ตารางเรียน</span>
+                        <p class="text-[10px] text-gray-500 mt-0.5">แจ้งเตือนก่อนคาบเรียนเริ่ม</p>
+                      </div>
+                    </label>
+                    <div v-if="emailPrefs.classReminders" class="pl-6">
+                      <select
+                        v-model.number="emailPrefs.classReminderMinutes"
+                        class="w-full bg-gray-800 border border-gray-700/60 rounded-lg px-2.5 py-1.5 text-xs text-white"
+                      >
+                        <option :value="5">5 นาที</option>
+                        <option :value="10">10 นาที</option>
+                        <option :value="15">15 นาที</option>
+                        <option :value="30">30 นาที</option>
+                        <option :value="60">1 ชั่วโมง</option>
+                      </select>
+                    </div>
+
+                    <label class="flex items-start gap-2 p-2.5 rounded-lg bg-gray-800/40 cursor-pointer hover:bg-gray-800/60 transition">
+                      <input v-model="emailPrefs.eventReminders" type="checkbox" class="mt-0.5 accent-violet-500">
+                      <div class="flex-1">
+                        <span class="text-xs text-gray-200 font-medium">📅 กิจกรรม</span>
+                        <p class="text-[10px] text-gray-500 mt-0.5">แจ้งเตือนกิจกรรมตามเวลา</p>
+                      </div>
+                    </label>
+
+                    <label class="flex items-start gap-2 p-2.5 rounded-lg bg-gray-800/40 cursor-pointer hover:bg-gray-800/60 transition">
+                      <input v-model="emailPrefs.taskReminders" type="checkbox" class="mt-0.5 accent-violet-500">
+                      <div class="flex-1">
+                        <span class="text-xs text-gray-200 font-medium">✅ งานและการบ้าน</span>
+                        <p class="text-[10px] text-gray-500 mt-0.5">แจ้งเตือนใกล้ครบกำหนด</p>
+                      </div>
+                    </label>
+
+                    <label class="flex items-start gap-2 p-2.5 rounded-lg bg-gray-800/40 cursor-pointer hover:bg-gray-800/60 transition">
+                      <input v-model="emailPrefs.billReminders" type="checkbox" class="mt-0.5 accent-violet-500">
+                      <div class="flex-1">
+                        <span class="text-xs text-gray-200 font-medium">💳 บิลประจำ</span>
+                        <p class="text-[10px] text-gray-500 mt-0.5">แจ้งเตือนบิลรายเดือน</p>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                <div class="flex flex-wrap gap-2 mt-5 pt-4 border-t border-gray-700/50">
+                  <button
+                    @click="handleSaveEmailSettings"
+                    :disabled="isSavingEmail"
+                    class="flex-1 px-4 py-2 rounded-lg bg-violet-600 hover:bg-violet-500 text-sm font-semibold text-white transition-all tap-scale disabled:opacity-50"
+                  >
+                    {{ isSavingEmail ? 'กำลังบันทึก...' : 'บันทึก' }}
+                  </button>
+                  <button
+                    @click="handleSendEmailTest"
+                    :disabled="isTestingEmail"
+                    class="px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 border border-gray-700/60 text-sm text-gray-300 transition-all tap-scale disabled:opacity-50"
+                  >
+                    {{ isTestingEmail ? 'กำลังส่ง...' : '📧 ทดสอบ' }}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+        </template>
+      </div>
+    </div>
+      <!-- Legacy duplicate profile layout retained temporarily but never rendered. -->
+      <template v-if="false">
         <!-- Error -->
         <div
           v-if="errorMessage"
@@ -751,8 +1307,7 @@
             </div>
           </section>
         </template>
-      </div>
-    </div>
+      </template>
 
     <!-- Edit Profile Modal -->
     <Teleport to="body">

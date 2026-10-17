@@ -139,6 +139,60 @@
         <span>⚠️</span><span>{{ errorMessage }}</span>
       </div>
 
+      <!-- Persistent Net Balance: visible in every Cashflow sub-tab -->
+      <section
+        class="section-card p-5 sm:p-6 relative overflow-hidden"
+        style="background: linear-gradient(145deg, var(--bg-card), var(--bg-elevated));"
+      >
+        <div class="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <div class="flex items-center justify-between gap-3">
+              <span class="eyebrow">คงเหลือสุทธิ · NET BALANCE</span>
+              <span
+                class="text-[11px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1.5"
+                :style="remainingBalance >= 0
+                  ? { background: 'rgba(40, 116, 91, 0.12)', color: 'var(--ink-emerald)', border: '1px solid rgba(40, 116, 91, 0.25)' }
+                  : { background: 'rgba(172, 77, 90, 0.12)', color: 'var(--ink-rose)', border: '1px solid rgba(172, 77, 90, 0.25)' }"
+              >
+                <span class="w-1.5 h-1.5 rounded-full" :style="{ background: remainingBalance >= 0 ? 'var(--ink-emerald)' : 'var(--ink-rose)' }"></span>
+                <span>{{ remainingBalance >= 0 ? 'สภาพคล่องบวก' : 'ยอดติดลบ' }}</span>
+              </span>
+            </div>
+            <p
+              class="num text-3xl sm:text-4xl lg:text-[42px] font-extrabold tracking-tight mt-3"
+              :style="{ color: remainingBalance >= 0 ? 'var(--text-primary)' : 'var(--ink-rose)' }"
+            >
+              {{ formatCurrency(remainingBalance) }}
+            </p>
+            <p class="text-xs mt-1" style="color: var(--text-muted);">
+              {{ currentMonthYearLabel }} &bull; ยอดรวมของทุกรายการในช่วงเวลานี้
+            </p>
+          </div>
+
+          <div class="w-full sm:max-w-md">
+            <div class="flex items-center justify-between text-xs font-semibold mb-2">
+              <span class="flex items-center gap-1.5" style="color: var(--ink-emerald);">
+                <span class="w-2 h-2 rounded-full" style="background: var(--ink-emerald);"></span>
+                รับ +{{ formatCurrency(totalIncome) }}
+              </span>
+              <span class="flex items-center gap-1.5" style="color: var(--ink-rose);">
+                จ่าย −{{ formatCurrency(totalExpense) }}
+                <span class="w-2 h-2 rounded-full" style="background: var(--ink-rose);"></span>
+              </span>
+            </div>
+            <div class="h-2.5 rounded-full overflow-hidden flex" style="background: var(--bg-surface); border: 1px solid var(--border-subtle);">
+              <div class="h-full transition-all duration-500 rounded-l-full" :style="{ width: totalIncome + totalExpense > 0 ? `${(totalIncome / (totalIncome + totalExpense)) * 100}%` : '50%', background: 'var(--ink-emerald)' }"></div>
+              <div class="h-full transition-all duration-500 rounded-r-full" :style="{ width: totalIncome + totalExpense > 0 ? `${(totalExpense / (totalIncome + totalExpense)) * 100}%` : '50%', background: 'var(--ink-rose)' }"></div>
+            </div>
+            <div class="flex items-center justify-between text-[11px] mt-2" style="color: var(--text-muted);">
+              <span>{{ expenseProgressText }}</span>
+              <span v-if="overspentAmount > 0" class="font-bold" style="color: var(--ink-rose);">⚠️ เกินงบ {{ formatCurrency(overspentAmount) }}</span>
+              <span v-else>{{ remainingProgressText }}</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <!-- 3. Navigation View Tabs -->
       <nav class="cashflow-view-tabs" aria-label="Cashflow views">
         <div class="grid grid-cols-4 gap-1.5">
@@ -174,88 +228,10 @@
       <div>
         <!-- Tab 1: ภาพรวม (Overview) -->
         <div v-show="activeTab === 'overview'" class="space-y-6">
-          <!-- Hero Net Balance & Flow Breakdown -->
+          <!-- Flow Summary -->
           <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
-            <!-- Hero Balance Card (7 cols on lg) -->
-            <div
-              class="lg:col-span-7 section-card p-5 sm:p-6 flex flex-col justify-between relative overflow-hidden"
-              style="background: linear-gradient(145deg, var(--bg-card), var(--bg-elevated));"
-            >
-              <div>
-                <div class="flex items-center justify-between gap-3">
-                  <div class="flex items-center gap-2">
-                    <span class="eyebrow">คงเหลือสุทธิ · NET BALANCE</span>
-                  </div>
-                  <span
-                    class="text-[11px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1.5"
-                    :style="remainingBalance >= 0
-                      ? { background: 'rgba(40, 116, 91, 0.12)', color: 'var(--ink-emerald)', border: '1px solid rgba(40, 116, 91, 0.25)' }
-                      : { background: 'rgba(172, 77, 90, 0.12)', color: 'var(--ink-rose)', border: '1px solid rgba(172, 77, 90, 0.25)' }"
-                  >
-                    <span class="w-1.5 h-1.5 rounded-full" :style="{ background: remainingBalance >= 0 ? 'var(--ink-emerald)' : 'var(--ink-rose)' }"></span>
-                    <span>{{ remainingBalance >= 0 ? 'สภาพคล่องบวก' : 'ยอดติดลบ' }}</span>
-                  </span>
-                </div>
-
-                <!-- Big Balance Numeral -->
-                <div class="mt-3">
-                  <p
-                    class="num text-3xl sm:text-4xl lg:text-[42px] font-extrabold tracking-tight"
-                    :style="{ color: remainingBalance >= 0 ? 'var(--text-primary)' : 'var(--ink-rose)' }"
-                  >
-                    {{ formatCurrency(remainingBalance) }}
-                  </p>
-                  <p class="text-xs mt-1" style="color: var(--text-muted);">
-                    {{ currentMonthYearLabel }} &bull; ยอดรวมของทุกรายการในช่วงเวลานี้
-                  </p>
-                </div>
-              </div>
-
-              <!-- Flow Comparison Ratio Bar -->
-              <div class="mt-6 pt-5 border-t" style="border-color: var(--border-subtle);">
-                <div class="flex items-center justify-between text-xs font-semibold mb-2">
-                  <span class="flex items-center gap-1.5" style="color: var(--ink-emerald);">
-                    <span class="w-2 h-2 rounded-full" style="background: var(--ink-emerald);"></span>
-                    รับ +{{ formatCurrency(totalIncome) }}
-                  </span>
-                  <span class="flex items-center gap-1.5" style="color: var(--ink-rose);">
-                    จ่าย −{{ formatCurrency(totalExpense) }}
-                    <span class="w-2 h-2 rounded-full" style="background: var(--ink-rose);"></span>
-                  </span>
-                </div>
-
-                <!-- Progress Track -->
-                <div class="h-2.5 rounded-full overflow-hidden flex" style="background: var(--bg-surface); border: 1px solid var(--border-subtle);">
-                  <div
-                    class="h-full transition-all duration-500 rounded-l-full"
-                    :style="{
-                      width: totalIncome + totalExpense > 0 ? `${(totalIncome / (totalIncome + totalExpense)) * 100}%` : '50%',
-                      background: 'var(--ink-emerald)'
-                    }"
-                    title="สัดส่วนรายรับ"
-                  ></div>
-                  <div
-                    class="h-full transition-all duration-500 rounded-r-full"
-                    :style="{
-                      width: totalIncome + totalExpense > 0 ? `${(totalExpense / (totalIncome + totalExpense)) * 100}%` : '50%',
-                      background: 'var(--ink-rose)'
-                    }"
-                    title="สัดส่วนรายจ่าย"
-                  ></div>
-                </div>
-
-                <div class="flex items-center justify-between text-[11px] mt-2" style="color: var(--text-muted);">
-                  <span>{{ expenseProgressText }}</span>
-                  <span v-if="overspentAmount > 0" class="font-bold" style="color: var(--ink-rose);">
-                    ⚠️ เกินงบ {{ formatCurrency(overspentAmount) }}
-                  </span>
-                  <span v-else>{{ remainingProgressText }}</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Inflow & Outflow Side Cards (5 cols on lg) -->
-            <div class="lg:col-span-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
+            <!-- Inflow & Outflow Cards -->
+            <div class="lg:col-span-12 grid grid-cols-1 sm:grid-cols-2 gap-4">
               <!-- Income Card -->
               <div class="section-card p-4 sm:p-5 flex flex-col justify-between">
                 <div class="flex items-center justify-between gap-3">

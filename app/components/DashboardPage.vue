@@ -1,99 +1,11 @@
 <template>
+  <div class="dashboard-page">
+  <!-- Legacy dashboard is retained temporarily but excluded from Vue compilation. -->
+  <template v-if="false">
+    <div v-pre>
   <AppTabsLayout>
-    <div class="dashboard-shell mx-auto w-full max-w-[1240px] px-4 sm:px-5 md:px-6 py-5 md:py-8 space-y-4 sm:space-y-5 relative">
-      <!-- Animated Background Orbs -->
-      <div class="dashboard-orb dashboard-orb-1"></div>
-      <div class="dashboard-orb dashboard-orb-2"></div>
-
-      <!-- Page head with enhanced styling -->
-      <header class="dashboard-workspace-header flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 animate-slide-up relative z-10">
-        <div class="min-w-0">
-          <div class="flex items-center gap-2 mb-2">
-            <span class="eyebrow">ภาพรวม · Dashboard</span>
-            <span class="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider animate-pulse-slow" style="background: var(--brand-soft); color: var(--brand-ink); border: 1px solid var(--brand-border);">Live</span>
-          </div>
-          <h1 class="text-[1.45rem] sm:text-2xl md:text-[1.85rem] font-bold tracking-tight leading-snug">
-            <span class="gradient-text-animated">{{ greetingText }}</span><span style="color: var(--text-primary);">, </span>
-            <em class="not-italic bg-gradient-to-r from-[var(--brand)] to-[var(--brand-2)] bg-clip-text text-transparent font-extrabold">{{ userDisplayName }}</em>
-          </h1>
-          <div class="flex items-center gap-2 mt-2 flex-wrap">
-            <p class="text-xs flex items-center gap-1.5" style="color: var(--text-muted);">
-              <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
-              {{ todayText }}
-            </p>
-            <span class="text-xs" style="color: var(--border-strong);">·</span>
-            <p class="text-xs flex items-center gap-1.5" style="color: var(--text-muted);">
-              <svg class="w-3 h-3 animate-spin-slow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 3 .7M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-3-.7"/></svg>
-              อัปเดต {{ lastUpdateTime }}
-            </p>
-          </div>
-        </div>
-        <div class="flex items-center gap-2 flex-wrap">
-          <NuxtLink v-if="isModuleEnabled('cashflow')" to="/cashflow" class="btn-primary-enhanced text-sm inline-flex items-center gap-2 group">
-            <svg class="w-4 h-4 group-hover:rotate-90 transition-transform duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg>
-            บันทึกรายการ
-          </NuxtLink>
-          <NuxtLink v-if="isModuleEnabled('study-schedule')" to="/study-schedule" class="btn-secondary-enhanced text-sm inline-flex items-center gap-2 group">
-            <svg class="w-4 h-4 group-hover:scale-110 transition-transform duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
-            ตารางเรียน
-          </NuxtLink>
-          <NuxtLink v-if="isModuleEnabled('todos') && !isModuleEnabled('study-schedule')" to="/todos" class="btn-secondary-enhanced text-sm inline-flex items-center gap-2 group">
-            <svg class="w-4 h-4 group-hover:scale-110 transition-transform duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h11"/></svg>
-            To-do List
-          </NuxtLink>
-          <NuxtLink v-if="isModuleEnabled('tasks') && !isModuleEnabled('cashflow')" to="/tasks" class="btn-secondary-enhanced text-sm inline-flex items-center gap-2 group">
-            <svg class="w-4 h-4 group-hover:scale-110 transition-transform duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-            จัดการงาน
-          </NuxtLink>
-        </div>
-      </header>
-
-      <!-- Productivity snapshot: the next action is visible before the detail panels. -->
-      <section class="focus-command-center animate-slide-up delay-100" aria-label="Today's overview">
-        <div class="focus-command-intro">
-          <span class="focus-command-kicker">TODAY'S FOCUS</span>
-          <p class="text-sm font-semibold" style="color: var(--text-primary);">ภาพรวมที่ต้องจัดการวันนี้</p>
-        </div>
-        <div class="focus-command-grid">
-          <NuxtLink v-if="isModuleEnabled('cashflow')" to="/cashflow" class="focus-command-item">
-            <span class="focus-command-icon focus-command-icon--finance">
-              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/></svg>
-            </span>
-            <span class="min-w-0"><span class="focus-command-label">คงเหลือ</span><strong class="num focus-command-value">{{ formatCurrency(remainingBalance) }}</strong></span>
-            <svg class="focus-command-arrow w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
-          </NuxtLink>
-          <NuxtLink v-if="isModuleEnabled('study-schedule')" to="/study-schedule" class="focus-command-item">
-            <span class="focus-command-icon focus-command-icon--study">
-              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
-            </span>
-            <span><span class="focus-command-label">ตารางวันนี้</span><strong class="focus-command-value">{{ todaysStudyClasses.length }} คาบ</strong></span>
-            <svg class="focus-command-arrow w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
-          </NuxtLink>
-          <NuxtLink v-if="isModuleEnabled('tasks') || isModuleEnabled('todos')" :to="isModuleEnabled('tasks') ? '/tasks' : '/todos'" class="focus-command-item">
-            <span class="focus-command-icon focus-command-icon--tasks">
-              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 11 3 3L22 4"/><path d="M21 12v7a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h11"/></svg>
-            </span>
-            <span><span class="focus-command-label">งานค้าง</span><strong class="focus-command-value">{{ dashboardTasks.length + dashboardTodos.length }} รายการ</strong></span>
-            <svg class="focus-command-arrow w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
-          </NuxtLink>
-        </div>
-      </section>
-
-      <!-- Error -->
-      <Transition name="slide-down">
-        <div
-          v-if="errorMessage"
-          class="rounded-xl p-3.5 text-sm flex items-center gap-2"
-          style="background: var(--event-status-soon-soft); border: 1px solid var(--event-status-soon-border); color: var(--event-status-soon-ink);"
-          role="alert"
-        >
-          <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.3 3.9l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.7-3l-8-14a2 2 0 0 0-3.4 0z"/></svg>
-          <span>{{ errorMessage }}</span>
-        </div>
-      </Transition>
-
-      <!-- Main grid: left (hero + recent) · right (allocation + schedule + todos) -->
-      <section v-if="hasLeftColumn || hasRightColumn" :class="gridClasses">
+    <main class="dashboard-next">
+      <header class="dashboard-next__header">
         <!-- LEFT column -->
         <div v-if="hasLeftColumn" class="space-y-4">
           <!-- Multi-Book Selector Bar (if user has books) -->
@@ -794,7 +706,7 @@
             </div>
           </div>
         </div>
-      </section>
+      </header>
 
       <!-- Events Section -->
       <section v-if="isModuleEnabled('events')" class="section-card dashboard-panel productivity-panel dashboard-events-panel animate-slide-up delay-400">
@@ -906,8 +818,130 @@
           ปรับแต่งฟังก์ชัน
         </NuxtLink>
       </div>
-    </div>
+    </main>
   </AppTabsLayout>
+    </div>
+  </template>
+
+  <AppTabsLayout>
+    <main class="dashboard-next">
+      <header class="dashboard-next__header">
+        <div>
+          <p class="dashboard-next__eyebrow">PERSONAL OVERVIEW · {{ todayText }}</p>
+          <h1>{{ greetingText }}, <span>{{ userDisplayName }}</span></h1>
+        </div>
+        <div class="dashboard-next__actions">
+          <NuxtLink v-if="isModuleEnabled('cashflow')" to="/cashflow" class="dashboard-next__primary">+ บันทึกรายการ</NuxtLink>
+          <NuxtLink v-if="isModuleEnabled('study-schedule')" to="/study-schedule" class="dashboard-next__link">ตารางเรียน</NuxtLink>
+        </div>
+      </header>
+
+      <Transition name="slide-down">
+        <p v-if="errorMessage" class="dashboard-next__alert">{{ errorMessage }}</p>
+      </Transition>
+
+      <section class="dashboard-next__pulse" aria-label="สรุปวันนี้">
+        <NuxtLink v-if="isModuleEnabled('cashflow')" to="/cashflow" class="dashboard-next__pulse-item">
+          <span>เงินคงเหลือ</span><strong class="num">{{ formatCurrency(remainingBalance) }}</strong>
+          <small :class="remainingBalance >= 0 ? 'is-good' : 'is-risk'">{{ remainingBalance >= 0 ? 'สถานะปกติ' : 'ยอดติดลบ' }}</small>
+        </NuxtLink>
+        <NuxtLink v-if="isModuleEnabled('study-schedule')" to="/study-schedule" class="dashboard-next__pulse-item">
+          <span>ตารางวันนี้</span><strong>{{ todaysStudyClasses.length }} <em>คาบ</em></strong><small>{{ activeTermName || 'ยังไม่มีภาคเรียน' }}</small>
+        </NuxtLink>
+        <NuxtLink v-if="isModuleEnabled('tasks') || isModuleEnabled('todos')" :to="isModuleEnabled('tasks') ? '/tasks' : '/todos'" class="dashboard-next__pulse-item">
+          <span>รายการที่ต้องทำ</span><strong>{{ dashboardTasks.length + dashboardTodos.length }} <em>รายการ</em></strong><small>งานและสิ่งที่ต้องติดตาม</small>
+        </NuxtLink>
+      </section>
+
+      <div v-if="books.length" class="dashboard-next__books" aria-label="เลือกสมุดบัญชี">
+        <button type="button" :class="{ active: selectedBookId === 'all' }" @click="selectBook('all')">ทั้งหมด</button>
+        <button v-for="book in books" :key="book.id" type="button" :class="{ active: selectedBookId === book.id }" @click="selectBook(book.id)">
+          {{ book.icon || '●' }} {{ book.name }}
+        </button>
+      </div>
+
+      <section v-if="isModuleEnabled('cashflow')" class="dashboard-next__finance">
+        <div class="dashboard-next__finance-main">
+          <p class="dashboard-next__eyebrow">FINANCIAL POSITION</p>
+          <div class="dashboard-next__balance-row">
+            <div><span>คงเหลือสุทธิ</span><strong class="num" :class="{ 'is-risk': remainingBalance < 0 }">{{ formatCurrency(remainingBalance) }}</strong></div>
+            <NuxtLink to="/cashflow">เปิดกระแสเงิน →</NuxtLink>
+          </div>
+          <div class="dashboard-next__range">
+            <button v-for="range in [{ value: '7d', label: '7 วัน' }, { value: '30d', label: '30 วัน' }, { value: 'this_month', label: 'เดือนนี้' }, { value: 'all', label: 'ทั้งหมด' }]" :key="range.value" :class="{ active: selectedChartRange === range.value }" @click="selectedChartRange = range.value as any">{{ range.label }}</button>
+          </div>
+          <div v-if="barChartData.empty" class="dashboard-next__empty-chart">ยังไม่มีข้อมูลในช่วงเวลานี้</div>
+          <div v-else class="dashboard-next__bars">
+            <div v-for="(bar, index) in barChartData.bars" :key="index" class="dashboard-next__bar-group" @mouseenter="hoveredBarIndex = index" @mouseleave="hoveredBarIndex = null">
+              <div class="dashboard-next__bar-track"><i :style="{ height: `${Math.max(bar.incomeHeight, 3)}%` }" class="income"></i><i :style="{ height: `${Math.max(bar.expenseHeight, 3)}%` }" class="expense"></i></div>
+              <span>{{ bar.label }}</span>
+            </div>
+          </div>
+        </div>
+        <div class="dashboard-next__flow">
+          <div><span>รายรับ</span><strong class="num is-good">+{{ formatCurrency(totalIncome) }}</strong></div>
+          <div><span>รายจ่าย</span><strong class="num is-risk">−{{ formatCurrency(totalExpense) }}</strong></div>
+          <p>{{ overspentAmount > 0 ? `เกินงบ ${formatCurrency(overspentAmount)}` : remainingProgressText }}</p>
+        </div>
+      </section>
+
+      <section class="dashboard-next__grid">
+        <article v-if="isModuleEnabled('cashflow')" class="dashboard-next__panel dashboard-next__transactions">
+          <div class="dashboard-next__panel-head"><div><p class="dashboard-next__eyebrow">MONEY LOG</p><h2>รายการล่าสุด</h2></div><NuxtLink to="/cashflow">ดูทั้งหมด</NuxtLink></div>
+          <div v-if="isLoading" class="dashboard-next__loading">กำลังโหลดข้อมูล…</div>
+          <p v-else-if="!recentTransactions.length" class="dashboard-next__empty">ยังไม่มีรายการเงิน</p>
+          <ul v-else class="dashboard-next__list">
+            <li v-for="tx in recentTransactions" :key="tx.id"><span class="dashboard-next__mark" :class="tx.type"></span><div><strong>{{ tx.category || (tx.type === 'income' ? 'รายรับ' : 'รายจ่าย') }}</strong><small>{{ formatDate(tx.entry_date) }}</small></div><b class="num" :class="tx.type === 'income' ? 'is-good' : 'is-risk'">{{ tx.type === 'income' ? '+' : '−' }}{{ formatCurrency(tx.amount) }}</b></li>
+          </ul>
+        </article>
+
+        <article v-if="isModuleEnabled('study-schedule')" class="dashboard-next__panel dashboard-next__study">
+          <div class="dashboard-next__panel-head"><div><p class="dashboard-next__eyebrow">TODAY'S CLASS</p><h2>{{ isInActiveTerm ? 'ตารางเรียนวันนี้' : 'ตารางเรียน' }}</h2></div><NuxtLink to="/study-schedule">ดูตาราง</NuxtLink></div>
+          <div v-if="isScheduleLoading" class="dashboard-next__loading">กำลังโหลดข้อมูล…</div>
+          <div v-else-if="!isInActiveTerm" class="dashboard-next__empty">
+            <p>{{ offTermMessage }}</p>
+            <div v-if="nextTermCountdown" class="dashboard-next__term-countdown">
+              <span>ภาคเรียนถัดไป</span>
+              <strong>{{ nextTermCountdown.termName }}</strong>
+              <b>เริ่มในอีก {{ nextTermCountdown.label }}</b>
+              <small>{{ nextTermCountdown.dateLabel }}</small>
+            </div>
+          </div>
+          <template v-else>
+            <div v-if="currentStudyClass || nextStudyClassToday" class="dashboard-next__study-countdown" :class="{ 'is-active': currentStudyClass }">
+              <span>{{ currentStudyClass ? 'กำลังเรียน' : 'คาบเรียนถัดไป' }}</span>
+              <strong>{{ currentStudyClass ? currentStudyClass.course_name : nextStudyClassToday?.course_name }}</strong>
+              <b>{{ studyCountdownText }}</b>
+              <small>{{ formatTime(currentStudyClass ? currentStudyClass.start_time : (nextStudyClassToday?.start_time || '')) }}–{{ formatTime(currentStudyClass ? currentStudyClass.end_time : (nextStudyClassToday?.end_time || '')) }} น. <template v-if="currentStudyClass?.location || nextStudyClassToday?.location">· {{ currentStudyClass ? currentStudyClass.location : nextStudyClassToday?.location }}</template></small>
+            </div>
+            <p v-if="!todaysStudyClasses.length" class="dashboard-next__empty">วันนี้ไม่มีคาบเรียน</p>
+            <ul v-else class="dashboard-next__classes"><li v-for="item in todaysStudyClasses" :key="item.id"><time>{{ formatTime(item.start_time) }}–{{ formatTime(item.end_time) }}</time><div :style="{ borderColor: courseTint(item.course_name) }"><strong>{{ item.course_name }}</strong><small>{{ item.location || 'ไม่ระบุห้อง' }}</small></div><span v-if="getClassStatus(item) === 'active'">กำลังเรียน</span></li></ul>
+          </template>
+        </article>
+
+        <article v-if="isModuleEnabled('cashflow')" class="dashboard-next__panel dashboard-next__recurring">
+          <div class="dashboard-next__panel-head"><div><p class="dashboard-next__eyebrow">UP NEXT</p><h2>รายจ่ายประจำ</h2></div><NuxtLink to="/cashflow">จัดการ</NuxtLink></div>
+          <div v-if="isRecurringLoading" class="dashboard-next__loading">กำลังโหลดข้อมูล…</div>
+          <p v-else-if="!nearestRecurringItemInfo" class="dashboard-next__empty">ยังไม่มีรายการจ่ายประจำ</p>
+          <div v-else class="dashboard-next__due"><span>{{ nearestRecurringItemInfo.dueLabel }}</span><h3>{{ nearestRecurringItemInfo.item.title }}</h3><p>ครบกำหนดทุกวันที่ {{ nearestRecurringItemInfo.item.dayOfMonthDue }} · {{ nearestRecurringItemInfo.countdownText }}</p><div><strong class="num">{{ formatCurrency(nearestRecurringItemInfo.item.amount) }}</strong><button :disabled="isPayingDashboardRecurringId === nearestRecurringItemInfo.item.id" @click="payDashboardRecurring(nearestRecurringItemInfo.item)">{{ isPayingDashboardRecurringId === nearestRecurringItemInfo.item.id ? 'กำลังบันทึก…' : 'จ่ายแล้ว' }}</button></div></div>
+        </article>
+
+        <article v-if="isModuleEnabled('tasks') || isModuleEnabled('todos')" class="dashboard-next__panel dashboard-next__work">
+          <div class="dashboard-next__panel-head"><div><p class="dashboard-next__eyebrow">ACTION QUEUE</p><h2>สิ่งที่ต้องทำ</h2></div><NuxtLink :to="isModuleEnabled('tasks') ? '/tasks' : '/todos'">ดูทั้งหมด</NuxtLink></div>
+          <div v-if="isTasksLoading || isTodosLoading" class="dashboard-next__loading">กำลังโหลดข้อมูล…</div>
+          <p v-else-if="!dashboardTasks.length && !dashboardTodos.length" class="dashboard-next__empty">วันนี้ไม่มีงานค้าง</p>
+          <ul v-else class="dashboard-next__work-list"><li v-for="task in dashboardTasks" :key="`task-${task.id}`"><div><strong>{{ task.title }}</strong><small>{{ task.subject || 'งาน' }} · {{ formatTaskDeadline(task.deadline) }}</small></div><b :style="getTaskStatusStyle(task)">{{ getTaskStatusLabel(task) }}</b></li><li v-for="todo in dashboardTodos" :key="`todo-${todo.id}`"><div><strong>{{ todo.title }}</strong><small>{{ todo.due_date ? formatDate(todo.due_date) : 'ไม่มีกำหนด' }}</small></div><b v-if="todo.priority === 'high'" class="is-risk">ด่วน</b></li></ul>
+        </article>
+      </section>
+
+      <section v-if="isModuleEnabled('events')" class="dashboard-next__events">
+        <div class="dashboard-next__panel-head"><div><p class="dashboard-next__eyebrow">CALENDAR</p><h2>กิจกรรมที่กำลังจะมาถึง</h2></div><NuxtLink to="/events">ดูปฏิทิน</NuxtLink></div>
+        <div v-if="isEventsLoading" class="dashboard-next__loading">กำลังโหลดข้อมูล…</div><p v-else-if="!dashboardEvents.length" class="dashboard-next__empty">ไม่มีกิจกรรมที่กำลังจะมาถึง</p>
+        <div v-else class="dashboard-next__event-list"><NuxtLink v-for="event in dashboardEvents" :key="event.id" to="/events"><time><b>{{ getDay(event.start_date) }}</b><span>{{ getMonthShort(event.start_date) }}</span></time><div><strong>{{ event.title }}</strong><small>{{ displayEventDateTimeShort(event) }}</small><div class="dashboard-next__event-progress"><span>{{ getDashboardEventStatusMeta(event).status === 'ongoing' ? 'ดำเนินการแล้ว' : 'ถึงวันเริ่ม' }}</span><b>{{ getDashboardEventStatusMeta(event).status === 'ongoing' ? getDashboardOngoingEventDetails(event).progress : getDashboardUpcomingEventDetails(event).progress }}%</b><i><em :class="{ 'is-ongoing': getDashboardEventStatusMeta(event).status === 'ongoing' }" :style="{ width: (getDashboardEventStatusMeta(event).status === 'ongoing' ? getDashboardOngoingEventDetails(event).progress : getDashboardUpcomingEventDetails(event).progress) + '%' }"></em></i></div></div><span :style="getDashboardEventStatusTextStyle(event)">{{ getDashboardEventStatusText(event) }}</span></NuxtLink></div>
+      </section>
+    </main>
+  </AppTabsLayout>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -2848,6 +2882,7 @@ onUnmounted(() => {
   padding: 1px;
   background: linear-gradient(135deg, var(--brand-border), transparent, var(--brand-border));
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
   opacity: 0;
@@ -3318,4 +3353,21 @@ onUnmounted(() => {
   .productivity-panel .grid.grid-cols-\[34px_1fr_auto\],
   .productivity-panel .grid.grid-cols-\[1fr_auto\] { margin-inline: 0.45rem; }
 }
+/* Rebuilt dashboard interface */
+.dashboard-next { width:min(100%, 1360px); margin:0 auto; padding:clamp(24px,4vw,56px) clamp(16px,3vw,40px) 72px; color:var(--text-primary); }
+.dashboard-next__header { display:flex; align-items:end; justify-content:space-between; gap:24px; padding-bottom:26px; border-bottom:1px solid var(--border-subtle); }
+.dashboard-next__eyebrow { margin:0 0 7px; color:var(--brand-ink); font-size:10px; font-weight:800; letter-spacing:.14em; }
+.dashboard-next h1,.dashboard-next h2,.dashboard-next h3,.dashboard-next p { margin-top:0; }.dashboard-next h1 { margin-bottom:0; font-size:clamp(30px,4vw,52px); line-height:1; letter-spacing:-.055em; }.dashboard-next h1 span { color:var(--brand); }.dashboard-next h2 { margin-bottom:0; font-size:18px; letter-spacing:-.03em; }.dashboard-next__actions { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }.dashboard-next__primary,.dashboard-next__link { padding:11px 16px; border-radius:10px; font-size:13px; font-weight:700; transition:.2s; }.dashboard-next__primary { background:var(--brand); color:var(--brand-on); }.dashboard-next__link { border:1px solid var(--border-default); color:var(--text-secondary); }.dashboard-next__primary:hover,.dashboard-next__link:hover { transform:translateY(-2px); }
+.dashboard-next__alert { margin:18px 0 0; padding:12px 14px; border-radius:10px; color:var(--event-status-soon-ink); background:var(--event-status-soon-soft); border:1px solid var(--event-status-soon-border); font-size:13px; }
+.dashboard-next__pulse { display:grid; grid-template-columns:repeat(3,1fr); margin:25px 0 18px; border:1px solid var(--border-subtle); border-radius:16px; overflow:hidden; background:var(--bg-card); }.dashboard-next__pulse-item { min-height:112px; padding:20px 22px; border-right:1px solid var(--border-subtle); display:flex; flex-direction:column; gap:5px; transition:background .2s; }.dashboard-next__pulse-item:last-child { border:0; }.dashboard-next__pulse-item:hover { background:var(--bg-elevated); }.dashboard-next__pulse-item span,.dashboard-next__pulse-item small { color:var(--text-muted); font-size:12px; }.dashboard-next__pulse-item strong { color:var(--text-primary); font-size:23px; line-height:1.15; letter-spacing:-.04em; }.dashboard-next__pulse-item em { font-size:13px; font-style:normal; font-weight:600; }
+.is-good { color:var(--ink-emerald)!important; }.is-risk { color:var(--ink-rose)!important; }
+.dashboard-next__books { display:flex; gap:8px; overflow-x:auto; padding:0 0 12px; }.dashboard-next__books button,.dashboard-next__range button { border:1px solid var(--border-subtle); background:var(--bg-card); color:var(--text-secondary); cursor:pointer; white-space:nowrap; }.dashboard-next__books button { padding:8px 12px; border-radius:999px; font-size:12px; }.dashboard-next__books button.active,.dashboard-next__range button.active { border-color:var(--brand); background:var(--brand); color:var(--brand-on); }
+.dashboard-next__finance { display:grid; grid-template-columns:minmax(0,1.65fr) minmax(230px,.65fr); margin-bottom:18px; overflow:hidden; border:1px solid var(--border-subtle); border-radius:18px; background:var(--bg-card); }.dashboard-next__finance-main { padding:26px; }.dashboard-next__balance-row { display:flex; align-items:end; justify-content:space-between; gap:18px; }.dashboard-next__balance-row span { display:block; color:var(--text-muted); font-size:13px; }.dashboard-next__balance-row strong { display:block; margin-top:5px; color:var(--text-primary); font-size:clamp(28px,3.5vw,44px); letter-spacing:-.06em; }.dashboard-next__balance-row a,.dashboard-next__panel-head a { color:var(--brand); font-size:12px; font-weight:700; white-space:nowrap; }.dashboard-next__range { display:flex; gap:6px; margin-top:22px; }.dashboard-next__range button { padding:6px 10px; border-radius:7px; font-size:11px; }.dashboard-next__empty-chart { height:130px; margin-top:18px; display:grid; place-items:center; color:var(--text-muted); font-size:12px; border-top:1px solid var(--border-subtle); }.dashboard-next__bars { height:142px; margin-top:16px; padding-top:12px; display:flex; align-items:end; justify-content:space-between; gap:8px; border-top:1px solid var(--border-subtle); }.dashboard-next__bar-group { flex:1; height:100%; min-width:24px; display:flex; flex-direction:column; justify-content:end; align-items:center; gap:6px; }.dashboard-next__bar-track { height:110px; width:100%; display:flex; align-items:end; justify-content:center; gap:3px; }.dashboard-next__bar-track i { display:block; width:min(13px,35%); border-radius:5px 5px 1px 1px; transition:.2s; }.dashboard-next__bar-track .income { background:var(--ink-emerald); }.dashboard-next__bar-track .expense { background:var(--ink-rose); }.dashboard-next__bar-group span { color:var(--text-muted); font-size:9px; white-space:nowrap; }.dashboard-next__flow { padding:26px; display:flex; flex-direction:column; justify-content:center; gap:18px; background:color-mix(in srgb,var(--brand) 8%,var(--bg-elevated)); }.dashboard-next__flow span { display:block; color:var(--text-muted); font-size:12px; }.dashboard-next__flow strong { display:block; margin-top:3px; font-size:19px; }.dashboard-next__flow p { margin-bottom:0; padding-top:16px; border-top:1px solid var(--border-subtle); color:var(--text-secondary); font-size:12px; }
+.dashboard-next__grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; }.dashboard-next__panel,.dashboard-next__events { border:1px solid var(--border-subtle); border-radius:16px; background:var(--bg-card); overflow:hidden; }.dashboard-next__panel-head { display:flex; align-items:start; justify-content:space-between; gap:12px; padding:19px 20px 15px; border-bottom:1px solid var(--border-subtle); }.dashboard-next__list,.dashboard-next__classes,.dashboard-next__work-list { margin:0; padding:0; list-style:none; }.dashboard-next__list li { display:grid; grid-template-columns:10px minmax(0,1fr) auto; gap:10px; align-items:center; padding:13px 20px; border-bottom:1px solid var(--border-subtle); }.dashboard-next__list li:last-child,.dashboard-next__classes li:last-child,.dashboard-next__work-list li:last-child { border:0; }.dashboard-next__mark { width:8px; height:8px; border-radius:50%; }.dashboard-next__mark.income { background:var(--ink-emerald); }.dashboard-next__mark.expense { background:var(--ink-rose); }.dashboard-next__list strong,.dashboard-next__classes strong,.dashboard-next__work-list strong,.dashboard-next__event-list strong { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--text-primary); font-size:13px; }.dashboard-next__list small,.dashboard-next__classes small,.dashboard-next__work-list small,.dashboard-next__event-list small { display:block; margin-top:2px; color:var(--text-muted); font-size:11px; }.dashboard-next__list b { font-size:13px; }.dashboard-next__loading,.dashboard-next__empty { padding:32px 20px; margin:0; color:var(--text-muted); text-align:center; font-size:13px; }.dashboard-next__due { padding:20px; }.dashboard-next__due > span { display:inline-block; padding:4px 7px; border-radius:6px; background:var(--brand-soft); color:var(--brand-ink); font-size:10px; font-weight:700; }.dashboard-next__due h3 { margin:14px 0 4px; font-size:16px; }.dashboard-next__due p { color:var(--text-muted); font-size:12px; }.dashboard-next__due > div { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:18px; }.dashboard-next__due button { padding:8px 11px; border:1px solid var(--event-status-ongoing-border); border-radius:8px; background:var(--event-status-ongoing-soft); color:var(--ink-emerald); cursor:pointer; font-size:11px; font-weight:700; }.dashboard-next__classes li { display:grid; grid-template-columns:80px minmax(0,1fr) auto; gap:10px; align-items:center; padding:13px 20px; border-bottom:1px solid var(--border-subtle); }.dashboard-next__classes time { color:var(--text-muted); font-size:11px; }.dashboard-next__classes li > div { padding-left:10px; border-left:3px solid; }.dashboard-next__classes li > span { padding:4px 7px; border-radius:6px; background:var(--ink-emerald); color:white; font-size:10px; }.dashboard-next__work-list li { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:13px 20px; border-bottom:1px solid var(--border-subtle); }.dashboard-next__work-list b { padding:4px 6px; border-radius:5px; font-size:10px; color:var(--brand-ink); background:var(--brand-soft); white-space:nowrap; }
+.dashboard-next__events { margin-top:18px; }.dashboard-next__event-list { display:grid; grid-template-columns:repeat(3,1fr); }.dashboard-next__event-list a { display:grid; grid-template-columns:42px minmax(0,1fr); gap:10px; padding:16px 20px; border-right:1px solid var(--border-subtle); }.dashboard-next__event-list a:last-child { border:0; }.dashboard-next__event-list time { grid-row:span 2; display:flex; flex-direction:column; justify-content:center; align-items:center; background:var(--bg-elevated); color:var(--brand-ink); border-radius:8px; }.dashboard-next__event-list time b { font-size:17px; line-height:1; }.dashboard-next__event-list time span,.dashboard-next__event-list > a > span { font-size:10px; }.dashboard-next__event-list > a > span { grid-column:2; margin-top:4px; font-weight:700; }
+@media (max-width:760px) { .dashboard-next__header { align-items:start; flex-direction:column; }.dashboard-next__pulse,.dashboard-next__finance,.dashboard-next__grid,.dashboard-next__event-list { grid-template-columns:1fr; }.dashboard-next__pulse-item,.dashboard-next__event-list a { border-right:0; border-bottom:1px solid var(--border-subtle); }.dashboard-next__pulse-item:last-child,.dashboard-next__event-list a:last-child { border-bottom:0; }.dashboard-next__actions { width:100%; }.dashboard-next__finance-main,.dashboard-next__flow { padding:20px; }.dashboard-next__flow { display:grid; grid-template-columns:1fr 1fr; }.dashboard-next__flow p { grid-column:span 2; }.dashboard-next__bar-group:nth-child(n+8) { display:none; } }
+.dashboard-next__term-countdown,.dashboard-next__study-countdown { display:flex; flex-direction:column; gap:4px; margin:16px 20px 20px; padding:14px; border:1px solid var(--brand-border); border-radius:12px; background:var(--brand-soft); text-align:left; }.dashboard-next__term-countdown span,.dashboard-next__study-countdown span { color:var(--brand-ink); font-size:10px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; }.dashboard-next__term-countdown strong,.dashboard-next__study-countdown strong { color:var(--text-primary); font-size:14px; }.dashboard-next__term-countdown b,.dashboard-next__study-countdown b { color:var(--brand-ink); font-size:13px; }.dashboard-next__term-countdown small,.dashboard-next__study-countdown small { color:var(--text-muted); font-size:11px; }.dashboard-next__study-countdown.is-active { border-color:var(--event-status-ongoing-border); background:var(--event-status-ongoing-soft); }.dashboard-next__study-countdown.is-active span,.dashboard-next__study-countdown.is-active b { color:var(--ink-emerald); }
+.dashboard-next__recurring { position:relative; border-color:color-mix(in srgb,var(--ink-amber) 42%,var(--border-subtle)); background:linear-gradient(145deg,color-mix(in srgb,var(--ink-amber) 9%,var(--bg-card)),var(--bg-card) 58%); box-shadow:0 14px 32px color-mix(in srgb,var(--ink-amber) 11%,transparent); }.dashboard-next__recurring::before { content:''; position:absolute; top:0; right:0; left:0; height:3px; background:linear-gradient(90deg,var(--ink-amber),var(--brand),transparent); }.dashboard-next__recurring .dashboard-next__panel-head { border-bottom-color:color-mix(in srgb,var(--ink-amber) 22%,var(--border-subtle)); }.dashboard-next__recurring .dashboard-next__due { margin:14px; padding:16px; border:1px solid color-mix(in srgb,var(--ink-amber) 30%,var(--border-subtle)); border-radius:12px; background:color-mix(in srgb,var(--ink-amber) 7%,var(--bg-elevated)); }.dashboard-next__recurring .dashboard-next__due > span { background:color-mix(in srgb,var(--ink-amber) 18%,var(--bg-card)); color:var(--ink-amber); }.dashboard-next__recurring .dashboard-next__due > div { padding-top:13px; border-top:1px solid color-mix(in srgb,var(--ink-amber) 20%,var(--border-subtle)); }.dashboard-next__recurring .dashboard-next__due button { box-shadow:0 4px 12px color-mix(in srgb,var(--ink-emerald) 18%,transparent); transition:transform .2s,box-shadow .2s; }.dashboard-next__recurring .dashboard-next__due button:hover:not(:disabled) { transform:translateY(-1px); box-shadow:0 7px 16px color-mix(in srgb,var(--ink-emerald) 28%,transparent); }
+.dashboard-next__events { position:relative; border-color:color-mix(in srgb,var(--brand) 38%,var(--border-subtle)); background:linear-gradient(145deg,color-mix(in srgb,var(--brand) 8%,var(--bg-card)),var(--bg-card) 55%); box-shadow:0 14px 32px color-mix(in srgb,var(--brand) 10%,transparent); }.dashboard-next__events::before { content:''; position:absolute; top:0; right:0; left:0; height:3px; background:linear-gradient(90deg,var(--brand),var(--ink-cyan),transparent); }.dashboard-next__events .dashboard-next__panel-head { border-bottom-color:color-mix(in srgb,var(--brand) 22%,var(--border-subtle)); }.dashboard-next__events .dashboard-next__event-list { margin:14px; overflow:hidden; border:1px solid color-mix(in srgb,var(--brand) 23%,var(--border-subtle)); border-radius:12px; background:color-mix(in srgb,var(--brand) 4%,var(--bg-elevated)); }.dashboard-next__events .dashboard-next__event-list a { transition:background .2s; }.dashboard-next__events .dashboard-next__event-list a:hover { background:color-mix(in srgb,var(--brand) 9%,transparent); }
+.dashboard-next__event-progress { display:grid; grid-template-columns:1fr auto; gap:4px 8px; margin-top:9px; color:var(--text-muted); font-size:10px; }.dashboard-next__event-progress b { color:var(--brand-ink); font-size:10px; }.dashboard-next__event-progress i { grid-column:span 2; display:block; height:5px; overflow:hidden; border-radius:999px; background:color-mix(in srgb,var(--brand) 16%,transparent); }.dashboard-next__event-progress em { display:block; height:100%; border-radius:inherit; background:linear-gradient(90deg,var(--brand),var(--ink-cyan)); transition:width .5s ease; }.dashboard-next__event-progress em.is-ongoing { background:linear-gradient(90deg,var(--ink-emerald),var(--ink-cyan)); }
 </style>
