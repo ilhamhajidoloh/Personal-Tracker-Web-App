@@ -2232,7 +2232,8 @@ const exportToPDF = async () => {
 </script>
 
 <style scoped>
-.cx { max-width: 1240px; margin: 0 auto; padding: 24px 18px 96px; display: flex; flex-direction: column; gap: 18px; color: var(--text-primary); }
+.cx { width: 100%; max-width: 1240px; min-width: 0; box-sizing: border-box; margin: 0 auto; padding: 24px 18px 96px; display: flex; flex-direction: column; gap: 18px; color: var(--text-primary); }
+.cx *, .cx *::before, .cx *::after { box-sizing: border-box; }
 .cx :is(h1, h2, h3, p, ol, ul) { margin: 0; }
 .cx :is(ol, ul) { padding: 0; list-style: none; }
 .cx .in { color: var(--ink-emerald); }
@@ -2242,7 +2243,8 @@ const exportToPDF = async () => {
 .cx button:disabled { opacity: .45; cursor: not-allowed; }
 
 /* ───── header ───── */
-.cx-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.cx-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; min-width: 0; }
+.cx-head-title { min-width: 0; }
 .cx-head h1 { font-size: 32px; font-weight: 800; letter-spacing: -.035em; line-height: 1.1; margin-top: 4px; }
 .cx-head-title p { margin-top: 6px; font-size: 13px; color: var(--text-muted); }
 .cx-eyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--brand-ink); }
@@ -2277,7 +2279,7 @@ const exportToPDF = async () => {
 .cx-alert { display: flex; gap: 10px; align-items: center; padding: 12px 16px; border-radius: 14px; border: 1px solid color-mix(in srgb, var(--ink-amber) 40%, transparent); background: color-mix(in srgb, var(--ink-amber) 10%, transparent); color: var(--ink-amber); font-size: 13px; font-weight: 600; }
 
 /* ───── summary ───── */
-.cx-summary { display: grid; grid-template-columns: 1.6fr 1fr 1fr; gap: 14px; }
+.cx-summary { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) minmax(0, 1fr); gap: 14px; min-width: 0; }
 .cx-balance { position: relative; overflow: hidden; display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 26px; border-radius: 26px; color: #fff; background: linear-gradient(135deg, #1e3a8a, #312e81); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08), 0 24px 50px -28px #1e3a8a; }
 .cx-balance::before, .cx-balance::after { content: ''; position: absolute; border-radius: 50%; background: rgba(255, 255, 255, .05); pointer-events: none; }
 .cx-balance::before { width: 220px; height: 220px; right: -60px; top: -90px; }
@@ -2296,7 +2298,7 @@ const exportToPDF = async () => {
 .cx-gauge b { font-size: 20px; font-weight: 800; line-height: 1; }
 .cx-gauge small { font-size: 10px; opacity: .8; margin-top: 2px; }
 
-.cx-kpi { display: flex; flex-direction: column; justify-content: center; gap: 8px; padding: 20px; border-radius: 22px; background: var(--bg-card); border: 1px solid var(--border-subtle); }
+.cx-kpi { min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 8px; padding: 20px; border-radius: 22px; background: var(--bg-card); border: 1px solid var(--border-subtle); }
 .cx-kpi-top { display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 700; color: var(--text-secondary); }
 .cx-kpi-top button { margin-left: auto; height: 26px; padding: 0 11px; border-radius: 999px; border: 1px solid var(--border-subtle); background: var(--bg-elevated); color: var(--text-secondary); font-size: 11px; font-weight: 700; }
 .cx-kpi-ico { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 10px; font-size: 15px; font-weight: 800; }
@@ -2317,8 +2319,8 @@ const exportToPDF = async () => {
 .cx-pane { display: flex; flex-direction: column; gap: 14px; }
 
 /* ───── shared ───── */
-.cx-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-.cx-card { display: flex; flex-direction: column; gap: 16px; padding: 20px; border-radius: 22px; background: var(--bg-card); border: 1px solid var(--border-subtle); }
+.cx-grid2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; min-width: 0; }
+.cx-card { min-width: 0; display: flex; flex-direction: column; gap: 16px; padding: 20px; border-radius: 22px; background: var(--bg-card); border: 1px solid var(--border-subtle); }
 .cx-card-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
 .cx-card-head h2 { font-size: 16px; font-weight: 800; letter-spacing: -.01em; }
 .cx-card-head p { margin-top: 2px; font-size: 12px; color: var(--text-muted); }
@@ -2425,19 +2427,23 @@ const exportToPDF = async () => {
 @media (max-width: 640px) {
   .cx { padding: 16px 12px 88px; }
   .cx-head h1 { font-size: 26px; }
+  .cx-head-actions { width: 100%; }
   .cx-lbl { display: none; }
   .cx-ghost { padding: 0 13px; }
+  .cx-solid { flex: 1; justify-content: center; }
   .cx-wallets { flex-direction: column; align-items: stretch; }
   .cx-wallet-tools { justify-content: flex-end; }
   .cx-summary { grid-template-columns: 1fr; }
-  .cx-balance { padding: 20px; }
+  .cx-balance { min-width: 0; padding: 20px; }
   .cx-balance-amt { font-size: 30px; }
+  .cx-balance-note { overflow-wrap: anywhere; }
   .cx-gauge { width: 84px; height: 84px; }
   .cx-stats { grid-template-columns: 1fr; }
   .cx-bills, .cx-days { grid-template-columns: 1fr; }
   .cx-tabs { border-radius: 18px; }
   .cx-li-tools { flex-direction: column; }
-  .cx-lg li { gap: 10px; padding: 12px; }
+  .cx-lg li { min-width: 0; gap: 10px; padding: 12px; }
+  .cx-li-amt { min-width: 0; }
 }
 
 /* ───── modals (teleported → :global) ───── */
