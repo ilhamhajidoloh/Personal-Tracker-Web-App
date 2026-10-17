@@ -1,1237 +1,370 @@
 <template>
   <AppTabsLayout>
-    <div class="mx-auto w-full max-w-[1240px] px-4 md:px-6 py-6 md:py-8 space-y-6">
-      <!-- 1. Page Header Block -->
-      <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-        <div>
-          <div class="flex items-center gap-2">
-            <span class="eyebrow">การเงิน &bull; CASHFLOW</span>
-            <span
-              v-if="selectedBook"
-              class="text-[11px] font-semibold px-2 py-0.5 rounded-md flex items-center gap-1"
-              :style="{ background: `${selectedBook.color}15`, color: selectedBook.color, border: `1px solid ${selectedBook.color}35` }"
-            >
-              <span>{{ selectedBook.icon }}</span>
-              <span>{{ selectedBook.name }}</span>
-            </span>
-          </div>
-          <h1 class="text-2xl md:text-[32px] font-extrabold tracking-tight mt-1" style="color: var(--text-primary);">
-            รายรับ<span class="text-gradient">·</span>รายจ่าย
-          </h1>
-          <p class="text-xs mt-1.5 flex items-center gap-2 flex-wrap font-medium" style="color: var(--text-muted);">
-            <span class="flex items-center gap-1">
-              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-              <span>{{ currentMonthYearLabel }}</span>
-            </span>
-            <span>&bull;</span>
-            <span class="num font-semibold">{{ transactions.length }} รายการ</span>
-            <span v-if="recurringExpenses.length > 0">&bull;</span>
-            <span v-if="recurringExpenses.length > 0" class="font-semibold flex items-center gap-1" style="color: var(--ink-amber);">
-              🔄 {{ recurringExpenses.length }} รายจ่ายประจำ
-            </span>
+    <div class="cx">
+      <!-- Header -->
+      <header class="cx-head">
+        <div class="cx-head-title">
+          <span class="cx-eyebrow"><i></i>{{ currentMonthYearLabel }}</span>
+          <h1>รายรับ · รายจ่าย</h1>
+          <p>
+            {{ transactions.length }} รายการ<template v-if="recurringExpenses.length > 0"> · {{ recurringExpenses.length }} รายจ่ายประจำ</template>
           </p>
         </div>
-
-        <div class="flex items-center gap-2 shrink-0 flex-wrap">
-          <button
-            @click="openExportModal"
-            :disabled="transactions.length === 0"
-            class="btn-secondary text-xs sm:text-sm inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed tap-scale touch-target"
-            title="Export ข้อมูล (PDF, Excel, CSV)"
-          >
-            <svg class="w-4 h-4 text-violet-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
-            <span class="font-semibold">ส่งออก</span>
+        <div class="cx-head-actions">
+          <button type="button" class="cx-ghost" :disabled="transactions.length === 0" title="Export ข้อมูล (PDF, Excel, CSV)" @click="openExportModal">
+            <span aria-hidden="true">⬇</span><span class="cx-lbl">ส่งออก</span>
           </button>
-          <button
-            @click="refreshData"
-            :disabled="isLoading || isLoadingBooks"
-            class="btn-secondary text-xs sm:text-sm inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed tap-scale touch-target"
-            title="รีเฟรชข้อมูล"
-          >
-            <svg class="w-4 h-4" :class="isLoading ? 'animate-spin' : ''" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5M21 12a9 9 0 0 1-15 6.7L3 16M3 21v-5h5"/></svg>
-            <span class="hidden sm:inline">{{ isLoading ? 'กำลังโหลด...' : 'รีเฟรช' }}</span>
+          <button type="button" class="cx-ghost" :disabled="isLoading || isLoadingBooks" title="รีเฟรชข้อมูล" @click="refreshData">
+            <span aria-hidden="true" :class="{ 'cx-spin': isLoading }">↻</span><span class="cx-lbl">{{ isLoading ? 'กำลังโหลด...' : 'รีเฟรช' }}</span>
           </button>
-          <button
-            @click="openAddTransactionModal"
-            class="btn-primary text-xs sm:text-sm inline-flex items-center gap-2 tap-scale touch-target"
-          >
-            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
-            <span class="font-semibold">เพิ่มรายการ</span>
+          <button type="button" class="cx-solid" @click="openAddTransactionModal">
+            <span aria-hidden="true">＋</span> เพิ่มรายการ
           </button>
         </div>
-      </div>
+      </header>
 
-      <!-- 2. Multi-Book Switcher Block -->
-      <section class="section-card p-3 sm:p-4">
-        <div class="flex items-center justify-between gap-3 mb-2.5">
-          <div class="flex items-center gap-2">
-            <span class="text-sm">💼</span>
-            <span class="text-xs font-bold uppercase tracking-wider" style="color: var(--text-secondary);">สมุดบัญชี (Books)</span>
-            <span class="num text-[11px] font-semibold px-2 py-0.5 rounded-full" style="background: var(--bg-elevated); color: var(--text-muted);">
-              {{ books.length }} เล่ม
-            </span>
-          </div>
-          <div class="flex items-center gap-1.5">
-            <button
-              type="button"
-              @click="openManageBooksModal"
-              class="px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all tap-scale"
-              style="background: var(--bg-elevated); color: var(--text-secondary); border: 1px solid var(--border-subtle);"
-            >
-              <span>⚙️</span>
-              <span class="hidden sm:inline">จัดการสมุด</span>
-            </button>
-            <button
-              type="button"
-              @click="openCreateBookModal"
-              class="px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all tap-scale"
-              style="background: var(--brand-soft); color: var(--brand-ink); border: 1px solid var(--brand-border);"
-            >
-              <span>+</span>
-              <span class="hidden sm:inline">เพิ่มสมุด</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- Scrollable Book Pills -->
-        <div class="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-          <!-- All Books -->
-          <button
-            type="button"
-            @click="selectBook('all')"
-            class="book-pill"
-            :class="{ 'book-pill-active': selectedBookId === 'all' }"
-          >
-            <span class="text-base">📊</span>
-            <span class="font-semibold">ทุกสมุด</span>
-            <span class="book-pill-badge">{{ transactions.length }}</span>
+      <!-- Wallets -->
+      <section class="cx-wallets" aria-label="สมุดบัญชี">
+        <div class="cx-wallet-row">
+          <button type="button" class="cx-wallet" :class="{ on: selectedBookId === 'all' }" @click="selectBook('all')">
+            <span class="cx-wallet-ico">📊</span>
+            <span class="cx-wallet-txt"><strong>ทุกสมุด</strong><small>{{ transactions.length }} รายการ</small></span>
           </button>
-
-          <!-- Individual Books -->
           <button
             v-for="book in books"
             :key="book.id"
             type="button"
+            class="cx-wallet"
+            :class="{ on: selectedBookId === book.id }"
+            :style="{ '--bk': book.color || 'var(--brand)' }"
             @click="selectBook(book.id)"
-            class="book-pill"
-            :class="{ 'book-pill-selected': selectedBookId === book.id }"
-            :style="selectedBookId === book.id ? {
-              background: `${book.color}18`,
-              borderColor: `${book.color}60`,
-              color: book.color
-            } : {}"
           >
-            <span class="text-base">{{ book.icon || '💼' }}</span>
-            <span class="font-semibold">{{ book.name }}</span>
-            <span v-if="book.isDefault" class="book-default-badge" :style="{ background: `${book.color}20`, color: book.color }">
-              หลัก
+            <span class="cx-wallet-ico cx-wallet-ico--tint">{{ book.icon || '💼' }}</span>
+            <span class="cx-wallet-txt">
+              <strong>{{ book.name }}</strong>
+              <small>{{ book.isDefault ? 'สมุดหลัก' : 'สมุดบัญชี' }}</small>
             </span>
           </button>
         </div>
-      </section>
-
-      <!-- Error Message Banner -->
-      <div
-        v-if="errorMessage"
-        class="rounded-2xl px-4 py-3 text-sm flex items-center gap-2 font-medium"
-        style="background: rgba(182, 133, 42, 0.1); border: 1px solid rgba(182, 133, 42, 0.3); color: var(--ink-amber);"
-      >
-        <span>⚠️</span><span>{{ errorMessage }}</span>
-      </div>
-
-      <!-- Persistent Net Balance: visible in every Cashflow sub-tab -->
-      <section
-        class="section-card p-5 sm:p-6 relative overflow-hidden"
-        style="background: linear-gradient(145deg, var(--bg-card), var(--bg-elevated));"
-      >
-        <div class="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <div class="flex items-center justify-between gap-3">
-              <span class="eyebrow">คงเหลือสุทธิ · NET BALANCE</span>
-              <span
-                class="text-[11px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1.5"
-                :style="remainingBalance >= 0
-                  ? { background: 'rgba(40, 116, 91, 0.12)', color: 'var(--ink-emerald)', border: '1px solid rgba(40, 116, 91, 0.25)' }
-                  : { background: 'rgba(172, 77, 90, 0.12)', color: 'var(--ink-rose)', border: '1px solid rgba(172, 77, 90, 0.25)' }"
-              >
-                <span class="w-1.5 h-1.5 rounded-full" :style="{ background: remainingBalance >= 0 ? 'var(--ink-emerald)' : 'var(--ink-rose)' }"></span>
-                <span>{{ remainingBalance >= 0 ? 'สภาพคล่องบวก' : 'ยอดติดลบ' }}</span>
-              </span>
-            </div>
-            <p
-              class="num text-3xl sm:text-4xl lg:text-[42px] font-extrabold tracking-tight mt-3"
-              :style="{ color: remainingBalance >= 0 ? 'var(--text-primary)' : 'var(--ink-rose)' }"
-            >
-              {{ formatCurrency(remainingBalance) }}
-            </p>
-            <p class="text-xs mt-1" style="color: var(--text-muted);">
-              {{ currentMonthYearLabel }} &bull; ยอดรวมของทุกรายการในช่วงเวลานี้
-            </p>
-          </div>
-
-          <div class="w-full sm:max-w-md">
-            <div class="flex items-center justify-between text-xs font-semibold mb-2">
-              <span class="flex items-center gap-1.5" style="color: var(--ink-emerald);">
-                <span class="w-2 h-2 rounded-full" style="background: var(--ink-emerald);"></span>
-                รับ +{{ formatCurrency(totalIncome) }}
-              </span>
-              <span class="flex items-center gap-1.5" style="color: var(--ink-rose);">
-                จ่าย −{{ formatCurrency(totalExpense) }}
-                <span class="w-2 h-2 rounded-full" style="background: var(--ink-rose);"></span>
-              </span>
-            </div>
-            <div class="h-2.5 rounded-full overflow-hidden flex" style="background: var(--bg-surface); border: 1px solid var(--border-subtle);">
-              <div class="h-full transition-all duration-500 rounded-l-full" :style="{ width: totalIncome + totalExpense > 0 ? `${(totalIncome / (totalIncome + totalExpense)) * 100}%` : '50%', background: 'var(--ink-emerald)' }"></div>
-              <div class="h-full transition-all duration-500 rounded-r-full" :style="{ width: totalIncome + totalExpense > 0 ? `${(totalExpense / (totalIncome + totalExpense)) * 100}%` : '50%', background: 'var(--ink-rose)' }"></div>
-            </div>
-            <div class="flex items-center justify-between text-[11px] mt-2" style="color: var(--text-muted);">
-              <span>{{ expenseProgressText }}</span>
-              <span v-if="overspentAmount > 0" class="font-bold" style="color: var(--ink-rose);">⚠️ เกินงบ {{ formatCurrency(overspentAmount) }}</span>
-              <span v-else>{{ remainingProgressText }}</span>
-            </div>
-          </div>
+        <div class="cx-wallet-tools">
+          <button type="button" class="cx-pill" @click="openManageBooksModal">⚙ จัดการ</button>
+          <button type="button" class="cx-pill cx-pill--accent" @click="openCreateBookModal">＋ สมุดใหม่</button>
         </div>
       </section>
 
-      <!-- 3. Navigation View Tabs -->
-      <nav class="cashflow-view-tabs" aria-label="Cashflow views">
-        <div class="grid grid-cols-4 gap-1.5">
-          <button
-            v-for="tab in tabs"
-            :key="tab.id"
-            type="button"
-            @click="activeTab = tab.id"
-            class="tab-button"
-            :class="{ 'tab-button-active': activeTab === tab.id }"
-          >
-            <span class="cashflow-tab-icon">{{ tab.icon }}</span>
-            <span class="font-semibold text-xs sm:text-sm">{{ tab.id === 'analytics' ? 'รายการแยกประเภท' : tab.label }}</span>
-            <span
-              v-if="tab.id === 'recurring' && recurringExpenses.length > 0"
-              class="hidden sm:inline-block text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-              :class="activeTab === 'recurring' ? 'bg-white/30 text-white' : 'bg-amber-500/15 text-amber-500'"
-            >
-              {{ recurringExpenses.length }}
-            </span>
-            <span
-              v-if="tab.id === 'analytics' && transactions.length > 0"
-              class="hidden sm:inline-block text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-              :class="activeTab === 'analytics' ? 'bg-white/30 text-white' : 'bg-gray-800/10 text-gray-500'"
-            >
-              {{ transactions.length }}
-            </span>
-          </button>
-        </div>
+      <p v-if="errorMessage" class="cx-alert"><span>⚠️</span>{{ errorMessage }}</p>
+
+      <!-- Summary -->
+      <section class="cx-summary">
+        <article class="cx-balance">
+          <div class="cx-balance-info">
+            <span class="cx-eyebrow cx-eyebrow--light">คงเหลือสุทธิ</span>
+            <p class="cx-balance-amt" :class="{ neg: remainingBalance < 0 }">{{ formatCurrency(remainingBalance) }}</p>
+            <span class="cx-state" :class="remainingBalance >= 0 ? 'pos' : 'neg'">{{ remainingBalance >= 0 ? 'สภาพคล่องบวก' : 'ยอดติดลบ' }}</span>
+            <p class="cx-balance-note">
+              {{ expenseProgressText }}
+              <strong v-if="overspentAmount > 0"> · เกินงบ {{ formatCurrency(overspentAmount) }}</strong>
+              <template v-else> · {{ remainingProgressText }}</template>
+            </p>
+          </div>
+          <div class="cx-gauge" :title="expenseProgressText">
+            <svg viewBox="0 0 100 100" aria-hidden="true">
+              <circle cx="50" cy="50" r="42" class="cx-gauge-bg" />
+              <circle cx="50" cy="50" r="42" class="cx-gauge-fg" :stroke-dasharray="`${expenseProgressPercent * 2.639} 263.9`" />
+            </svg>
+            <div><b>{{ Math.round(expenseProgressPercent) }}%</b><small>ใช้ไป</small></div>
+          </div>
+        </article>
+
+        <article class="cx-kpi cx-kpi--in">
+          <div class="cx-kpi-top">
+            <span class="cx-kpi-ico">↗</span>
+            <span>รายรับรวม</span>
+            <button v-if="incomeCategoryRankings.length > 0" type="button" @click="isIncomeRankingModalOpen = true">อันดับ</button>
+          </div>
+          <b>+{{ formatCurrency(totalIncome) }}</b>
+          <small>{{ incomeCategoryRankings.length }} หมวดหมู่รายรับ</small>
+        </article>
+
+        <article class="cx-kpi cx-kpi--out">
+          <div class="cx-kpi-top">
+            <span class="cx-kpi-ico">↘</span>
+            <span>รายจ่ายรวม</span>
+            <button v-if="expenseCategoryRankings.length > 0" type="button" @click="isRankingModalOpen = true">อันดับ</button>
+          </div>
+          <b>−{{ formatCurrency(totalExpense) }}</b>
+          <small>สูงสุด: {{ topExpenseCategory.name }} ({{ formatCurrency(topExpenseCategory.amount) }})</small>
+        </article>
+      </section>
+
+      <!-- Tabs -->
+      <nav class="cx-tabs" aria-label="Cashflow views">
+        <button
+          v-for="tab in tabs"
+          :key="tab.id"
+          type="button"
+          class="cx-tab"
+          :class="{ on: activeTab === tab.id }"
+          @click="activeTab = tab.id"
+        >
+          <span aria-hidden="true">{{ tab.icon }}</span>
+          {{ tab.id === 'analytics' ? 'รายการแยกประเภท' : tab.label }}
+          <em v-if="tab.id === 'recurring' && recurringExpenses.length > 0">{{ recurringExpenses.length }}</em>
+          <em v-if="tab.id === 'analytics' && transactions.length > 0">{{ transactions.length }}</em>
+        </button>
       </nav>
 
-      <!-- 4. Tab Contents -->
-      <div>
-        <!-- Tab 1: ภาพรวม (Overview) -->
-        <div v-show="activeTab === 'overview'" class="space-y-6">
-          <!-- Flow Summary -->
-          <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
-            <!-- Inflow & Outflow Cards -->
-            <div class="lg:col-span-12 grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <!-- Income Card -->
-              <div class="section-card p-4 sm:p-5 flex flex-col justify-between">
-                <div class="flex items-center justify-between gap-3">
-                  <div class="flex items-center gap-2.5">
-                    <div
-                      class="w-9 h-9 rounded-xl flex items-center justify-center text-lg shrink-0"
-                      style="background: rgba(40, 116, 91, 0.12); color: var(--ink-emerald); border: 1px solid rgba(40, 116, 91, 0.2);"
-                    >
-                      📈
-                    </div>
-                    <div>
-                      <p class="eyebrow" style="color: var(--ink-emerald);">รายรับรวม</p>
-                      <h3 class="text-sm font-bold" style="color: var(--text-primary);">Total Inflow</h3>
-                    </div>
-                  </div>
-                  <button
-                    v-if="incomeCategoryRankings.length > 0"
-                    @click="isIncomeRankingModalOpen = true"
-                    class="text-xs font-semibold px-2.5 py-1 rounded-lg transition-all tap-scale"
-                    style="background: var(--bg-elevated); color: var(--brand-ink); border: 1px solid var(--border-subtle);"
-                  >
-                    อันดับ →
-                  </button>
+      <!-- Overview -->
+      <div v-show="activeTab === 'overview'" class="cx-pane">
+        <div v-if="expenseCategoryRankings.length > 0" class="cx-grid2">
+          <article class="cx-card">
+            <header class="cx-card-head">
+              <div><h2>รายจ่ายสูงสุด 3 อันดับ</h2><p>หมวดหมู่ที่ใช้จ่ายมากที่สุด</p></div>
+              <button type="button" class="cx-pill" @click="isRankingModalOpen = true">ทั้งหมด {{ expenseCategoryRankings.length }}</button>
+            </header>
+            <ol class="cx-rank cx-rank--out">
+              <li v-for="(cat, i) in topExpenseCategories" :key="cat.name">
+                <span class="cx-rank-no">{{ i + 1 }}</span>
+                <div class="cx-rank-body">
+                  <div class="cx-rank-line"><strong>{{ cat.name }}</strong><b>{{ formatCurrency(cat.amount) }}</b></div>
+                  <div class="cx-bar"><i :style="{ width: `${(cat.amount / (expenseCategoryRankings[0]?.amount || 1)) * 100}%` }"></i></div>
                 </div>
-                <div class="mt-3">
-                  <p class="num text-2xl font-bold" style="color: var(--ink-emerald);">
-                    +{{ formatCurrency(totalIncome) }}
-                  </p>
-                  <p class="text-[11px] mt-1" style="color: var(--text-muted);">
-                    {{ incomeCategoryRankings.length }} หมวดหมู่รายรับ
-                  </p>
-                </div>
-              </div>
+                <em>{{ formatPercent((cat.amount / (totalExpense || 1)) * 100) }}%</em>
+              </li>
+            </ol>
+          </article>
 
-              <!-- Expense Card -->
-              <div class="section-card p-4 sm:p-5 flex flex-col justify-between">
-                <div class="flex items-center justify-between gap-3">
-                  <div class="flex items-center gap-2.5">
-                    <div
-                      class="w-9 h-9 rounded-xl flex items-center justify-center text-lg shrink-0"
-                      style="background: rgba(172, 77, 90, 0.12); color: var(--ink-rose); border: 1px solid rgba(172, 77, 90, 0.2);"
-                    >
-                      📉
-                    </div>
-                    <div>
-                      <p class="eyebrow" style="color: var(--ink-rose);">รายจ่ายรวม</p>
-                      <h3 class="text-sm font-bold" style="color: var(--text-primary);">Total Outflow</h3>
-                    </div>
-                  </div>
-                  <button
-                    v-if="expenseCategoryRankings.length > 0"
-                    @click="isRankingModalOpen = true"
-                    class="text-xs font-semibold px-2.5 py-1 rounded-lg transition-all tap-scale"
-                    style="background: var(--bg-elevated); color: var(--ink-rose); border: 1px solid var(--border-subtle);"
-                  >
-                    อันดับ →
-                  </button>
+          <article class="cx-card">
+            <header class="cx-card-head">
+              <div><h2>รายจ่ายน้อยสุด 3 อันดับ</h2><p>หมวดหมู่ที่ประหยัดงบได้ดี</p></div>
+            </header>
+            <ol class="cx-rank cx-rank--in">
+              <li v-for="(cat, i) in bottomExpenseCategories" :key="cat.name">
+                <span class="cx-rank-no">{{ i + 1 }}</span>
+                <div class="cx-rank-body">
+                  <div class="cx-rank-line"><strong>{{ cat.name }}</strong><b>{{ formatCurrency(cat.amount) }}</b></div>
+                  <div class="cx-bar"><i :style="{ width: `${(cat.amount / (bottomExpenseCategories[bottomExpenseCategories.length - 1]?.amount || 1)) * 100}%` }"></i></div>
                 </div>
-                <div class="mt-3">
-                  <p class="num text-2xl font-bold" style="color: var(--ink-rose);">
-                    −{{ formatCurrency(totalExpense) }}
-                  </p>
-                  <p class="text-[11px] mt-1 truncate" style="color: var(--text-muted);">
-                    หมวดสูงสุด: <strong style="color: var(--text-primary);">{{ topExpenseCategory.name }}</strong> ({{ formatCurrency(topExpenseCategory.amount) }})
-                  </p>
-                </div>
-              </div>
-            </div>
+                <em>{{ formatPercent((cat.amount / (totalExpense || 1)) * 100) }}%</em>
+              </li>
+            </ol>
+          </article>
+        </div>
+        <div v-else class="cx-empty">
+          <span>📊</span>
+          <strong>ยังไม่มีข้อมูลรายจ่ายให้สรุป</strong>
+          <p>กด "เพิ่มรายการ" เพื่อเริ่มบันทึกรายรับ-รายจ่าย</p>
+        </div>
+      </div>
+
+      <!-- Recurring -->
+      <div v-show="activeTab === 'recurring'" class="cx-pane">
+        <article class="cx-card">
+          <header class="cx-card-head">
+            <div><h2>รายจ่ายประจำ</h2><p>รายการผ่อนชำระและค่าใช้จ่ายที่ต้องจ่ายทุกเดือน</p></div>
+            <button type="button" class="cx-solid" @click="openAddRecurringModal">＋ เพิ่มรายจ่ายประจำ</button>
+          </header>
+          <div class="cx-stats">
+            <div><span>ยอดจ่ายประจำต่อเดือน</span><b>฿{{ formatCurrency(recurringTotalMonthly).replace('฿', '') }}</b></div>
+            <div><span>ใกล้ครบกำหนด (ภายใน 3 วัน)</span><b :class="recurringDueSoonCount > 0 ? 'amber' : 'in'">{{ recurringDueSoonCount }} รายการ</b></div>
+            <div><span>ทั้งหมดในระบบ</span><b>{{ recurringExpenses.length }} <small>(ผ่อน {{ fixedRecurringExpenses.length }} · ตลอดชีพ {{ indefiniteRecurringExpenses.length }})</small></b></div>
           </div>
+        </article>
 
-          <!-- Top / Bottom Expense Category Rankings -->
-          <div v-if="expenseCategoryRankings.length > 0" class="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <!-- Top 3 Highest -->
-            <div class="section-card p-5">
-              <div class="flex items-center justify-between gap-2 mb-4">
-                <div class="flex items-center gap-2.5">
-                  <div
-                    class="w-8 h-8 rounded-lg flex items-center justify-center text-base shrink-0"
-                    style="background: rgba(172, 77, 90, 0.12); color: var(--ink-rose);"
-                  >🔺</div>
-                  <div>
-                    <h2 class="text-sm font-bold" style="color: var(--text-primary);">3 อันดับรายจ่ายสูงสุด</h2>
-                    <p class="text-[11px]" style="color: var(--text-muted);">หมวดหมู่ที่มีการใช้จ่ายมากที่สุด</p>
-                  </div>
-                </div>
-                <button
-                  @click="isRankingModalOpen = true"
-                  class="px-2.5 py-1 rounded-lg text-xs font-semibold transition-all tap-scale"
-                  style="background: var(--bg-elevated); color: var(--text-secondary); border: 1px solid var(--border-subtle);"
-                >
-                  ดูทั้งหมด ({{ expenseCategoryRankings.length }}) →
-                </button>
-              </div>
+        <div v-if="isLoadingRecurring" class="cx-skel"><i v-for="i in 2" :key="i"></i></div>
 
-              <div class="space-y-2.5">
-                <div
-                  v-for="(cat, i) in topExpenseCategories"
-                  :key="cat.name"
-                  class="p-3 rounded-xl transition-all"
-                  style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);"
-                >
-                  <div class="flex items-center justify-between gap-2">
-                    <div class="flex items-center gap-2.5 min-w-0">
-                      <span
-                        class="w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center shrink-0"
-                        :style="i === 0
-                          ? { background: 'rgba(172, 77, 90, 0.2)', color: 'var(--ink-rose)' }
-                          : i === 1
-                            ? { background: 'rgba(168, 93, 51, 0.2)', color: 'var(--ink-orange)' }
-                            : { background: 'rgba(147, 112, 61, 0.2)', color: 'var(--ink-amber)' }"
-                      >
-                        {{ i + 1 }}
-                      </span>
-                      <span class="text-sm font-semibold truncate" style="color: var(--text-primary);">{{ cat.name }}</span>
-                    </div>
-                    <span class="num text-sm font-bold shrink-0" style="color: var(--ink-rose);">
-                      {{ formatCurrency(cat.amount) }}
-                    </span>
-                  </div>
-                  <!-- Progress bar -->
-                  <div class="mt-2 flex items-center gap-2">
-                    <div class="flex-1 h-1.5 rounded-full overflow-hidden" style="background: var(--bg-surface);">
-                      <div
-                        class="h-full rounded-full transition-all duration-500"
-                        :style="{
-                          width: `${(cat.amount / (expenseCategoryRankings[0]?.amount || 1)) * 100}%`,
-                          background: 'var(--ink-rose)'
-                        }"
-                      ></div>
-                    </div>
-                    <span class="num text-[10px] font-semibold shrink-0" style="color: var(--text-muted);">
-                      {{ formatPercent((cat.amount / (totalExpense || 1)) * 100) }}%
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Top 3 Lowest -->
-            <div class="section-card p-5">
-              <div class="flex items-center gap-2.5 mb-4">
-                <div
-                  class="w-8 h-8 rounded-lg flex items-center justify-center text-base shrink-0"
-                  style="background: rgba(40, 116, 91, 0.12); color: var(--ink-emerald);"
-                >🔻</div>
-                <div>
-                  <h2 class="text-sm font-bold" style="color: var(--text-primary);">3 อันดับรายจ่ายน้อยสุด</h2>
-                  <p class="text-[11px]" style="color: var(--text-muted);">หมวดหมู่ที่มีการประหยัดงบได้ดี</p>
-                </div>
-              </div>
-
-              <div class="space-y-2.5">
-                <div
-                  v-for="(cat, i) in bottomExpenseCategories"
-                  :key="cat.name"
-                  class="p-3 rounded-xl transition-all"
-                  style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);"
-                >
-                  <div class="flex items-center justify-between gap-2">
-                    <div class="flex items-center gap-2.5 min-w-0">
-                      <span
-                        class="w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center shrink-0"
-                        :style="i === 0
-                          ? { background: 'rgba(40, 116, 91, 0.2)', color: 'var(--ink-emerald)' }
-                          : i === 1
-                            ? { background: 'rgba(40, 118, 110, 0.2)', color: 'var(--ink-teal)' }
-                            : { background: 'rgba(40, 114, 138, 0.2)', color: 'var(--ink-cyan)' }"
-                      >
-                        {{ i + 1 }}
-                      </span>
-                      <span class="text-sm font-semibold truncate" style="color: var(--text-primary);">{{ cat.name }}</span>
-                    </div>
-                    <span class="num text-sm font-bold shrink-0" style="color: var(--ink-emerald);">
-                      {{ formatCurrency(cat.amount) }}
-                    </span>
-                  </div>
-                  <!-- Progress bar -->
-                  <div class="mt-2 flex items-center gap-2">
-                    <div class="flex-1 h-1.5 rounded-full overflow-hidden" style="background: var(--bg-surface);">
-                      <div
-                        class="h-full rounded-full transition-all duration-500"
-                        :style="{
-                          width: `${(cat.amount / (bottomExpenseCategories[bottomExpenseCategories.length - 1]?.amount || 1)) * 100}%`,
-                          background: 'var(--ink-emerald)'
-                        }"
-                      ></div>
-                    </div>
-                    <span class="num text-[10px] font-semibold shrink-0" style="color: var(--text-muted);">
-                      {{ formatPercent((cat.amount / (totalExpense || 1)) * 100) }}%
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+        <div v-else-if="!recurringExpenses.length" class="cx-empty">
+          <span>📅</span>
+          <strong>ยังไม่มีรายการจ่ายประจำ</strong>
+          <p>กด "+ เพิ่มรายจ่ายประจำ" เพื่อบันทึกค่าเช่า ค่างวด ค่าเน็ต หรือบริการรายเดือน ระบบจะช่วยนับถอยหลังและบันทึกอัตโนมัติ</p>
+          <button type="button" class="cx-solid" @click="openAddRecurringModal">＋ เพิ่มรายการแรก</button>
         </div>
 
-        <!-- Tab 2: Recurring Expenses Section -->
-        <div v-show="activeTab === 'recurring'" class="space-y-5">
-          <!-- Top Metric & Quick Action Card -->
-          <div class="section-card p-5">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div class="flex items-center gap-3">
-                <div
-                  class="w-10 h-10 rounded-xl flex items-center justify-center text-xl shrink-0"
-                  style="background: rgba(147, 112, 61, 0.15); color: var(--ink-amber); border: 1px solid rgba(147, 112, 61, 0.25);"
-                >
-                  🔄
-                </div>
-                <div>
-                  <h2 class="text-base font-bold" style="color: var(--text-primary);">รายจ่ายประจำ (Recurring Bills)</h2>
-                  <p class="text-xs" style="color: var(--text-muted);">รายการผ่อนชำระและค่าใช้จ่ายที่ต้องจ่ายทุกเดือน</p>
-                </div>
-              </div>
-              <button
-                @click="openAddRecurringModal"
-                class="btn-primary text-xs py-2 px-3.5 inline-flex items-center gap-2 tap-scale touch-target self-start sm:self-auto"
-              >
-                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
-                <span>เพิ่มรายจ่ายประจำ</span>
-              </button>
-            </div>
-
-            <!-- Mini Summary Stats -->
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4 pt-4 border-t" style="border-color: var(--border-subtle);">
-              <div class="p-3 rounded-xl" style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);">
-                <p class="text-[11px]" style="color: var(--text-muted);">ยอดจ่ายประจำต่อเดือน</p>
-                <p class="num text-lg font-bold mt-0.5" style="color: var(--text-primary);">
-                  ฿{{ formatCurrency(recurringTotalMonthly).replace('฿', '') }}
-                </p>
-              </div>
-              <div class="p-3 rounded-xl" style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);">
-                <p class="text-[11px]" style="color: var(--text-muted);">ใกล้ครบกำหนด (ภายใน 3 วัน)</p>
-                <p class="num text-lg font-bold mt-0.5" :style="{ color: recurringDueSoonCount > 0 ? 'var(--ink-amber)' : 'var(--ink-emerald)' }">
-                  {{ recurringDueSoonCount }} รายการ
-                </p>
-              </div>
-              <div class="p-3 rounded-xl" style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);">
-                <p class="text-[11px]" style="color: var(--text-muted);">ทั้งหมดในระบบ</p>
-                <p class="num text-lg font-bold mt-0.5" style="color: var(--text-primary);">
-                  {{ recurringExpenses.length }} รายการ (ผ่อน {{ fixedRecurringExpenses.length }} &bull; ตลอดชีพ {{ indefiniteRecurringExpenses.length }})
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <!-- Loading Skeleton -->
-          <div v-if="isLoadingRecurring" class="section-card p-5 space-y-3">
-            <div v-for="i in 2" :key="i" class="h-20 rounded-xl bg-gray-800/10 animate-pulse"></div>
-          </div>
-
-          <!-- Empty State -->
-          <div v-else-if="!recurringExpenses.length" class="section-card flex flex-col items-center justify-center py-12 text-center px-5">
-            <div
-              class="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl mb-3"
-              style="background: rgba(147, 112, 61, 0.12); color: var(--ink-amber); border: 1px solid rgba(147, 112, 61, 0.2);"
-            >
-              📅
-            </div>
-            <p class="text-sm font-bold" style="color: var(--text-primary);">ยังไม่มีรายการจ่ายประจำ</p>
-            <p class="text-xs mt-1 max-w-sm" style="color: var(--text-muted);">
-              กด "+ เพิ่มรายจ่ายประจำ" เพื่อบันทึกค่าเช่า ค่างวด ค่าเน็ต หรือบริการรายเดือน ระบบจะช่วยนับถอยหลังและบันทึกอัตโนมัติ
-            </p>
-            <button
-              @click="openAddRecurringModal"
-              class="btn-primary text-xs py-2 px-4 mt-4 inline-flex items-center gap-1.5 tap-scale"
-            >
-              <span>+ เพิ่มรายการแรก</span>
-            </button>
-          </div>
-
-          <div v-else class="space-y-5">
-            <!-- Group 1: มีกำหนดระยะเวลา -->
-            <div v-if="fixedRecurringExpenses.length > 0" class="section-card p-4 sm:p-5">
-              <div class="flex items-center justify-between gap-2 mb-3">
-                <p class="text-xs font-bold uppercase tracking-wider flex items-center gap-2" style="color: var(--text-secondary);">
-                  <span class="w-2.5 h-2.5 rounded-full" style="background: var(--ink-amber);"></span>
-                  มีกำหนดระยะเวลา (Installments / งวด)
-                </p>
-                <span class="num text-xs font-semibold px-2 py-0.5 rounded-full" style="background: var(--bg-elevated); color: var(--text-muted);">
-                  {{ fixedRecurringExpenses.length }} รายการ
-                </span>
-              </div>
-
-              <div class="space-y-3">
-                <div
-                  v-for="r in fixedRecurringExpenses"
-                  :key="r.id"
-                  @click="openEditRecurringModal(r)"
-                  class="p-4 rounded-xl transition-all cursor-pointer space-y-3 group"
-                  style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);"
-                >
-                  <div class="flex flex-wrap sm:flex-nowrap items-center justify-between gap-3">
-                    <div class="flex items-center gap-3 min-w-0 flex-1">
-                      <div
-                        class="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0"
-                        style="background: rgba(147, 112, 61, 0.15); color: var(--ink-amber);"
-                      >
-                        🗓️
-                      </div>
-                      <div class="min-w-0">
-                        <div class="flex items-center gap-2 flex-wrap">
-                          <p class="text-sm font-bold truncate group-hover:text-amber-500 transition-colors" style="color: var(--text-primary);">
-                            {{ r.title }}
-                          </p>
-                          <span
-                            v-if="selectedBookId === 'all' && getBookById(r.bookId)"
-                            class="text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0"
-                            :style="{ background: `${getBookById(r.bookId)?.color}15`, color: getBookById(r.bookId)?.color }"
-                          >
-                            {{ getBookById(r.bookId)?.icon }} {{ getBookById(r.bookId)?.name }}
-                          </span>
-                        </div>
-                        <p class="text-xs mt-0.5 truncate" style="color: var(--text-muted);">
-                          จ่ายทุกวันที่ {{ r.dayOfMonthDue }} &bull; {{ formatShortDate(r.startDate) }} - {{ formatShortDate(r.endDate!) }}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div class="flex items-center gap-3 shrink-0 ml-auto sm:ml-0">
-                      <div class="text-right">
-                        <p class="num text-sm sm:text-base font-bold" style="color: var(--text-primary);">
-                          ฿{{ formatCurrency(r.amount).replace('฿', '') }}
-                        </p>
-                        <span
-                          class="inline-block mt-0.5 text-[10.5px] font-semibold px-2 py-0.5 rounded-md border"
-                          :class="getDueInfo(r).statusClass"
-                        >
-                          {{ getDueInfo(r).label }}
-                        </span>
-                        <div class="mt-1 text-[10px] font-mono font-semibold" style="color: var(--ink-amber);">
-                          ⏱️ {{ getDueInfo(r).countdownText }}
-                        </div>
-                      </div>
-
-                      <button
-                        @click.stop="payRecurring(r)"
-                        :disabled="isPayingRecurringId === r.id"
-                        class="px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all tap-scale touch-target disabled:opacity-50"
-                        style="background: rgba(40, 116, 91, 0.15); color: var(--ink-emerald); border: 1px solid rgba(40, 116, 91, 0.3);"
-                      >
-                        <svg v-if="isPayingRecurringId !== r.id" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                        <span v-else class="inline-block w-3 h-3 border-2 rounded-full animate-spin" style="border-color: rgba(40, 116, 91, 0.3); border-top-color: var(--ink-emerald);"></span>
-                        <span>จ่ายแล้ว</span>
-                      </button>
-                    </div>
+        <template v-else>
+          <section
+            v-for="grp in [
+              { k: 'fixed', title: 'มีกำหนดระยะเวลา (งวด)', icon: '🗓️', items: fixedRecurringExpenses },
+              { k: 'open', title: 'ไม่มีกำหนดสิ้นสุด', icon: '♾️', items: indefiniteRecurringExpenses },
+            ]"
+            v-show="grp.items.length > 0"
+            :key="grp.k"
+            class="cx-group"
+          >
+            <h3><span>{{ grp.icon }}</span>{{ grp.title }}<em>{{ grp.items.length }}</em></h3>
+            <div class="cx-bills">
+              <article v-for="r in grp.items" :key="r.id" class="cx-bill" @click="openEditRecurringModal(r)">
+                <div class="cx-bill-main">
+                  <div class="cx-ring" :class="{ late: getDueInfo(r).daysUntil <= 0 }" :style="{ '--p': getDueInfo(r).progressPercent }">
+                    <span>{{ getDueInfo(r).progressPercent }}%</span>
                   </div>
-
-                  <!-- Cycle Progress Bar -->
-                  <div class="space-y-1">
-                    <div class="flex items-center justify-between text-[10px] font-semibold">
-                      <span style="color: var(--text-muted);">ความคืบหน้าของรอบ</span>
-                      <span :style="{ color: getDueInfo(r).daysUntil <= 0 ? 'var(--ink-rose)' : 'var(--ink-amber)' }">
-                        {{ getDueInfo(r).progressPercent }}%
-                      </span>
-                    </div>
-                    <div class="h-1.5 rounded-full overflow-hidden" style="background: var(--bg-surface);">
-                      <div
-                        class="h-full rounded-full transition-all duration-300"
-                        :style="{
-                          width: `${getDueInfo(r).progressPercent}%`,
-                          background: getDueInfo(r).daysUntil <= 0 ? 'var(--ink-rose)' : 'var(--ink-amber)'
-                        }"
-                      ></div>
-                    </div>
+                  <div class="cx-bill-title">
+                    <strong>{{ r.title }}</strong>
+                    <small v-if="grp.k === 'fixed'">ทุกวันที่ {{ r.dayOfMonthDue }} · {{ formatShortDate(r.startDate) }} - {{ formatShortDate(r.endDate!) }}</small>
+                    <small v-else>ทุกวันที่ {{ r.dayOfMonthDue }} · เริ่ม {{ formatShortDate(r.startDate) }}</small>
+                    <span v-if="selectedBookId === 'all' && getBookById(r.bookId)" class="cx-tag" :style="{ background: `${getBookById(r.bookId)?.color}22`, color: getBookById(r.bookId)?.color }">{{ getBookById(r.bookId)?.icon }} {{ getBookById(r.bookId)?.name }}</span>
                   </div>
+                  <b class="cx-bill-amt">฿{{ formatCurrency(r.amount).replace('฿', '') }}</b>
                 </div>
-              </div>
-            </div>
-
-            <!-- Group 2: ไม่มีกำหนดสิ้นสุด -->
-            <div v-if="indefiniteRecurringExpenses.length > 0" class="section-card p-4 sm:p-5">
-              <div class="flex items-center justify-between gap-2 mb-3">
-                <p class="text-xs font-bold uppercase tracking-wider flex items-center gap-2" style="color: var(--text-secondary);">
-                  <span class="w-2.5 h-2.5 rounded-full" style="background: var(--ink-sky);"></span>
-                  ไม่มีกำหนดสิ้นสุด (Subscriptions & Recurring)
-                </p>
-                <span class="num text-xs font-semibold px-2 py-0.5 rounded-full" style="background: var(--bg-elevated); color: var(--text-muted);">
-                  {{ indefiniteRecurringExpenses.length }} รายการ
-                </span>
-              </div>
-
-              <div class="space-y-3">
-                <div
-                  v-for="r in indefiniteRecurringExpenses"
-                  :key="r.id"
-                  @click="openEditRecurringModal(r)"
-                  class="p-4 rounded-xl transition-all cursor-pointer space-y-3 group"
-                  style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);"
-                >
-                  <div class="flex flex-wrap sm:flex-nowrap items-center justify-between gap-3">
-                    <div class="flex items-center gap-3 min-w-0 flex-1">
-                      <div
-                        class="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0"
-                        style="background: rgba(37, 99, 168, 0.12); color: var(--ink-sky);"
-                      >
-                        ♾️
-                      </div>
-                      <div class="min-w-0">
-                        <div class="flex items-center gap-2 flex-wrap">
-                          <p class="text-sm font-bold truncate group-hover:text-sky-500 transition-colors" style="color: var(--text-primary);">
-                            {{ r.title }}
-                          </p>
-                          <span
-                            v-if="selectedBookId === 'all' && getBookById(r.bookId)"
-                            class="text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0"
-                            :style="{ background: `${getBookById(r.bookId)?.color}15`, color: getBookById(r.bookId)?.color }"
-                          >
-                            {{ getBookById(r.bookId)?.icon }} {{ getBookById(r.bookId)?.name }}
-                          </span>
-                        </div>
-                        <p class="text-xs mt-0.5 truncate" style="color: var(--text-muted);">
-                          จ่ายทุกวันที่ {{ r.dayOfMonthDue }} &bull; เริ่ม {{ formatShortDate(r.startDate) }}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div class="flex items-center gap-3 shrink-0 ml-auto sm:ml-0">
-                      <div class="text-right">
-                        <p class="num text-sm sm:text-base font-bold" style="color: var(--text-primary);">
-                          ฿{{ formatCurrency(r.amount).replace('฿', '') }}
-                        </p>
-                        <span
-                          class="inline-block mt-0.5 text-[10.5px] font-semibold px-2 py-0.5 rounded-md border"
-                          :class="getDueInfo(r).statusClass"
-                        >
-                          {{ getDueInfo(r).label }}
-                        </span>
-                        <div class="mt-1 text-[10px] font-mono font-semibold" style="color: var(--ink-amber);">
-                          ⏱️ {{ getDueInfo(r).countdownText }}
-                        </div>
-                      </div>
-
-                      <button
-                        @click.stop="payRecurring(r)"
-                        :disabled="isPayingRecurringId === r.id"
-                        class="px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all tap-scale touch-target disabled:opacity-50"
-                        style="background: rgba(40, 116, 91, 0.15); color: var(--ink-emerald); border: 1px solid rgba(40, 116, 91, 0.3);"
-                      >
-                        <svg v-if="isPayingRecurringId !== r.id" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                        <span v-else class="inline-block w-3 h-3 border-2 rounded-full animate-spin" style="border-color: rgba(40, 116, 91, 0.3); border-top-color: var(--ink-emerald);"></span>
-                        <span>จ่ายแล้ว</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  <!-- Cycle Progress Bar -->
-                  <div class="space-y-1">
-                    <div class="flex items-center justify-between text-[10px] font-semibold">
-                      <span style="color: var(--text-muted);">ความคืบหน้าของรอบ</span>
-                      <span :style="{ color: getDueInfo(r).daysUntil <= 0 ? 'var(--ink-rose)' : 'var(--ink-amber)' }">
-                        {{ getDueInfo(r).progressPercent }}%
-                      </span>
-                    </div>
-                    <div class="h-1.5 rounded-full overflow-hidden" style="background: var(--bg-surface);">
-                      <div
-                        class="h-full rounded-full transition-all duration-300"
-                        :style="{
-                          width: `${getDueInfo(r).progressPercent}%`,
-                          background: getDueInfo(r).daysUntil <= 0 ? 'var(--ink-rose)' : 'var(--ink-amber)'
-                        }"
-                      ></div>
-                    </div>
-                  </div>
+                <div class="cx-bill-foot">
+                  <span class="border cx-badge" :class="getDueInfo(r).statusClass">{{ getDueInfo(r).label }}</span>
+                  <span class="cx-countdown">⏱ {{ getDueInfo(r).countdownText }}</span>
+                  <button type="button" class="cx-paid" :disabled="isPayingRecurringId === r.id" @click.stop="payRecurring(r)">{{ isPayingRecurringId === r.id ? '…' : '✓ จ่ายแล้ว' }}</button>
                 </div>
-              </div>
+              </article>
             </div>
+          </section>
+        </template>
+      </div>
+
+      <!-- Daily -->
+      <div v-show="activeTab === 'daily'" class="cx-pane">
+        <article class="cx-card">
+          <header class="cx-card-head">
+            <div><h2>สรุปความเคลื่อนไหวรายวัน</h2><p>ยอดรับ จ่าย และคงเหลือสุทธิของแต่ละวัน</p></div>
+            <div class="cx-tools">
+              <input v-model="summaryFilterMonth" type="month" class="cx-field" />
+              <button v-if="summaryFilterMonth" type="button" class="cx-pill" @click="summaryFilterMonth = ''">ล้าง ✕</button>
+              <span class="cx-count">{{ dailySummaries.length }} วัน</span>
+            </div>
+          </header>
+          <div v-if="dailySummaries.length > 0" class="cx-stats">
+            <div><span>รับรวม</span><b class="in">+{{ formatCurrency(dailySummaryTotals.income) }}</b></div>
+            <div><span>จ่ายรวม</span><b class="out">−{{ formatCurrency(dailySummaryTotals.expense) }}</b></div>
+            <div><span>สุทธิ</span><b :class="dailySummaryTotals.balance >= 0 ? 'in' : 'out'">{{ dailySummaryTotals.balance >= 0 ? '+' : '' }}{{ formatCurrency(dailySummaryTotals.balance) }}</b></div>
           </div>
+        </article>
+
+        <div v-if="isLoading" class="cx-skel"><i v-for="i in 3" :key="i"></i></div>
+        <div v-else-if="!dailySummaries.length" class="cx-empty">
+          <span>📊</span>
+          <strong>ไม่มีข้อมูลในช่วงเวลานี้</strong>
+          <p>ลองเลือกเดือนอื่น หรือกด "เพิ่มรายการ" เพื่อบันทึกรายรับ-รายจ่าย</p>
+        </div>
+        <ul v-else class="cx-days">
+          <li v-for="day in dailySummaries" :key="day.date" class="cx-day">
+            <div class="cx-day-date">
+              <b>{{ new Date(day.date).getDate() }}</b>
+              <span>{{ new Date(day.date).toLocaleDateString('th-TH', { month: 'short' }) }}</span>
+            </div>
+            <div class="cx-day-name">
+              <strong>{{ formatDate(day.date) }}</strong>
+              <small>{{ new Date(day.date).toLocaleDateString('th-TH', { weekday: 'long' }) }}</small>
+            </div>
+            <div class="cx-day-fig">
+              <span class="in"><small>รับ</small>+{{ formatCurrency(day.income) }}</span>
+              <span class="out"><small>จ่าย</small>−{{ formatCurrency(day.expense) }}</span>
+              <span class="cx-net" :class="day.balance >= 0 ? 'in' : 'out'"><small>สุทธิ</small>{{ day.balance >= 0 ? '+' : '' }}{{ formatCurrency(day.balance) }}</span>
+            </div>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Ledger -->
+      <div v-show="activeTab === 'analytics'" class="cx-pane">
+        <article class="cx-card">
+          <header class="cx-card-head">
+            <div><h2>สมุดบันทึกรายการ</h2><p>รายละเอียด ยอดยกมา และยอดสะสมตามลำดับเวลา</p></div>
+            <span class="cx-count">{{ transactionPageInfo }}</span>
+          </header>
+          <div class="cx-tools">
+            <select v-model="transactionFilterMode" class="cx-field">
+              <option value="month">📅 รายเดือน</option>
+              <option value="day">📆 รายวัน</option>
+            </select>
+            <input v-if="transactionFilterMode === 'day'" v-model="transactionFilterDate" type="date" class="cx-field" />
+            <input v-if="transactionFilterMode === 'month'" v-model="transactionFilterMonth" type="month" class="cx-field" />
+            <select v-model.number="transactionItemsPerPage" class="cx-field cx-push" @change="transactionCurrentPage = 1">
+              <option value="10">10 วัน/หน้า</option>
+              <option value="20">20 วัน/หน้า</option>
+              <option value="50">50 วัน/หน้า</option>
+            </select>
+          </div>
+        </article>
+
+        <div v-if="!filteredTransactionsByDate.length" class="cx-empty">
+          <span>🧾</span>
+          <strong>ยังไม่มีรายการในช่วงเวลานี้</strong>
+          <p>กดปุ่ม "เพิ่มรายการ" เพื่อเริ่มบันทึกรายรับหรือรายจ่าย</p>
         </div>
 
-        <!-- Tab 3: Daily Summary Block -->
-        <div v-show="activeTab === 'daily'" class="space-y-5">
-          <section class="section-card">
-            <!-- Filter & Month Toolbar -->
-            <div class="p-4 sm:p-5 border-b" style="border-color: var(--border-subtle);">
-              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div>
-                  <h2 class="text-base font-bold" style="color: var(--text-primary);">สรุปความเคลื่อนไหวรายวัน</h2>
-                  <p class="text-xs mt-0.5" style="color: var(--text-muted);">บันทึกยอดรับ จ่าย และคงเหลือสุทธิของแต่ละวัน</p>
-                </div>
-                <div class="flex items-center gap-2 flex-wrap">
-                  <input
-                    v-model="summaryFilterMonth"
-                    type="month"
-                    class="input-glass text-xs sm:text-sm py-1.5 px-3"
-                  />
-                  <button
-                    v-if="summaryFilterMonth"
-                    @click="summaryFilterMonth = ''"
-                    class="px-2.5 py-1.5 rounded-lg text-xs transition-all tap-scale"
-                    style="background: var(--bg-elevated); color: var(--text-secondary); border: 1px solid var(--border-subtle);"
-                  >
-                    ล้าง ✕
-                  </button>
-                  <span class="num text-xs font-semibold px-3 py-1.5 rounded-xl" style="background: var(--bg-elevated); color: var(--text-secondary); border: 1px solid var(--border-subtle);">
-                    {{ dailySummaries.length }} วัน
-                  </span>
-                </div>
+        <div v-else class="cx-ledger">
+          <section v-for="dayGroup in paginatedLedgerGroups" :key="dayGroup.date" class="cx-lg">
+            <header>
+              <div class="cx-lg-date">
+                <strong>{{ formatDate(dayGroup.date) }}</strong>
+                <small>{{ dayGroup.items.length }} รายการ · ยกมา {{ formatCurrency(dayGroup.openingBalance) }}</small>
               </div>
-
-              <!-- Month Summary Bar (Total Inflow/Outflow/Net for the filtered month) -->
-              <div v-if="dailySummaries.length > 0" class="grid grid-cols-3 gap-2 mt-4 pt-3 border-t text-center" style="border-color: var(--border-subtle);">
-                <div class="p-2.5 rounded-xl" style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);">
-                  <p class="text-[10px]" style="color: var(--text-muted);">รับรวมเดือนนี้</p>
-                  <p class="num text-xs sm:text-sm font-bold mt-0.5" style="color: var(--ink-emerald);">
-                    +{{ formatCurrency(dailySummaryTotals.income) }}
-                  </p>
-                </div>
-                <div class="p-2.5 rounded-xl" style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);">
-                  <p class="text-[10px]" style="color: var(--text-muted);">จ่ายรวมเดือนนี้</p>
-                  <p class="num text-xs sm:text-sm font-bold mt-0.5" style="color: var(--ink-rose);">
-                    −{{ formatCurrency(dailySummaryTotals.expense) }}
-                  </p>
-                </div>
-                <div class="p-2.5 rounded-xl" style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);">
-                  <p class="text-[10px]" style="color: var(--text-muted);">สุทธิเดือนนี้</p>
-                  <p class="num text-xs sm:text-sm font-bold mt-0.5" :style="{ color: dailySummaryTotals.balance >= 0 ? 'var(--ink-emerald)' : 'var(--ink-rose)' }">
-                    {{ dailySummaryTotals.balance >= 0 ? '+' : '' }}{{ formatCurrency(dailySummaryTotals.balance) }}
-                  </p>
-                </div>
+              <div class="cx-lg-sum">
+                <span class="in">+{{ formatCurrency(dayGroup.totalIncome) }}</span>
+                <span class="out">−{{ formatCurrency(dayGroup.totalExpense) }}</span>
+                <b :class="dayGroup.closingBalance >= 0 ? 'in' : 'out'">ยกไป {{ formatCurrency(dayGroup.closingBalance) }}</b>
               </div>
-            </div>
-
-            <!-- Loading Skeleton -->
-            <div v-if="isLoading" class="p-5 space-y-3">
-              <div v-for="i in 3" :key="i" class="h-16 rounded-xl bg-gray-800/10 animate-pulse"></div>
-            </div>
-
-            <!-- Empty State -->
-            <div v-else-if="!dailySummaries.length" class="flex flex-col items-center justify-center py-12 text-center px-5">
-              <div class="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl mb-3" style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);">
-                📊
-              </div>
-              <p class="text-sm font-bold" style="color: var(--text-primary);">ไม่มีข้อมูลในช่วงเวลานี้</p>
-              <p class="text-xs mt-1" style="color: var(--text-muted);">ลองเลือกเดือนอื่น หรือกด "เพิ่มรายการ" เพื่อบันทึกรายรับ-รายจ่าย</p>
-            </div>
-
-            <!-- Daily Summaries List -->
-            <div v-else class="divide-y" style="border-color: var(--border-subtle);">
-              <div
-                v-for="day in dailySummaries"
-                :key="day.date"
-                class="px-4 sm:px-5 py-3.5 hover:bg-black/5 dark:hover:bg-white/5 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3"
-              >
-                <div class="flex items-center gap-3">
-                  <div class="w-10 h-10 rounded-xl flex flex-col items-center justify-center shrink-0" style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);">
-                    <span class="num text-sm font-extrabold leading-none" style="color: var(--text-primary);">{{ new Date(day.date).getDate() }}</span>
-                    <span class="text-[9px] uppercase tracking-wide leading-none mt-0.5" style="color: var(--text-muted);">{{ new Date(day.date).toLocaleDateString('th-TH', { month: 'short' }) }}</span>
+            </header>
+            <ul>
+              <li v-for="item in dayGroup.items" :key="item.id" :class="item.type">
+                <span class="cx-av">{{ item.type === 'income' ? '↗' : '↘' }}</span>
+                <div class="cx-li-main">
+                  <div class="cx-li-title">
+                    <strong>{{ item.category || 'ไม่ระบุหมวดหมู่' }}</strong>
+                    <span v-if="selectedBookId === 'all' && getBookById(item.book_id)" class="cx-tag" :style="{ background: `${getBookById(item.book_id)?.color}22`, color: getBookById(item.book_id)?.color }">{{ getBookById(item.book_id)?.icon }} {{ getBookById(item.book_id)?.name }}</span>
                   </div>
-                  <div>
-                    <p class="text-sm font-bold" style="color: var(--text-primary);">{{ formatDate(day.date) }}</p>
-                    <p class="text-xs" style="color: var(--text-muted);">{{ new Date(day.date).toLocaleDateString('th-TH', { weekday: 'long' }) }}</p>
-                  </div>
+                  <small v-if="item.description">{{ item.description }}</small>
                 </div>
-
-                <div class="grid grid-cols-3 gap-3 text-right sm:text-left sm:flex sm:items-center sm:gap-6">
-                  <div>
-                    <p class="text-[10px]" style="color: var(--text-muted);">รายรับ</p>
-                    <p class="num text-xs sm:text-sm font-semibold mt-0.5" style="color: var(--ink-emerald);">
-                      +{{ formatCurrency(day.income) }}
-                    </p>
-                  </div>
-                  <div>
-                    <p class="text-[10px]" style="color: var(--text-muted);">รายจ่าย</p>
-                    <p class="num text-xs sm:text-sm font-semibold mt-0.5" style="color: var(--ink-rose);">
-                      −{{ formatCurrency(day.expense) }}
-                    </p>
-                  </div>
-                  <div class="text-right min-w-[90px]">
-                    <p class="text-[10px]" style="color: var(--text-muted);">คงเหลือสุทธิ</p>
-                    <p class="num text-xs sm:text-sm font-bold mt-0.5" :style="{ color: day.balance >= 0 ? 'var(--text-primary)' : 'var(--ink-rose)' }">
-                      {{ day.balance >= 0 ? '+' : '' }}{{ formatCurrency(day.balance) }}
-                    </p>
-                  </div>
+                <div class="cx-li-amt">
+                  <b :class="item.type === 'income' ? 'in' : 'out'">{{ item.type === 'income' ? '+' : '−' }}{{ formatCurrency(item.amount) }}</b>
+                  <small>สะสม {{ formatCurrency(item.runningBalance) }}</small>
                 </div>
-              </div>
-            </div>
+                <div class="cx-li-tools">
+                  <button type="button" title="แก้ไขรายการ" aria-label="แก้ไข" :disabled="isDeletingId === item.id" @click="openEditTransactionModal(item)">✎</button>
+                  <button type="button" class="del" title="ลบรายการ" aria-label="ลบ" :disabled="isDeletingId === item.id" @click="deleteTransaction(item.id)">{{ isDeletingId === item.id ? '…' : '🗑' }}</button>
+                </div>
+              </li>
+            </ul>
           </section>
         </div>
 
-        <!-- Tab 4: Transaction List (Ledger Style) -->
-        <div v-show="activeTab === 'analytics'" class="space-y-5">
-          <section class="section-card">
-            <!-- Header & Filter Bar -->
-            <div class="flex flex-col gap-3.5 px-4 sm:px-5 py-4 border-b" style="border-color: var(--border-subtle);">
-              <div class="flex items-center justify-between flex-wrap gap-2">
-                <div>
-                  <h2 class="text-base font-bold" style="color: var(--text-primary);">สมุดบัญชีบันทึกรายการ (General Ledger)</h2>
-                  <p class="text-xs mt-0.5" style="color: var(--text-muted);">บันทึกรายละเอียด ยอดยกมา และยอดสะสมตามลำดับเวลา</p>
-                </div>
-                <span class="num text-xs font-semibold px-2.5 py-1 rounded-full" style="background: var(--bg-elevated); color: var(--text-secondary); border: 1px solid var(--border-subtle);">
-                  {{ transactionPageInfo }}
-                </span>
-              </div>
-
-              <!-- Filter Options -->
-              <div class="flex items-center gap-2 flex-wrap">
-                <select
-                  v-model="transactionFilterMode"
-                  class="input-glass text-xs sm:text-sm py-1.5 px-3 min-h-[38px]"
-                >
-                  <option value="month">📅 รายเดือน</option>
-                  <option value="day">📆 รายวัน</option>
-                </select>
-
-                <input
-                  v-if="transactionFilterMode === 'day'"
-                  v-model="transactionFilterDate"
-                  type="date"
-                  class="input-glass text-xs sm:text-sm py-1.5 px-3 min-h-[38px]"
-                />
-                <input
-                  v-if="transactionFilterMode === 'month'"
-                  v-model="transactionFilterMonth"
-                  type="month"
-                  class="input-glass text-xs sm:text-sm py-1.5 px-3 min-h-[38px]"
-                />
-
-                <select
-                  v-model.number="transactionItemsPerPage"
-                  @change="transactionCurrentPage = 1"
-                  class="input-glass text-xs sm:text-sm py-1.5 px-3 min-h-[38px] ml-auto"
-                >
-                  <option value="10">10 วัน/หน้า</option>
-                  <option value="20">20 วัน/หน้า</option>
-                  <option value="50">50 วัน/หน้า</option>
-                </select>
-              </div>
-            </div>
-
-            <!-- Empty State -->
-            <div v-if="!filteredTransactionsByDate.length" class="flex flex-col items-center justify-center py-14 text-center px-5">
-              <div class="w-14 h-14 rounded-2xl flex items-center justify-center mb-3" style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);">
-                <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--text-muted);"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
-              </div>
-              <p class="text-sm font-bold" style="color: var(--text-primary);">ยังไม่มีรายการในช่วงเวลานี้</p>
-              <p class="text-xs mt-1" style="color: var(--text-muted);">กดปุ่ม "+ เพิ่มรายการ" เพื่อเริ่มบันทึกรายรับหรือรายจ่าย</p>
-            </div>
-
-            <!-- Ledger Style Table & Mobile Cards -->
-            <div v-else class="overflow-x-auto">
-              <div v-for="dayGroup in paginatedLedgerGroups" :key="dayGroup.date" class="border-b" style="border-color: var(--border-subtle);">
-                <!-- Date Group Header Bar -->
-                <div class="px-4 md:px-5 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5" style="background: var(--bg-elevated);">
-                  <div class="flex items-center gap-2 flex-wrap">
-                    <span class="text-sm font-bold" style="color: var(--text-primary);">
-                      📅 {{ formatDate(dayGroup.date) }}
-                    </span>
-                    <span class="num text-[11px] font-semibold px-2 py-0.5 rounded-full" style="background: var(--bg-card); color: var(--text-secondary); border: 1px solid var(--border-subtle);">
-                      {{ dayGroup.items.length }} รายการ
-                    </span>
-                  </div>
-
-                  <!-- Balances Bar -->
-                  <div class="flex items-center gap-2.5 text-xs font-semibold flex-wrap">
-                    <span class="px-2 py-0.5 rounded-md" style="background: var(--bg-card); color: var(--text-secondary); border: 1px solid var(--border-subtle);">
-                      ยกมา: <span class="num">{{ formatCurrency(dayGroup.openingBalance) }}</span>
-                    </span>
-                    <span class="num" style="color: var(--ink-emerald);">+{{ formatCurrency(dayGroup.totalIncome) }}</span>
-                    <span class="num" style="color: var(--ink-rose);">−{{ formatCurrency(dayGroup.totalExpense) }}</span>
-                    <span class="num" :style="{ color: dayGroup.balance >= 0 ? 'var(--ink-emerald)' : 'var(--ink-rose)' }">
-                      {{ dayGroup.balance >= 0 ? '+' : '' }}{{ formatCurrency(dayGroup.balance) }}
-                    </span>
-                    <span class="px-2 py-0.5 rounded-md font-bold" :style="{
-                      background: 'var(--bg-card)',
-                      color: dayGroup.closingBalance >= 0 ? 'var(--ink-emerald)' : 'var(--ink-rose)',
-                      border: '1px solid var(--border-subtle)'
-                    }">
-                      ยกไป: <span class="num">{{ formatCurrency(dayGroup.closingBalance) }}</span>
-                    </span>
-                  </div>
-                </div>
-
-                <!-- Desktop Table -->
-                <div class="hidden md:block">
-                  <table class="w-full">
-                    <thead>
-                      <tr style="background: var(--bg-surface); border-bottom: 1px solid var(--border-subtle);">
-                        <th class="px-4 py-2.5 text-left text-xs font-bold uppercase tracking-wider" style="color: var(--text-secondary); width: 36%;">รายละเอียด & หมวดหมู่</th>
-                        <th class="px-4 py-2.5 text-right text-xs font-bold uppercase tracking-wider" style="color: var(--ink-emerald); width: 17%;">รายรับ (+)</th>
-                        <th class="px-4 py-2.5 text-right text-xs font-bold uppercase tracking-wider" style="color: var(--ink-rose); width: 17%;">รายจ่าย (−)</th>
-                        <th class="px-4 py-2.5 text-right text-xs font-bold uppercase tracking-wider" style="color: var(--text-primary); width: 18%;">คงเหลือสะสม</th>
-                        <th class="px-4 py-2.5 text-center text-xs font-bold" style="color: var(--text-secondary); width: 12%;">จัดการ</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <!-- Opening Balance Row -->
-                      <tr style="background: var(--bg-surface); border-bottom: 1px solid var(--border-subtle);">
-                        <td class="px-4 py-2.5">
-                          <p class="text-xs font-bold italic" style="color: var(--text-secondary);">ยอดยกมา (Opening Balance)</p>
-                        </td>
-                        <td class="px-4 py-2.5 text-right">
-                          <span class="text-xs" style="color: var(--text-muted);">—</span>
-                        </td>
-                        <td class="px-4 py-2.5 text-right">
-                          <span class="text-xs" style="color: var(--text-muted);">—</span>
-                        </td>
-                        <td class="px-4 py-2.5 text-right">
-                          <span class="num text-xs font-bold" :style="{ color: dayGroup.openingBalance >= 0 ? 'var(--text-primary)' : 'var(--ink-amber)' }">
-                            {{ formatCurrency(dayGroup.openingBalance) }}
-                          </span>
-                        </td>
-                        <td class="px-4 py-2.5"></td>
-                      </tr>
-
-                      <!-- Transaction Rows -->
-                      <tr
-                        v-for="item in dayGroup.items"
-                        :key="item.id"
-                        class="group hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
-                        style="border-bottom: 1px solid var(--border-subtle);"
-                      >
-                        <td class="px-4 py-3">
-                          <div class="flex items-center gap-2 flex-wrap">
-                            <span class="text-xs font-bold px-2 py-0.5 rounded-md" style="background: var(--bg-elevated); color: var(--text-primary); border: 1px solid var(--border-subtle);">
-                              {{ item.category || 'ไม่ระบุหมวดหมู่' }}
-                            </span>
-                            <span
-                              v-if="selectedBookId === 'all' && getBookById(item.book_id)"
-                              class="text-[10px] px-2 py-0.5 rounded-md font-medium shrink-0 flex items-center gap-1"
-                              :style="{
-                                backgroundColor: `${getBookById(item.book_id)?.color}15`,
-                                color: getBookById(item.book_id)?.color,
-                                border: `1px solid ${getBookById(item.book_id)?.color}35`
-                              }"
-                            >
-                              <span>{{ getBookById(item.book_id)?.icon }}</span>
-                              <span>{{ getBookById(item.book_id)?.name }}</span>
-                            </span>
-                          </div>
-                          <p v-if="item.description" class="text-xs mt-1" style="color: var(--text-muted);">
-                            {{ item.description }}
-                          </p>
-                        </td>
-                        <td class="px-4 py-3 text-right">
-                          <span v-if="item.type === 'income'" class="num text-sm font-bold" style="color: var(--ink-emerald);">
-                            +{{ formatCurrency(item.amount) }}
-                          </span>
-                          <span v-else class="text-xs" style="color: var(--text-muted);">—</span>
-                        </td>
-                        <td class="px-4 py-3 text-right">
-                          <span v-if="item.type === 'expense'" class="num text-sm font-bold" style="color: var(--ink-rose);">
-                            −{{ formatCurrency(item.amount) }}
-                          </span>
-                          <span v-else class="text-xs" style="color: var(--text-muted);">—</span>
-                        </td>
-                        <td class="px-4 py-3 text-right">
-                          <span class="num text-sm font-bold" :style="{ color: item.runningBalance >= 0 ? 'var(--text-primary)' : 'var(--ink-amber)' }">
-                            {{ formatCurrency(item.runningBalance) }}
-                          </span>
-                        </td>
-                        <td class="px-4 py-3">
-                          <div class="flex items-center justify-center gap-1.5 opacity-80 group-hover:opacity-100 transition-opacity">
-                            <button
-                              @click="openEditTransactionModal(item)"
-                              :disabled="isDeletingId === item.id"
-                              class="w-7 h-7 rounded-lg flex items-center justify-center disabled:opacity-50 transition-all tap-scale"
-                              style="background: var(--bg-card); border: 1px solid var(--border-subtle); color: var(--brand-ink);"
-                              title="แก้ไขรายการ"
-                              aria-label="แก้ไข"
-                            >
-                              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
-                            </button>
-                            <button
-                              @click="deleteTransaction(item.id)"
-                              :disabled="isDeletingId === item.id"
-                              class="w-7 h-7 rounded-lg flex items-center justify-center disabled:opacity-50 transition-all tap-scale"
-                              style="background: var(--bg-card); border: 1px solid var(--border-subtle); color: var(--ink-rose);"
-                              title="ลบรายการ"
-                              aria-label="ลบ"
-                            >
-                              <svg v-if="isDeletingId !== item.id" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
-                              <span v-else class="inline-block w-3 h-3 border-2 rounded-full animate-spin" style="border-color: var(--border-strong); border-top-color: var(--ink-rose);"></span>
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-
-                      <!-- Closing Balance Row -->
-                      <tr style="background: var(--bg-surface);">
-                        <td class="px-4 py-2.5">
-                          <p class="text-xs font-bold italic" style="color: var(--text-secondary);">ยอดยกไป (Closing Balance)</p>
-                        </td>
-                        <td class="px-4 py-2.5 text-right">
-                          <span class="num text-xs font-bold" style="color: var(--ink-emerald);">+{{ formatCurrency(dayGroup.totalIncome) }}</span>
-                        </td>
-                        <td class="px-4 py-2.5 text-right">
-                          <span class="num text-xs font-bold" style="color: var(--ink-rose);">−{{ formatCurrency(dayGroup.totalExpense) }}</span>
-                        </td>
-                        <td class="px-4 py-2.5 text-right">
-                          <span class="num text-xs font-extrabold" :style="{ color: dayGroup.closingBalance >= 0 ? 'var(--ink-emerald)' : 'var(--ink-rose)' }">
-                            {{ formatCurrency(dayGroup.closingBalance) }}
-                          </span>
-                        </td>
-                        <td class="px-4 py-2.5"></td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-
-                <!-- Mobile Card View -->
-                <div class="md:hidden">
-                  <!-- Opening Balance -->
-                  <div class="px-4 py-2.5 flex items-center justify-between text-xs" style="background: var(--bg-surface); border-bottom: 1px solid var(--border-subtle);">
-                    <span class="font-bold italic" style="color: var(--text-secondary);">ยอดยกมา</span>
-                    <span class="num font-bold" :style="{ color: dayGroup.openingBalance >= 0 ? 'var(--text-primary)' : 'var(--ink-amber)' }">
-                      {{ formatCurrency(dayGroup.openingBalance) }}
-                    </span>
-                  </div>
-
-                  <!-- Transactions -->
-                  <div class="divide-y" style="border-color: var(--border-subtle);">
-                    <div
-                      v-for="item in dayGroup.items"
-                      :key="item.id"
-                      class="px-4 py-3 flex items-start justify-between gap-3"
-                    >
-                      <div class="flex-1 min-w-0">
-                        <div class="flex items-center gap-2 flex-wrap">
-                          <span class="text-xs font-bold px-2 py-0.5 rounded-md" style="background: var(--bg-elevated); color: var(--text-primary); border: 1px solid var(--border-subtle);">
-                            {{ item.category || 'ไม่ระบุหมวดหมู่' }}
-                          </span>
-                          <span
-                            v-if="selectedBookId === 'all' && getBookById(item.book_id)"
-                            class="text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0 flex items-center gap-0.5"
-                            :style="{
-                              backgroundColor: `${getBookById(item.book_id)?.color}15`,
-                              color: getBookById(item.book_id)?.color,
-                              border: `1px solid ${getBookById(item.book_id)?.color}35`
-                            }"
-                          >
-                            <span>{{ getBookById(item.book_id)?.icon }}</span>
-                            <span>{{ getBookById(item.book_id)?.name }}</span>
-                          </span>
-                        </div>
-                        <p v-if="item.description" class="text-xs mt-1" style="color: var(--text-muted);">
-                          {{ item.description }}
-                        </p>
-                        <div class="flex items-center gap-3 mt-2 text-xs flex-wrap">
-                          <span v-if="item.type === 'income'" class="num font-bold" style="color: var(--ink-emerald);">
-                            +{{ formatCurrency(item.amount) }}
-                          </span>
-                          <span v-else class="num font-bold" style="color: var(--ink-rose);">
-                            −{{ formatCurrency(item.amount) }}
-                          </span>
-                          <span class="num text-[11px]" style="color: var(--text-muted);">
-                            สะสม: {{ formatCurrency(item.runningBalance) }}
-                          </span>
-                        </div>
-                      </div>
-                      <div class="flex items-center gap-1.5 shrink-0 pt-0.5">
-                        <button
-                          @click="openEditTransactionModal(item)"
-                          :disabled="isDeletingId === item.id"
-                          class="w-8 h-8 rounded-lg flex items-center justify-center disabled:opacity-50 transition-all tap-scale"
-                          style="background: var(--bg-elevated); border: 1px solid var(--border-subtle); color: var(--brand-ink);"
-                          aria-label="แก้ไข"
-                        >
-                          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
-                        </button>
-                        <button
-                          @click="deleteTransaction(item.id)"
-                          :disabled="isDeletingId === item.id"
-                          class="w-8 h-8 rounded-lg flex items-center justify-center disabled:opacity-50 transition-all tap-scale"
-                          style="background: var(--bg-elevated); border: 1px solid var(--border-subtle); color: var(--ink-rose);"
-                          aria-label="ลบ"
-                        >
-                          <svg v-if="isDeletingId !== item.id" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
-                          <span v-else class="inline-block w-3 h-3 border-2 rounded-full animate-spin" style="border-color: var(--border-strong); border-top-color: var(--ink-rose);"></span>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- Closing Balance -->
-                  <div class="px-4 py-2.5 flex items-center justify-between text-xs font-semibold" style="background: var(--bg-surface);">
-                    <div class="flex items-center gap-2">
-                      <span class="italic" style="color: var(--text-secondary);">ยอดยกไป</span>
-                      <span class="num text-[11px]" style="color: var(--ink-emerald);">+{{ formatCurrency(dayGroup.totalIncome) }}</span>
-                      <span class="num text-[11px]" style="color: var(--ink-rose);">−{{ formatCurrency(dayGroup.totalExpense) }}</span>
-                    </div>
-                    <span class="num font-bold" :style="{ color: dayGroup.closingBalance >= 0 ? 'var(--ink-emerald)' : 'var(--ink-rose)' }">
-                      {{ formatCurrency(dayGroup.closingBalance) }}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Pagination Controls -->
-            <div v-if="transactionTotalPages > 1" class="flex items-center justify-center gap-2 px-5 py-4 border-t" style="border-color: var(--border-subtle);">
-              <button
-                @click="transactionCurrentPage = Math.max(1, transactionCurrentPage - 1)"
-                :disabled="transactionCurrentPage === 1"
-                class="px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed tap-scale touch-target"
-                style="background: var(--bg-elevated); border: 1px solid var(--border-default); color: var(--text-secondary);"
-                :style="transactionCurrentPage === 1 ? {} : { 'cursor': 'pointer', 'color': 'var(--text-primary)' }"
-              >
-                ← ก่อนหน้า
-              </button>
-              <div class="flex items-center gap-1 overflow-x-auto">
-                <button
-                  v-for="page in transactionTotalPages"
-                  :key="page"
-                  @click="transactionCurrentPage = page"
-                  class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl text-xs sm:text-sm font-bold transition-all tap-scale touch-target shrink-0"
-                  :style="transactionCurrentPage === page
-                    ? { 'background': 'var(--brand)', 'color': 'white', 'border': '1px solid var(--brand)' }
-                    : { 'background': 'var(--bg-elevated)', 'border': '1px solid var(--border-default)', 'color': 'var(--text-secondary)' }"
-                >
-                  {{ page }}
-                </button>
-              </div>
-              <button
-                @click="transactionCurrentPage = Math.min(transactionTotalPages, transactionCurrentPage + 1)"
-                :disabled="transactionCurrentPage === transactionTotalPages"
-                class="px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed tap-scale touch-target"
-                style="background: var(--bg-elevated); border: 1px solid var(--border-default); color: var(--text-secondary);"
-                :style="transactionCurrentPage === transactionTotalPages ? {} : { 'cursor': 'pointer', 'color': 'var(--text-primary)' }"
-              >
-                ต่อไป →
-              </button>
-            </div>
-          </section>
-        </div>
+        <nav v-if="transactionTotalPages > 1" class="cx-pager">
+          <button type="button" :disabled="transactionCurrentPage === 1" @click="transactionCurrentPage = Math.max(1, transactionCurrentPage - 1)">← ก่อนหน้า</button>
+          <div>
+            <button v-for="page in transactionTotalPages" :key="page" type="button" :class="{ on: transactionCurrentPage === page }" @click="transactionCurrentPage = page">{{ page }}</button>
+          </div>
+          <button type="button" :disabled="transactionCurrentPage === transactionTotalPages" @click="transactionCurrentPage = Math.min(transactionTotalPages, transactionCurrentPage + 1)">ต่อไป →</button>
+        </nav>
       </div>
     </div>
 
     <!-- Expense Ranking Modal -->
     <Teleport to="body">
       <Transition name="backdrop">
-        <div
-          v-if="isRankingModalOpen"
-          class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-6"
-          style="background: rgba(3,5,12,0.62); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);"
-        >
+        <div v-if="isRankingModalOpen" class="cxm-overlay" @click.self="isRankingModalOpen = false">
           <Transition name="modal">
-            <div v-if="isRankingModalOpen" class="relative z-10 w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl border border-gray-700/80 bg-gray-900 shadow-2xl flex flex-col max-h-[88vh] sm:max-h-[80vh]">
-          <!-- Header -->
-          <div class="flex items-center justify-between px-5 py-4 border-b border-gray-800/80 shrink-0">
-            <div class="flex items-center gap-3">
-              <div class="w-9 h-9 rounded-xl bg-rose-500/20 flex items-center justify-center text-base shrink-0">📊</div>
-              <div>
-                <h3 class="text-base font-semibold text-white">ลำดับรายจ่ายทุกประเภท</h3>
-                <p class="text-xs text-gray-500">
-                  {{ expenseCategoryRankings.length }} หมวดหมู่ · รวม {{ formatCurrency(totalExpense) }}
-                </p>
-              </div>
-            </div>
-            <button
-              @click="isRankingModalOpen = false"
-              class="w-8 h-8 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white flex items-center justify-center text-sm transition-all shrink-0 tap-scale touch-target"
-              aria-label="ปิด"
-            >✕</button>
-          </div>
-
-          <!-- List -->
-          <div class="overflow-y-auto flex-1">
-            <div
-              v-for="(cat, i) in expenseCategoryRankings"
-              :key="cat.name"
-              class="px-5 py-3.5 border-b border-gray-800/40 last:border-0 hover:bg-gray-800/20 transition-all tap-scale"
-            >
-              <div class="flex items-center gap-3 mb-2">
-                <span
-                  class="w-7 h-7 rounded-full text-xs font-bold flex items-center justify-center shrink-0"
-                  :class="i === 0
-                    ? 'bg-rose-500/30 text-rose-300'
-                    : i === 1
-                      ? 'bg-orange-500/30 text-orange-300'
-                      : i === 2
-                        ? 'bg-amber-500/30 text-amber-300'
-                        : 'bg-gray-700/80 text-gray-400'"
-                >{{ i + 1 }}</span>
-                <span class="flex-1 text-sm font-medium text-white truncate">{{ cat.name }}</span>
-                <span class="text-sm font-bold text-rose-400 shrink-0">{{ formatCurrency(cat.amount) }}</span>
-              </div>
-              <div class="ml-10 space-y-1">
-                <div class="h-1.5 w-full rounded-full bg-gray-800 overflow-hidden">
-                  <div
-                    class="h-full rounded-full transition-all duration-500"
-                    :class="i === 0 ? 'bg-gradient-to-r from-rose-500 to-pink-400' : i === 1 ? 'bg-gradient-to-r from-orange-500 to-amber-400' : i === 2 ? 'bg-gradient-to-r from-amber-500 to-yellow-400' : 'bg-gray-600'"
-                    :style="{ width: `${(cat.amount / (expenseCategoryRankings[0]?.amount || 1)) * 100}%` }"
-                  ></div>
+            <div v-if="isRankingModalOpen" class="cxm cxm--out" role="dialog" aria-modal="true">
+              <header class="cxm-head">
+                <span class="cxm-badge">📉</span>
+                <div class="cxm-head-txt">
+                  <h3>ลำดับรายจ่ายทุกประเภท</h3>
+                  <p>{{ expenseCategoryRankings.length }} หมวดหมู่ · รวม {{ formatCurrency(totalExpense) }}</p>
                 </div>
-                <p class="text-[11px] text-gray-500">
-                  {{ formatPercent((cat.amount / totalExpense) * 100) }}% ของรายจ่ายทั้งหมด
-                </p>
+                <button type="button" class="cxm-x" aria-label="ปิด" @click="isRankingModalOpen = false">✕</button>
+              </header>
+              <div class="cxm-body cxm-body--flush">
+                <ol class="cxm-rank">
+                  <li v-for="(cat, i) in expenseCategoryRankings" :key="cat.name">
+                    <span class="cxm-rank-no" :class="{ top: i < 3 }">{{ i + 1 }}</span>
+                    <div>
+                      <div class="cxm-rank-line"><strong>{{ cat.name }}</strong><b>{{ formatCurrency(cat.amount) }}</b></div>
+                      <div class="cx-bar"><i :style="{ width: `${(cat.amount / (expenseCategoryRankings[0]?.amount || 1)) * 100}%` }"></i></div>
+                      <small>{{ formatPercent((cat.amount / totalExpense) * 100) }}% ของรายจ่ายทั้งหมด</small>
+                    </div>
+                  </li>
+                </ol>
               </div>
+              <footer class="cxm-foot cxm-foot--between">
+                <span>รายจ่ายรวมทั้งหมด</span>
+                <b>{{ formatCurrency(totalExpense) }}</b>
+              </footer>
             </div>
-          </div>
-
-          <!-- Footer -->
-          <div class="px-5 py-3.5 border-t border-gray-800/80 shrink-0 flex items-center justify-between">
-            <p class="text-xs text-gray-500">รายจ่ายรวมทั้งหมด</p>
-            <p class="text-sm font-bold text-rose-400">{{ formatCurrency(totalExpense) }}</p>
-          </div>
-        </div>
           </Transition>
-          <div class="absolute inset-0 z-0 bg-black/70 backdrop-blur-sm" @click="isRankingModalOpen = false"></div>
         </div>
       </Transition>
     </Teleport>
@@ -1239,75 +372,35 @@
     <!-- Income Ranking Modal -->
     <Teleport to="body">
       <Transition name="backdrop">
-        <div
-          v-if="isIncomeRankingModalOpen"
-          class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-6"
-          style="background: rgba(3,5,12,0.62); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);"
-        >
+        <div v-if="isIncomeRankingModalOpen" class="cxm-overlay" @click.self="isIncomeRankingModalOpen = false">
           <Transition name="modal">
-            <div v-if="isIncomeRankingModalOpen" class="relative z-10 w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl border border-gray-700/80 bg-gray-900 shadow-2xl flex flex-col max-h-[88vh] sm:max-h-[80vh]">
-          <!-- Header -->
-          <div class="flex items-center justify-between px-5 py-4 border-b border-gray-800/80 shrink-0">
-            <div class="flex items-center gap-3">
-              <div class="w-9 h-9 rounded-xl bg-emerald-500/20 flex items-center justify-center text-base shrink-0">📊</div>
-              <div>
-                <h3 class="text-base font-semibold text-white">ลำดับรายรับทุกประเภท</h3>
-                <p class="text-xs text-gray-500">
-                  {{ incomeCategoryRankings.length }} หมวดหมู่ · รวม {{ formatCurrency(totalIncome) }}
-                </p>
-              </div>
-            </div>
-            <button
-              @click="isIncomeRankingModalOpen = false"
-              class="w-8 h-8 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white flex items-center justify-center text-sm transition-all shrink-0 tap-scale touch-target"
-              aria-label="ปิด"
-            >✕</button>
-          </div>
-
-          <!-- List -->
-          <div class="overflow-y-auto flex-1">
-            <div
-              v-for="(cat, i) in incomeCategoryRankings"
-              :key="cat.name"
-              class="px-5 py-3.5 border-b border-gray-800/40 last:border-0 hover:bg-gray-800/20 transition-all tap-scale"
-            >
-              <div class="flex items-center gap-3 mb-2">
-                <span
-                  class="w-7 h-7 rounded-full text-xs font-bold flex items-center justify-center shrink-0"
-                  :class="i === 0
-                    ? 'bg-emerald-500/30 text-emerald-300'
-                    : i === 1
-                      ? 'bg-teal-500/30 text-teal-300'
-                      : i === 2
-                        ? 'bg-cyan-500/30 text-cyan-300'
-                        : 'bg-gray-700/80 text-gray-400'"
-                >{{ i + 1 }}</span>
-                <span class="flex-1 text-sm font-medium text-white truncate">{{ cat.name }}</span>
-                <span class="text-sm font-bold text-emerald-400 shrink-0">{{ formatCurrency(cat.amount) }}</span>
-              </div>
-              <div class="ml-10 space-y-1">
-                <div class="h-1.5 w-full rounded-full bg-gray-800 overflow-hidden">
-                  <div
-                    class="h-full rounded-full transition-all duration-500"
-                    :class="i === 0 ? 'bg-gradient-to-r from-emerald-500 to-teal-400' : i === 1 ? 'bg-gradient-to-r from-teal-500 to-cyan-400' : i === 2 ? 'bg-gradient-to-r from-cyan-500 to-sky-400' : 'bg-gray-600'"
-                    :style="{ width: `${(cat.amount / (incomeCategoryRankings[0]?.amount || 1)) * 100}%` }"
-                  ></div>
+            <div v-if="isIncomeRankingModalOpen" class="cxm cxm--in" role="dialog" aria-modal="true">
+              <header class="cxm-head">
+                <span class="cxm-badge">📈</span>
+                <div class="cxm-head-txt">
+                  <h3>ลำดับรายรับทุกประเภท</h3>
+                  <p>{{ incomeCategoryRankings.length }} หมวดหมู่ · รวม {{ formatCurrency(totalIncome) }}</p>
                 </div>
-                <p class="text-[11px] text-gray-500">
-                  {{ formatPercent((cat.amount / (totalIncome || 1)) * 100) }}% ของรายรับทั้งหมด
-                </p>
+                <button type="button" class="cxm-x" aria-label="ปิด" @click="isIncomeRankingModalOpen = false">✕</button>
+              </header>
+              <div class="cxm-body cxm-body--flush">
+                <ol class="cxm-rank">
+                  <li v-for="(cat, i) in incomeCategoryRankings" :key="cat.name">
+                    <span class="cxm-rank-no" :class="{ top: i < 3 }">{{ i + 1 }}</span>
+                    <div>
+                      <div class="cxm-rank-line"><strong>{{ cat.name }}</strong><b>{{ formatCurrency(cat.amount) }}</b></div>
+                      <div class="cx-bar"><i :style="{ width: `${(cat.amount / (incomeCategoryRankings[0]?.amount || 1)) * 100}%` }"></i></div>
+                      <small>{{ formatPercent((cat.amount / (totalIncome || 1)) * 100) }}% ของรายรับทั้งหมด</small>
+                    </div>
+                  </li>
+                </ol>
               </div>
+              <footer class="cxm-foot cxm-foot--between">
+                <span>รายรับรวมทั้งหมด</span>
+                <b>{{ formatCurrency(totalIncome) }}</b>
+              </footer>
             </div>
-          </div>
-
-          <!-- Footer -->
-          <div class="px-5 py-3.5 border-t border-gray-800/80 shrink-0 flex items-center justify-between">
-            <p class="text-xs text-gray-500">รายรับรวมทั้งหมด</p>
-            <p class="text-sm font-bold text-emerald-400">{{ formatCurrency(totalIncome) }}</p>
-          </div>
-        </div>
           </Transition>
-          <div class="absolute inset-0 z-0 bg-black/70 backdrop-blur-sm" @click="isIncomeRankingModalOpen = false"></div>
         </div>
       </Transition>
     </Teleport>
@@ -1315,179 +408,109 @@
     <!-- Add/Edit Modal -->
     <Teleport to="body">
       <Transition name="backdrop">
-        <div
-          v-if="isEntryModalOpen"
-          class="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style="background: rgba(3,5,12,0.62); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);"
-        >
+        <div v-if="isEntryModalOpen" class="cxm-overlay" @click.self="isEntryModalOpen = false">
           <Transition name="modal">
-            <div v-if="isEntryModalOpen" class="relative z-10 w-full max-w-lg rounded-2xl border border-gray-700/80 bg-gray-900 shadow-2xl overflow-hidden">
-          <!-- Modal Header -->
-          <div class="flex items-center justify-between px-6 py-4 border-b border-gray-800/80">
-            <div class="flex items-center gap-3">
-              <div class="w-9 h-9 rounded-xl flex items-center justify-center text-base" :class="form.type === 'income' ? 'bg-emerald-500/20' : 'bg-rose-500/20'">
-                {{ form.type === 'income' ? '📈' : '📉' }}
-              </div>
-              <div>
-                <h3 class="text-base font-semibold text-white">{{ modalTitle }}</h3>
-                <p class="text-xs text-gray-500">{{ modalSubtitle }}</p>
-              </div>
-            </div>
-            <button
-              @click="() => { isEntryModalOpen = false; resetForm() }"
-              class="w-8 h-8 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white flex items-center justify-center text-sm transition-all tap-scale touch-target"
-              aria-label="ปิด"
-            >✕</button>
-          </div>
-
-          <!-- Modal Body -->
-          <form class="p-6 space-y-4" @submit.prevent="submitTransaction">
-            <!-- Book selector -->
-            <div v-if="books.length > 0">
-              <label class="block text-xs font-medium text-gray-400 mb-1.5">สมุดบัญชี</label>
-              <div class="relative">
-                <select
-                  v-model="form.bookId"
-                  class="w-full bg-gray-800/80 border border-gray-700/60 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 transition-all cursor-pointer"
-                >
-                  <option v-for="b in books" :key="b.id" :value="b.id">
-                    {{ b.icon }} {{ b.name }} {{ b.isDefault ? '(สมุดหลัก)' : '' }}
-                  </option>
-                </select>
-              </div>
-            </div>
-
-            <div class="grid grid-cols-2 gap-4">
-              <div>
-                <label class="block text-xs font-medium text-gray-400 mb-1.5">วันที่</label>
-                <input
-                  v-model="form.entryDate"
-                  type="date"
-                  class="w-full bg-gray-800/80 border border-gray-700/60 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 transition-all"
-                >
-              </div>
-              <div>
-                <label class="block text-xs font-medium text-gray-400 mb-1.5">ประเภท</label>
-                <select
-                  v-model="form.type"
-                  class="w-full bg-gray-800/80 border border-gray-700/60 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 transition-all"
-                >
-                  <option value="income">📈 รายรับ</option>
-                  <option value="expense">📉 รายจ่าย</option>
-                </select>
-              </div>
-            </div>
-
-            <div class="relative" ref="categoryComboboxRef">
-              <label class="block text-xs font-medium text-gray-400 mb-1.5">หมวดหมู่</label>
-              <input
-                v-model="categorySearch"
-                type="text"
-                maxlength="80"
-                placeholder="พิมพ์ค้นหาหรือสร้างหมวดหมู่ใหม่..."
-                autocomplete="off"
-                @focus="isCategoryDropdownOpen = true"
-                @keydown.down.prevent="navigateCategoryOption(1)"
-                @keydown.up.prevent="navigateCategoryOption(-1)"
-                @keydown.enter.prevent="selectHighlightedCategory"
-                @keydown.escape="isCategoryDropdownOpen = false"
-                class="w-full bg-gray-800/80 border border-gray-700/60 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-600 outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 transition-all"
-              >
-              <!-- Dropdown -->
-              <div
-                v-if="isCategoryDropdownOpen && (filteredCategories.length > 0 || categorySearch.trim())"
-                class="absolute left-0 right-0 top-full mt-1 z-30 max-h-48 overflow-y-auto rounded-xl border border-gray-700/60 bg-gray-800 shadow-xl"
-              >
-                <button
-                  v-for="(cat, idx) in filteredCategories"
-                  :key="cat"
-                  type="button"
-                  @mousedown.prevent="selectCategory(cat)"
-                  class="w-full text-left px-4 py-2.5 text-sm transition-all"
-                  :class="idx === highlightedCategoryIndex ? 'bg-violet-600/30 text-white' : 'text-gray-300 hover:bg-gray-800/80 hover:text-white'"
-                >
-                  {{ cat }}
-                </button>
-                <!-- "Create new" option when search text doesn't match any existing -->
-                <button
-                  v-if="categorySearch.trim() && !categoryExactMatch"
-                  type="button"
-                  @mousedown.prevent="selectCategory(categorySearch.trim())"
-                  class="w-full text-left px-4 py-2.5 text-sm transition-all flex items-center gap-2"
-                  :class="highlightedCategoryIndex === filteredCategories.length ? 'bg-violet-600/30 text-white' : 'text-violet-400 hover:bg-gray-800/80 hover:text-violet-300'"
-                >
-                  <span>➕</span> สร้าง "{{ categorySearch.trim() }}"
-                </button>
-                <!-- No results and no search text -->
-                <div
-                  v-if="filteredCategories.length === 0 && !categorySearch.trim()"
-                  class="px-4 py-3 text-xs text-gray-500 text-center"
-                >
-                  พิมพ์เพื่อค้นหาหรือสร้างหมวดหมู่ใหม่
+            <div v-if="isEntryModalOpen" class="cxm" :class="form.type === 'income' ? 'cxm--in' : 'cxm--out'" role="dialog" aria-modal="true">
+              <header class="cxm-head">
+                <span class="cxm-badge">{{ form.type === 'income' ? '📈' : '📉' }}</span>
+                <div class="cxm-head-txt">
+                  <h3>{{ modalTitle }}</h3>
+                  <p>{{ modalSubtitle }}</p>
                 </div>
-              </div>
-            </div>
+                <button type="button" class="cxm-x" aria-label="ปิด" @click="() => { isEntryModalOpen = false; resetForm() }">✕</button>
+              </header>
 
-            <div>
-              <label class="block text-xs font-medium text-gray-400 mb-1.5">
-                จำนวนเงิน (บาท) <span class="text-rose-400">*</span>
-                <span class="text-[10px] text-gray-500 ml-1">(รองรับ +, -, *, /)</span>
-              </label>
-              <div class="relative">
-                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-medium">฿</span>
-                <input
-                  v-model="form.amount"
-                  type="text"
-                  placeholder="0.00 หรือ 100+50*2"
-                  @blur="evaluateAmountExpression"
-                  @keydown.enter.prevent="evaluateAmountExpression"
-                  class="w-full bg-gray-800/80 border border-gray-700/60 rounded-xl pl-8 pr-4 py-2.5 text-sm text-white placeholder-gray-600 outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 transition-all"
-                >
-              </div>
-              <!-- Live calculation preview -->
-              <div v-if="calculatedAmount !== null && form.amount && !isNaN(Number(form.amount)) === false" class="mt-1.5 flex items-center gap-2 text-xs">
-                <span class="text-gray-500">คำนวณได้:</span>
-                <span class="font-bold text-violet-400">฿{{ formatCurrency(calculatedAmount).replace('฿', '') }}</span>
-                <button
-                  type="button"
-                  @click="applyCalculatedAmount"
-                  class="text-[10px] px-2 py-0.5 rounded bg-violet-600/20 hover:bg-violet-600/30 text-violet-300 transition-all tap-scale"
-                >
-                  ใช้ค่านี้
-                </button>
-              </div>
-            </div>
+              <form class="cxm-form" @submit.prevent="submitTransaction">
+                <div class="cxm-body">
+                  <div class="cxm-seg" role="radiogroup" aria-label="ประเภท">
+                    <button type="button" class="seg-in" :class="{ on: form.type === 'income' }" @click="form.type = 'income'">📈 รายรับ</button>
+                    <button type="button" class="seg-out" :class="{ on: form.type === 'expense' }" @click="form.type = 'expense'">📉 รายจ่าย</button>
+                  </div>
 
-            <div>
-              <label class="block text-xs font-medium text-gray-400 mb-1.5">รายละเอียด (ไม่บังคับ)</label>
-              <textarea
-                v-model="form.description"
-                rows="2"
-                maxlength="300"
-                placeholder="บันทึกเพิ่มเติม..."
-                class="w-full bg-gray-800/80 border border-gray-700/60 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-600 outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 transition-all resize-none"
-              ></textarea>
-            </div>
+                  <div class="cxm-money">
+                    <label for="cx-amount">จำนวนเงิน (บาท) <i>*</i> <small>รองรับ +, -, *, /</small></label>
+                    <div class="cxm-money-box">
+                      <span>฿</span>
+                      <input
+                        id="cx-amount"
+                        v-model="form.amount"
+                        type="text"
+                        inputmode="decimal"
+                        placeholder="0.00 หรือ 100+50*2"
+                        @blur="evaluateAmountExpression"
+                        @keydown.enter.prevent="evaluateAmountExpression"
+                      >
+                    </div>
+                    <div v-if="calculatedAmount !== null && form.amount && !isNaN(Number(form.amount)) === false" class="cxm-calc">
+                      <span>คำนวณได้</span>
+                      <b>฿{{ formatCurrency(calculatedAmount).replace('฿', '') }}</b>
+                      <button type="button" @click="applyCalculatedAmount">ใช้ค่านี้</button>
+                    </div>
+                  </div>
 
-            <div class="flex gap-3 pt-2">
-              <button
-                type="button"
-                @click="() => { isEntryModalOpen = false; resetForm() }"
-                class="flex-1 py-2.5 rounded-xl bg-gray-800/80 hover:bg-gray-800 border border-gray-700/60 text-sm font-medium text-gray-300 hover:text-white transition-all tap-scale touch-target"
-              >ยกเลิก</button>
-              <button
-                type="submit"
-                :disabled="isSubmitting"
-                class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-semibold text-white shadow-md shadow-violet-500/20 transition-all flex items-center justify-center gap-2 tap-scale touch-target"
-              >
-                <span v-if="isSubmitting" class="inline-block w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
-                {{ submitButtonText }}
-              </button>
+                  <div class="cxm-row">
+                    <div class="cxm-f">
+                      <label>วันที่</label>
+                      <input v-model="form.entryDate" type="date" class="cxm-in">
+                    </div>
+                    <div v-if="books.length > 0" class="cxm-f">
+                      <label>สมุดบัญชี</label>
+                      <select v-model="form.bookId" class="cxm-in">
+                        <option v-for="b in books" :key="b.id" :value="b.id">{{ b.icon }} {{ b.name }} {{ b.isDefault ? '(สมุดหลัก)' : '' }}</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div ref="categoryComboboxRef" class="cxm-f cxm-combo">
+                    <label>หมวดหมู่</label>
+                    <input
+                      v-model="categorySearch"
+                      type="text"
+                      maxlength="80"
+                      placeholder="พิมพ์ค้นหาหรือสร้างหมวดหมู่ใหม่..."
+                      autocomplete="off"
+                      class="cxm-in"
+                      @focus="isCategoryDropdownOpen = true"
+                      @keydown.down.prevent="navigateCategoryOption(1)"
+                      @keydown.up.prevent="navigateCategoryOption(-1)"
+                      @keydown.enter.prevent="selectHighlightedCategory"
+                      @keydown.escape="isCategoryDropdownOpen = false"
+                    >
+                    <div v-if="isCategoryDropdownOpen && (filteredCategories.length > 0 || categorySearch.trim())" class="cxm-menu">
+                      <button
+                        v-for="(cat, idx) in filteredCategories"
+                        :key="cat"
+                        type="button"
+                        :class="{ hi: idx === highlightedCategoryIndex }"
+                        @mousedown.prevent="selectCategory(cat)"
+                      >{{ cat }}</button>
+                      <button
+                        v-if="categorySearch.trim() && !categoryExactMatch"
+                        type="button"
+                        class="new"
+                        :class="{ hi: highlightedCategoryIndex === filteredCategories.length }"
+                        @mousedown.prevent="selectCategory(categorySearch.trim())"
+                      >➕ สร้าง "{{ categorySearch.trim() }}"</button>
+                      <p v-if="filteredCategories.length === 0 && !categorySearch.trim()">พิมพ์เพื่อค้นหาหรือสร้างหมวดหมู่ใหม่</p>
+                    </div>
+                  </div>
+
+                  <div class="cxm-f">
+                    <label>รายละเอียด <small>(ไม่บังคับ)</small></label>
+                    <textarea v-model="form.description" rows="2" maxlength="300" placeholder="บันทึกเพิ่มเติม..." class="cxm-in"></textarea>
+                  </div>
+                </div>
+
+                <footer class="cxm-foot">
+                  <button type="button" class="cxm-btn" @click="() => { isEntryModalOpen = false; resetForm() }">ยกเลิก</button>
+                  <button type="submit" class="cxm-btn cxm-btn--main" :disabled="isSubmitting">
+                    <span v-if="isSubmitting" class="cxm-spin"></span>
+                    {{ submitButtonText }}
+                  </button>
+                </footer>
+              </form>
             </div>
-          </form>
-        </div>
           </Transition>
-          <div class="absolute inset-0 z-0 bg-black/70 backdrop-blur-sm" @click="isEntryModalOpen = false"></div>
         </div>
       </Transition>
     </Teleport>
@@ -1495,397 +518,174 @@
     <!-- Add/Edit Recurring Expense Modal -->
     <Teleport to="body">
       <Transition name="backdrop">
-        <div
-          v-if="isRecurringModalOpen"
-          class="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style="background: rgba(3,5,12,0.62); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);"
-        >
+        <div v-if="isRecurringModalOpen" class="cxm-overlay" @click.self="isRecurringModalOpen = false">
           <Transition name="modal">
-            <div v-if="isRecurringModalOpen" class="relative z-10 w-full max-w-lg rounded-2xl border border-gray-700/80 bg-gray-900 shadow-2xl overflow-hidden">
-              <!-- Header -->
-              <div class="flex items-center justify-between px-6 py-4 border-b border-gray-800/80">
-                <div class="flex items-center gap-3">
-                  <div class="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center text-base">
-                    🔄
+            <div v-if="isRecurringModalOpen" class="cxm cxm--amber" role="dialog" aria-modal="true">
+              <header class="cxm-head">
+                <span class="cxm-badge">🔄</span>
+                <div class="cxm-head-txt">
+                  <h3>{{ editingRecurringId ? 'แก้ไขรายจ่ายประจำ' : 'เพิ่มรายจ่ายประจำ' }}</h3>
+                  <p>กำหนดการจ่ายเงินที่ต้องทำซ้ำทุกเดือน</p>
+                </div>
+                <button type="button" class="cxm-x" aria-label="ปิด" @click="isRecurringModalOpen = false">✕</button>
+              </header>
+
+              <form class="cxm-form" @submit.prevent="submitRecurring">
+                <div class="cxm-body">
+                  <div class="cxm-f">
+                    <label>ชื่อรายการ <i>*</i></label>
+                    <input v-model="recurringForm.title" type="text" placeholder="เช่น ค่าเช่าห้อง, ค่าเน็ต, ค่าน้ำค่าไฟ" required class="cxm-in" />
                   </div>
-                  <div>
-                    <h3 class="text-base font-semibold text-white">
-                      {{ editingRecurringId ? 'แก้ไขรายจ่ายประจำ' : 'เพิ่มรายจ่ายประจำ' }}
-                    </h3>
-                    <p class="text-xs text-gray-500">กำหนดการจ่ายเงินที่ต้องทำซ้ำทุกเดือน</p>
-                  </div>
-                </div>
-                <button
-                  @click="isRecurringModalOpen = false"
-                  class="w-8 h-8 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white flex items-center justify-center text-sm transition-all tap-scale touch-target"
-                >✕</button>
-              </div>
 
-              <!-- Form Body -->
-              <form @submit.prevent="submitRecurring" class="p-6 space-y-4">
-                <!-- Book selector -->
-                <div v-if="books.length > 0">
-                  <label class="block text-xs font-semibold text-gray-300 mb-1.5">สมุดบัญชี</label>
-                  <select
-                    v-model="recurringForm.bookId"
-                    class="w-full px-3.5 py-2.5 rounded-xl bg-gray-800/80 border border-gray-700 text-sm text-white focus:outline-none focus:border-amber-500 transition-all cursor-pointer"
-                  >
-                    <option v-for="b in books" :key="b.id" :value="b.id">
-                      {{ b.icon }} {{ b.name }} {{ b.isDefault ? '(สมุดหลัก)' : '' }}
-                    </option>
-                  </select>
-                </div>
-
-                <!-- Title -->
-                <div>
-                  <label class="block text-xs font-semibold text-gray-300 mb-1.5">ชื่อรายการ <span class="text-rose-400">*</span></label>
-                  <input
-                    v-model="recurringForm.title"
-                    type="text"
-                    placeholder="เช่น ค่าเช่าห้อง, ค่าเน็ต, ค่าน้ำค่ายาก"
-                    required
-                    class="w-full px-3.5 py-2.5 rounded-xl bg-gray-800/80 border border-gray-700 text-sm text-white focus:outline-none focus:border-amber-500 transition-all"
-                  />
-                </div>
-
-                <!-- Amount + Day of Month Due -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label class="block text-xs font-semibold text-gray-300 mb-1.5">
-                      จำนวนเงิน (฿) <span class="text-rose-400">*</span>
-                      <span class="text-[10px] text-gray-500 ml-1">(รองรับ +, -, *, /)</span>
-                    </label>
-                    <input
-                      v-model="recurringForm.amount"
-                      type="text"
-                      placeholder="0.00 หรือ 100+50"
-                      required
-                      @blur="evaluateRecurringAmountExpression"
-                      @keydown.enter.prevent="evaluateRecurringAmountExpression"
-                      class="w-full px-3.5 py-2.5 rounded-xl bg-gray-800/80 border border-gray-700 text-sm text-white focus:outline-none focus:border-amber-500 transition-all"
-                    />
-                    <!-- Live calculation preview for recurring -->
-                    <div v-if="calculatedRecurringAmount !== null && recurringForm.amount && !isNaN(Number(recurringForm.amount)) === false" class="mt-1 flex items-center gap-2 text-xs">
-                      <span class="text-gray-500">คำนวณได้:</span>
-                      <span class="font-bold text-amber-400">฿{{ formatCurrency(calculatedRecurringAmount).replace('฿', '') }}</span>
-                      <button
-                        type="button"
-                        @click="applyCalculatedRecurringAmount"
-                        class="text-[10px] px-1.5 py-0.5 rounded bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 transition-all tap-scale"
-                      >
-                        ใช้
-                      </button>
+                  <div class="cxm-row">
+                    <div class="cxm-f">
+                      <label>จำนวนเงิน (฿) <i>*</i> <small>รองรับ +, -, *, /</small></label>
+                      <input
+                        v-model="recurringForm.amount"
+                        type="text"
+                        inputmode="decimal"
+                        placeholder="0.00 หรือ 100+50"
+                        required
+                        class="cxm-in"
+                        @blur="evaluateRecurringAmountExpression"
+                        @keydown.enter.prevent="evaluateRecurringAmountExpression"
+                      />
+                      <div v-if="calculatedRecurringAmount !== null && recurringForm.amount && !isNaN(Number(recurringForm.amount)) === false" class="cxm-calc">
+                        <span>คำนวณได้</span>
+                        <b>฿{{ formatCurrency(calculatedRecurringAmount).replace('฿', '') }}</b>
+                        <button type="button" @click="applyCalculatedRecurringAmount">ใช้</button>
+                      </div>
+                    </div>
+                    <div class="cxm-f">
+                      <label>กำหนดจ่ายทุกวันที่ <i>*</i></label>
+                      <input v-model.number="recurringForm.dayOfMonthDue" type="number" min="1" max="31" required class="cxm-in" />
                     </div>
                   </div>
-                  <div>
-                    <label class="block text-xs font-semibold text-gray-300 mb-1.5">กำหนดจ่ายทุกวันที่ <span class="text-rose-400">*</span></label>
-                    <input
-                      v-model.number="recurringForm.dayOfMonthDue"
-                      type="number"
-                      min="1"
-                      max="31"
-                      required
-                      class="w-full px-3.5 py-2.5 rounded-xl bg-gray-800/80 border border-gray-700 text-sm text-white focus:outline-none focus:border-amber-500 transition-all"
-                    />
-                  </div>
-                </div>
 
-                <!-- Category + Start Date -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label class="block text-xs font-semibold text-gray-300 mb-1.5">หมวดหมู่</label>
-                    <input
-                      v-model="recurringForm.category"
-                      type="text"
-                      placeholder="ค่าใช้จ่ายประจำ"
-                      class="w-full px-3.5 py-2.5 rounded-xl bg-gray-800/80 border border-gray-700 text-sm text-white focus:outline-none focus:border-amber-500 transition-all"
-                    />
+                  <div class="cxm-row">
+                    <div class="cxm-f">
+                      <label>หมวดหมู่</label>
+                      <input v-model="recurringForm.category" type="text" placeholder="ค่าใช้จ่ายประจำ" class="cxm-in" />
+                    </div>
+                    <div v-if="books.length > 0" class="cxm-f">
+                      <label>สมุดบัญชี</label>
+                      <select v-model="recurringForm.bookId" class="cxm-in">
+                        <option v-for="b in books" :key="b.id" :value="b.id">{{ b.icon }} {{ b.name }} {{ b.isDefault ? '(สมุดหลัก)' : '' }}</option>
+                      </select>
+                    </div>
                   </div>
-                  <div>
-                    <label class="block text-xs font-semibold text-gray-300 mb-1.5">วันที่เริ่ม</label>
-                    <input
-                      v-model="recurringForm.startDate"
-                      type="date"
-                      required
-                      class="w-full px-3.5 py-2.5 rounded-xl bg-gray-800/80 border border-gray-700 text-sm text-white focus:outline-none focus:border-amber-500 transition-all"
-                    />
-                  </div>
-                </div>
 
-                <!-- Is Indefinite Checkbox/Toggle -->
-                <div class="flex items-center justify-between p-3.5 rounded-xl bg-gray-800/50 border border-gray-700/60">
-                  <div>
-                    <p class="text-sm font-semibold text-white">ไม่มีกำหนดสิ้นสุด</p>
-                    <p class="text-xs text-gray-400">จ่ายต่อเนื่องไปเรื่อยๆ จนกว่าจะยกเลิก</p>
-                  </div>
-                  <label class="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" v-model="recurringForm.isIndefinite" class="sr-only peer" />
-                    <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
+                  <label class="cxm-switch">
+                    <span>
+                      <strong>ไม่มีกำหนดสิ้นสุด</strong>
+                      <small>จ่ายต่อเนื่องไปเรื่อยๆ จนกว่าจะยกเลิก</small>
+                    </span>
+                    <input v-model="recurringForm.isIndefinite" type="checkbox" />
+                    <i></i>
                   </label>
+
+                  <div class="cxm-row">
+                    <div class="cxm-f">
+                      <label>วันที่เริ่ม</label>
+                      <input v-model="recurringForm.startDate" type="date" required class="cxm-in" />
+                    </div>
+                    <div v-if="!recurringForm.isIndefinite" class="cxm-f">
+                      <label>วันที่สิ้นสุด</label>
+                      <input v-model="recurringForm.endDate" type="date" required class="cxm-in" />
+                    </div>
+                  </div>
                 </div>
 
-                <!-- End Date (if not indefinite) -->
-                <div v-if="!recurringForm.isIndefinite">
-                  <label class="block text-xs font-semibold text-gray-300 mb-1.5">วันที่สิ้นสุด</label>
-                  <input
-                    v-model="recurringForm.endDate"
-                    type="date"
-                    required
-                    class="w-full px-3.5 py-2.5 rounded-xl bg-gray-800/80 border border-gray-700 text-sm text-white focus:outline-none focus:border-amber-500 transition-all"
-                  />
-                </div>
-
-                <!-- Actions -->
-                <div class="flex items-center gap-3 pt-3">
-                  <button
-                    v-if="editingRecurringId"
-                    type="button"
-                    @click="deleteRecurring"
-                    :disabled="isDeletingRecurring"
-                    class="px-4 py-2.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-400 text-sm font-semibold transition-all tap-scale touch-target disabled:opacity-50"
-                  >
+                <footer class="cxm-foot">
+                  <button v-if="editingRecurringId" type="button" class="cxm-btn cxm-btn--danger" :disabled="isDeletingRecurring" @click="deleteRecurring">
                     {{ isDeletingRecurring ? 'กำลังลบ...' : 'ลบรายการ' }}
                   </button>
-                  <div class="flex items-center gap-2 ml-auto">
-                    <button
-                      type="button"
-                      @click="isRecurringModalOpen = false"
-                      class="px-4 py-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm font-semibold transition-all tap-scale touch-target"
-                    >
-                      ยกเลิก
-                    </button>
-                    <button
-                      type="submit"
-                      :disabled="isSubmittingRecurring"
-                      class="btn-primary px-5 py-2.5 text-sm inline-flex items-center gap-2 tap-scale touch-target disabled:opacity-50"
-                    >
-                      <span v-if="isSubmittingRecurring" class="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                      <span>{{ editingRecurringId ? 'บันทึกการแก้ไข' : 'เพิ่มรายการ' }}</span>
-                    </button>
-                  </div>
-                </div>
+                  <span class="cxm-grow"></span>
+                  <button type="button" class="cxm-btn" @click="isRecurringModalOpen = false">ยกเลิก</button>
+                  <button type="submit" class="cxm-btn cxm-btn--main" :disabled="isSubmittingRecurring">
+                    <span v-if="isSubmittingRecurring" class="cxm-spin"></span>
+                    {{ editingRecurringId ? 'บันทึกการแก้ไข' : 'เพิ่มรายการ' }}
+                  </button>
+                </footer>
               </form>
             </div>
           </Transition>
-          <div class="absolute inset-0 z-0 bg-black/70 backdrop-blur-sm" @click="isRecurringModalOpen = false"></div>
         </div>
       </Transition>
     </Teleport>
+
     <!-- Export Modal -->
     <Teleport to="body">
       <Transition name="backdrop">
-        <div
-          v-if="isExportModalOpen"
-          class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
-          style="background: rgba(3,5,12,0.62); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);"
-        >
+        <div v-if="isExportModalOpen" class="cxm-overlay" @click.self="isExportModalOpen = false">
           <Transition name="modal">
-            <div
-              v-if="isExportModalOpen"
-              class="relative z-10 w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl border shadow-2xl overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[85vh]"
-              style="background: var(--bg-card); border-color: var(--border-default);"
-            >
-              <!-- Modal Header -->
-              <div class="flex items-center justify-between px-5 py-4 border-b shrink-0" style="border-color: var(--border-subtle);">
-                <div class="flex items-center gap-3">
-                  <div class="w-9 h-9 rounded-xl bg-violet-500/20 flex items-center justify-center text-lg shrink-0">
-                    📥
-                  </div>
-                  <div>
-                    <h3 class="text-base font-bold" style="color: var(--text-primary);">Export ไฟล์รายการ</h3>
-                    <p class="text-xs" style="color: var(--text-secondary);">เลือกช่วงเวลาและรูปแบบไฟล์ที่ต้องการ</p>
-                  </div>
+            <div v-if="isExportModalOpen" class="cxm" role="dialog" aria-modal="true">
+              <header class="cxm-head">
+                <span class="cxm-badge">📥</span>
+                <div class="cxm-head-txt">
+                  <h3>Export ไฟล์รายการ</h3>
+                  <p>เลือกช่วงเวลาและรูปแบบไฟล์ที่ต้องการ</p>
                 </div>
-                <button
-                  @click="isExportModalOpen = false"
-                  class="w-8 h-8 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white flex items-center justify-center text-sm transition-all tap-scale touch-target"
-                  aria-label="ปิด"
-                >✕</button>
-              </div>
+                <button type="button" class="cxm-x" aria-label="ปิด" @click="isExportModalOpen = false">✕</button>
+              </header>
 
-              <!-- Modal Body -->
-              <div class="p-5 overflow-y-auto space-y-4">
-                <!-- Scope Selection (Tabs) -->
-                <div>
-                  <label class="block text-xs font-semibold uppercase tracking-wider mb-2" style="color: var(--text-secondary);">
-                    1. เลือกช่วงเวลาข้อมูล
-                  </label>
-                  <div class="grid grid-cols-3 gap-1.5 p-1 rounded-xl" style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);">
-                    <button
-                      type="button"
-                      @click="exportScope = 'month'"
-                      class="py-2 px-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5"
-                      :class="exportScope === 'month' ? 'bg-violet-600 text-white shadow-sm' : 'text-gray-400 hover:text-white'"
-                    >
-                      <span>📅</span>
-                      <span>รายเดือน</span>
-                    </button>
-                    <button
-                      type="button"
-                      @click="exportScope = 'year'"
-                      class="py-2 px-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5"
-                      :class="exportScope === 'year' ? 'bg-violet-600 text-white shadow-sm' : 'text-gray-400 hover:text-white'"
-                    >
-                      <span>📆</span>
-                      <span>รายปี</span>
-                    </button>
-                    <button
-                      type="button"
-                      @click="exportScope = 'all'"
-                      class="py-2 px-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5"
-                      :class="exportScope === 'all' ? 'bg-violet-600 text-white shadow-sm' : 'text-gray-400 hover:text-white'"
-                    >
-                      <span>📂</span>
-                      <span>ทั้งหมด</span>
-                    </button>
+              <div class="cxm-body">
+                <div class="cxm-f">
+                  <label>1. เลือกช่วงเวลาข้อมูล</label>
+                  <div class="cxm-seg cxm-seg--3">
+                    <button type="button" :class="{ on: exportScope === 'month' }" @click="exportScope = 'month'">📅 รายเดือน</button>
+                    <button type="button" :class="{ on: exportScope === 'year' }" @click="exportScope = 'year'">📆 รายปี</button>
+                    <button type="button" :class="{ on: exportScope === 'all' }" @click="exportScope = 'all'">📂 ทั้งหมด</button>
                   </div>
                 </div>
 
-                <!-- Scope specific inputs -->
-                <div v-if="exportScope === 'month'" class="space-y-1.5">
-                  <label class="block text-xs font-medium" style="color: var(--text-secondary);">เลือกเดือนที่ต้องการ Export</label>
-                  <input
-                    type="month"
-                    v-model="exportMonth"
-                    class="input-glass w-full text-sm font-medium"
-                  />
+                <div v-if="exportScope === 'month'" class="cxm-f">
+                  <label>เลือกเดือนที่ต้องการ Export</label>
+                  <input v-model="exportMonth" type="month" class="cxm-in" />
                 </div>
-
-                <div v-else-if="exportScope === 'year'" class="space-y-1.5">
-                  <label class="block text-xs font-medium" style="color: var(--text-secondary);">เลือกปีที่ต้องการ Export</label>
-                  <select
-                    v-model="exportYear"
-                    class="input-glass w-full text-sm font-medium"
-                  >
-                    <option v-for="y in availableYears" :key="y" :value="y">
-                      ปี พ.ศ. {{ Number(y) + 543 }} (ค.ศ. {{ y }})
-                    </option>
+                <div v-else-if="exportScope === 'year'" class="cxm-f">
+                  <label>เลือกปีที่ต้องการ Export</label>
+                  <select v-model="exportYear" class="cxm-in">
+                    <option v-for="y in availableYears" :key="y" :value="y">ปี พ.ศ. {{ Number(y) + 543 }} (ค.ศ. {{ y }})</option>
                   </select>
                 </div>
+                <p v-else class="cxm-note">ℹ️ ระบบจะส่งออกรายการบัญชีทั้งหมดในระบบ ({{ transactions.length }} รายการ)</p>
 
-                <div v-else class="p-3 rounded-xl flex items-center gap-2.5 text-xs" style="background: var(--bg-elevated); border: 1px solid var(--border-subtle); color: var(--text-secondary);">
-                  <span class="text-base">ℹ️</span>
-                  <span>ระบบจะส่งออกรายการบัญชีทั้งหมดในระบบ ({{ transactions.length }} รายการ)</span>
-                </div>
-
-                <!-- Live Summary Preview Box -->
-                <div class="p-3.5 rounded-xl space-y-2.5" style="background: var(--bg-elevated); border: 1px solid var(--border-default);">
-                  <div class="flex items-center justify-between">
-                    <span class="text-xs font-bold truncate max-w-[220px]" style="color: var(--text-primary);">{{ exportPeriodLabel }}</span>
-                    <span class="text-xs px-2 py-0.5 rounded-full font-bold shrink-0" :class="exportTransactions.length > 0 ? 'bg-violet-500/20 text-violet-300' : 'bg-rose-500/20 text-rose-300'">
-                      {{ exportTransactions.length }} รายการ
-                    </span>
+                <div class="cxm-sum">
+                  <div class="cxm-sum-top">
+                    <strong>{{ exportPeriodLabel }}</strong>
+                    <span :class="{ empty: exportTransactions.length === 0 }">{{ exportTransactions.length }} รายการ</span>
                   </div>
-
-                  <div class="grid grid-cols-3 gap-2 pt-2 border-t text-center" style="border-color: var(--border-subtle);">
-                    <div>
-                      <p class="text-[10px]" style="color: var(--text-muted);">รายรับรวม</p>
-                      <p class="text-xs font-bold text-emerald-400 mt-0.5 truncate">+{{ formatCurrency(exportTotalIncome) }}</p>
-                    </div>
-                    <div>
-                      <p class="text-[10px]" style="color: var(--text-muted);">รายจ่ายรวม</p>
-                      <p class="text-xs font-bold text-rose-400 mt-0.5 truncate">-{{ formatCurrency(exportTotalExpense) }}</p>
-                    </div>
-                    <div>
-                      <p class="text-[10px]" style="color: var(--text-muted);">คงเหลือสุทธิ</p>
-                      <p class="text-xs font-bold mt-0.5 truncate" :class="exportNetBalance >= 0 ? 'text-emerald-400' : 'text-rose-400'">
-                        {{ formatCurrency(exportNetBalance) }}
-                      </p>
-                    </div>
+                  <div class="cxm-sum-grid">
+                    <div><small>รายรับรวม</small><b class="in">+{{ formatCurrency(exportTotalIncome) }}</b></div>
+                    <div><small>รายจ่ายรวม</small><b class="out">−{{ formatCurrency(exportTotalExpense) }}</b></div>
+                    <div><small>คงเหลือสุทธิ</small><b :class="exportNetBalance >= 0 ? 'in' : 'out'">{{ formatCurrency(exportNetBalance) }}</b></div>
                   </div>
                 </div>
 
-                <!-- Export Action Buttons -->
-                <div class="space-y-2 pt-1">
-                  <label class="block text-xs font-semibold uppercase tracking-wider mb-1" style="color: var(--text-secondary);">
-                    2. ดาวน์โหลดรูปแบบไฟล์
-                  </label>
-
-                  <!-- PDF Button -->
-                  <button
-                    type="button"
-                    @click="exportToPDF"
-                    :disabled="isExporting || exportTransactions.length === 0"
-                    class="w-full p-3 rounded-xl border flex items-center justify-between transition-all group tap-scale disabled:opacity-50 disabled:cursor-not-allowed hover:border-violet-500"
-                    style="background: var(--bg-card); border-color: var(--border-default);"
-                  >
-                    <div class="flex items-center gap-3">
-                      <div class="w-9 h-9 rounded-xl bg-rose-500/15 text-rose-400 border border-rose-500/25 flex items-center justify-center font-bold text-xs shrink-0">
-                        PDF
-                      </div>
-                      <div class="text-left">
-                        <p class="text-sm font-bold group-hover:text-violet-400 transition-colors" style="color: var(--text-primary);">
-                          รายงาน PDF (.pdf)
-                        </p>
-                        <p class="text-[11px]" style="color: var(--text-secondary);">
-                          ภาษาไทยคมชัด ตารางสวยงามพร้อมสรุปยอด
-                        </p>
-                      </div>
-                    </div>
-                    <span class="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-violet-600 text-white shadow-sm flex items-center gap-1 shrink-0">
-                      <span v-if="isExporting" class="inline-block w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                      <span>โหลด PDF</span>
-                    </span>
-                  </button>
-
-                  <!-- Excel Button -->
-                  <button
-                    type="button"
-                    @click="exportToExcel"
-                    :disabled="isExporting || exportTransactions.length === 0"
-                    class="w-full p-3 rounded-xl border flex items-center justify-between transition-all group tap-scale disabled:opacity-50 disabled:cursor-not-allowed hover:border-emerald-500"
-                    style="background: var(--bg-card); border-color: var(--border-default);"
-                  >
-                    <div class="flex items-center gap-3">
-                      <div class="w-9 h-9 rounded-xl bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 flex items-center justify-center font-bold text-xs shrink-0">
-                        XLS
-                      </div>
-                      <div class="text-left">
-                        <p class="text-sm font-bold group-hover:text-emerald-400 transition-colors" style="color: var(--text-primary);">
-                          Excel (.xlsx)
-                        </p>
-                        <p class="text-[11px]" style="color: var(--text-secondary);">
-                          ไฟล์สเปรดชีตพร้อมตารางและสรุปผล
-                        </p>
-                      </div>
-                    </div>
-                    <span class="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-emerald-600 text-white shadow-sm flex items-center gap-1 shrink-0">
-                      <span v-if="isExporting" class="inline-block w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                      <span>โหลด Excel</span>
-                    </span>
-                  </button>
-
-                  <!-- CSV Button -->
-                  <button
-                    type="button"
-                    @click="exportToCSV"
-                    :disabled="isExporting || exportTransactions.length === 0"
-                    class="w-full p-3 rounded-xl border flex items-center justify-between transition-all group tap-scale disabled:opacity-50 disabled:cursor-not-allowed hover:border-sky-500"
-                    style="background: var(--bg-card); border-color: var(--border-default);"
-                  >
-                    <div class="flex items-center gap-3">
-                      <div class="w-9 h-9 rounded-xl bg-sky-500/15 text-sky-400 border border-sky-500/25 flex items-center justify-center font-bold text-xs shrink-0">
-                        CSV
-                      </div>
-                      <div class="text-left">
-                        <p class="text-sm font-bold group-hover:text-sky-400 transition-colors" style="color: var(--text-primary);">
-                          CSV (.csv)
-                        </p>
-                        <p class="text-[11px]" style="color: var(--text-secondary);">
-                          UTF-8 with BOM รองรับ Excel/Sheets
-                        </p>
-                      </div>
-                    </div>
-                    <span class="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-sky-600 text-white shadow-sm flex items-center gap-1 shrink-0">
-                      <span v-if="isExporting" class="inline-block w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                      <span>โหลด CSV</span>
-                    </span>
-                  </button>
+                <div class="cxm-f">
+                  <label>2. ดาวน์โหลดรูปแบบไฟล์</label>
+                  <div class="cxm-files">
+                    <button type="button" class="file-pdf" :disabled="isExporting || exportTransactions.length === 0" @click="exportToPDF">
+                      <span>PDF</span>
+                      <div><strong>รายงาน PDF (.pdf)</strong><small>ภาษาไทยคมชัด ตารางสวยงามพร้อมสรุปยอด</small></div>
+                      <em><i v-if="isExporting" class="cxm-spin"></i>โหลด</em>
+                    </button>
+                    <button type="button" class="file-xls" :disabled="isExporting || exportTransactions.length === 0" @click="exportToExcel">
+                      <span>XLS</span>
+                      <div><strong>Excel (.xlsx)</strong><small>ไฟล์สเปรดชีตพร้อมตารางและสรุปผล</small></div>
+                      <em><i v-if="isExporting" class="cxm-spin"></i>โหลด</em>
+                    </button>
+                    <button type="button" class="file-csv" :disabled="isExporting || exportTransactions.length === 0" @click="exportToCSV">
+                      <span>CSV</span>
+                      <div><strong>CSV (.csv)</strong><small>UTF-8 with BOM รองรับ Excel/Sheets</small></div>
+                      <em><i v-if="isExporting" class="cxm-spin"></i>โหลด</em>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
           </Transition>
-          <div class="absolute inset-0 z-0 bg-black/70 backdrop-blur-sm" @click="isExportModalOpen = false"></div>
         </div>
       </Transition>
     </Teleport>
@@ -1893,102 +693,42 @@
     <!-- Manage Books Modal -->
     <Teleport to="body">
       <Transition name="backdrop">
-        <div
-          v-if="isManageBooksModalOpen"
-          class="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style="background: rgba(3,5,12,0.62); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);"
-        >
+        <div v-if="isManageBooksModalOpen" class="cxm-overlay" @click.self="isManageBooksModalOpen = false">
           <Transition name="modal">
-            <div v-if="isManageBooksModalOpen" class="relative z-10 w-full max-w-lg rounded-2xl border border-gray-700/80 bg-gray-900 shadow-2xl overflow-hidden">
-              <div class="flex items-center justify-between px-6 py-4 border-b border-gray-800/80">
-                <div class="flex items-center gap-3">
-                  <div class="w-9 h-9 rounded-xl bg-violet-500/20 text-violet-300 flex items-center justify-center text-base">
-                    📚
-                  </div>
-                  <div>
-                    <h3 class="text-base font-semibold text-white">จัดการสมุดบัญชี (Finance Books)</h3>
-                    <p class="text-xs text-gray-500">แยกกระเป๋าเงินและสมุดรายรับ-รายจ่ายตามการใช้งาน</p>
-                  </div>
+            <div v-if="isManageBooksModalOpen" class="cxm" role="dialog" aria-modal="true">
+              <header class="cxm-head">
+                <span class="cxm-badge">📚</span>
+                <div class="cxm-head-txt">
+                  <h3>จัดการสมุดบัญชี</h3>
+                  <p>แยกกระเป๋าเงินและสมุดรายรับ-รายจ่ายตามการใช้งาน</p>
                 </div>
-                <button
-                  @click="isManageBooksModalOpen = false"
-                  class="w-8 h-8 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white flex items-center justify-center text-sm transition-all tap-scale touch-target"
-                >✕</button>
-              </div>
+                <button type="button" class="cxm-x" aria-label="ปิด" @click="isManageBooksModalOpen = false">✕</button>
+              </header>
 
-              <div class="p-6 space-y-4">
-                <div class="flex items-center justify-between">
-                  <span class="text-xs text-gray-400 font-medium">สมุดทั้งหมด ({{ books.length }} เล่ม)</span>
-                  <button
-                    type="button"
-                    @click="openCreateBookModal"
-                    class="text-xs font-semibold px-3 py-1.5 rounded-xl bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/30 text-violet-300 transition-all tap-scale flex items-center gap-1"
-                  >
-                    <span>+ เพิ่มสมุดใหม่</span>
-                  </button>
+              <div class="cxm-body">
+                <div class="cxm-bar">
+                  <span>สมุดทั้งหมด {{ books.length }} เล่ม</span>
+                  <button type="button" class="cxm-btn cxm-btn--main cxm-btn--sm" @click="openCreateBookModal">＋ เพิ่มสมุดใหม่</button>
                 </div>
 
-                <div class="space-y-2.5 max-h-[320px] overflow-y-auto pr-1">
-                  <div
-                    v-for="b in books"
-                    :key="b.id"
-                    class="p-3.5 rounded-xl border flex items-center justify-between gap-3 transition-all"
-                    :style="{
-                      background: 'rgba(255, 255, 255, 0.03)',
-                      borderColor: b.isDefault ? `${b.color}66` : 'rgba(255, 255, 255, 0.08)'
-                    }"
-                  >
-                    <div class="flex items-center gap-3 min-w-0">
-                      <div
-                        class="w-10 h-10 rounded-xl flex items-center justify-center text-xl shrink-0"
-                        :style="{ background: `${b.color}22`, border: `1px solid ${b.color}44` }"
-                      >
-                        {{ b.icon || '💼' }}
-                      </div>
-                      <div class="min-w-0">
-                        <div class="flex items-center gap-2">
-                          <h4 class="text-sm font-bold text-white truncate">{{ b.name }}</h4>
-                          <span
-                            v-if="b.isDefault"
-                            class="text-[10px] px-1.5 py-0.5 rounded font-semibold bg-violet-500/20 text-violet-300 border border-violet-500/30 shrink-0"
-                          >
-                            สมุดหลัก
-                          </span>
-                        </div>
-                        <p class="text-[11px] text-gray-500 mt-0.5">
-                          สร้างเมื่อ {{ formatDate(b.createdAt) }}
-                        </p>
-                      </div>
+                <ul class="cxm-books">
+                  <li v-for="b in books" :key="b.id" :style="{ '--bk': b.color || 'var(--brand)' }">
+                    <span class="cxm-book-ico">{{ b.icon || '💼' }}</span>
+                    <div>
+                      <strong>{{ b.name }}<em v-if="b.isDefault">สมุดหลัก</em></strong>
+                      <small>สร้างเมื่อ {{ formatDate(b.createdAt) }}</small>
                     </div>
-
-                    <div class="flex items-center gap-1.5 shrink-0">
-                      <button
-                        type="button"
-                        @click="openEditBookModal(b)"
-                        class="px-2.5 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white text-xs font-medium border border-gray-700 transition-all tap-scale"
-                      >
-                        แก้ไข
-                      </button>
-                      <button
-                        v-if="books.length > 1"
-                        type="button"
-                        @click="handleDeleteBook(b)"
-                        class="px-2.5 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 text-xs font-medium border border-rose-500/30 transition-all tap-scale"
-                      >
-                        ลบ
-                      </button>
+                    <div class="cxm-book-tools">
+                      <button type="button" class="cxm-btn cxm-btn--sm" @click="openEditBookModal(b)">แก้ไข</button>
+                      <button v-if="books.length > 1" type="button" class="cxm-btn cxm-btn--danger cxm-btn--sm" @click="handleDeleteBook(b)">ลบ</button>
                     </div>
-                  </div>
-                </div>
+                  </li>
+                </ul>
 
-                <div class="p-3 rounded-xl bg-sky-500/10 border border-sky-500/20 text-xs text-sky-300 leading-relaxed flex items-start gap-2">
-                  <span class="text-base">💡</span>
-                  <span>สมุดบัญชีช่วยแยกประวัติรายรับ-รายจ่าย เช่น การใช้จ่ายส่วนตัว และ ธุรกิจ/งานฟรีแลนซ์ หากลบสมุด รายการข้างในจะถูกย้ายไปยังสมุดหลักโดยอัตโนมัติ</span>
-                </div>
+                <p class="cxm-note">💡 สมุดบัญชีช่วยแยกประวัติรายรับ-รายจ่าย เช่น การใช้จ่ายส่วนตัว และ ธุรกิจ/งานฟรีแลนซ์ หากลบสมุด รายการข้างในจะถูกย้ายไปยังสมุดหลักโดยอัตโนมัติ</p>
               </div>
             </div>
           </Transition>
-          <div class="absolute inset-0 z-0 bg-black/70 backdrop-blur-sm" @click="isManageBooksModalOpen = false"></div>
         </div>
       </Transition>
     </Teleport>
@@ -1996,114 +736,67 @@
     <!-- Create/Edit Book Form Modal -->
     <Teleport to="body">
       <Transition name="backdrop">
-        <div
-          v-if="isBookFormModalOpen"
-          class="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style="background: rgba(3,5,12,0.62); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);"
-        >
+        <div v-if="isBookFormModalOpen" class="cxm-overlay cxm-overlay--top" @click.self="isBookFormModalOpen = false">
           <Transition name="modal">
-            <div v-if="isBookFormModalOpen" class="relative z-10 w-full max-w-md rounded-2xl border border-gray-700/80 bg-gray-900 shadow-2xl overflow-hidden">
-              <div class="flex items-center justify-between px-6 py-4 border-b border-gray-800/80">
-                <div class="flex items-center gap-3">
-                  <div class="w-9 h-9 rounded-xl flex items-center justify-center text-xl" :style="{ background: `${bookForm.color}25`, border: `1px solid ${bookForm.color}45` }">
-                    {{ bookForm.icon }}
-                  </div>
-                  <div>
-                    <h3 class="text-base font-semibold text-white">{{ editingBookId ? 'แก้ไขสมุดบัญชี' : 'เพิ่มสมุดบัญชีใหม่' }}</h3>
-                    <p class="text-xs text-gray-500">กำหนดชื่อ ไอคอน และสีประจำสมุด</p>
-                  </div>
+            <div v-if="isBookFormModalOpen" class="cxm cxm--book" :style="{ '--ac': bookForm.color }" role="dialog" aria-modal="true">
+              <header class="cxm-head">
+                <span class="cxm-badge">{{ bookForm.icon }}</span>
+                <div class="cxm-head-txt">
+                  <h3>{{ editingBookId ? 'แก้ไขสมุดบัญชี' : 'เพิ่มสมุดบัญชีใหม่' }}</h3>
+                  <p>กำหนดชื่อ ไอคอน และสีประจำสมุด</p>
                 </div>
-                <button
-                  @click="isBookFormModalOpen = false"
-                  class="w-8 h-8 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white flex items-center justify-center text-sm transition-all tap-scale touch-target"
-                >✕</button>
-              </div>
+                <button type="button" class="cxm-x" aria-label="ปิด" @click="isBookFormModalOpen = false">✕</button>
+              </header>
 
-              <form @submit.prevent="submitBookForm" class="p-6 space-y-4">
-                <div>
-                  <label class="block text-xs font-semibold text-gray-300 mb-1.5">ชื่อสมุดบัญชี <span class="text-rose-400">*</span></label>
-                  <input
-                    v-model="bookForm.name"
-                    type="text"
-                    placeholder="เช่น สมุดส่วนตัว, งานฟรีแลนซ์, ท่องเที่ยว"
-                    required
-                    maxlength="50"
-                    class="w-full px-3.5 py-2.5 rounded-xl bg-gray-800/80 border border-gray-700 text-sm text-white focus:outline-none focus:border-violet-500 transition-all"
-                  />
-                </div>
-
-                <!-- Icon presets -->
-                <div>
-                  <label class="block text-xs font-semibold text-gray-300 mb-1.5">ไอคอนประจำสมุด</label>
-                  <div class="grid grid-cols-8 gap-2">
-                    <button
-                      v-for="icon in BOOK_ICON_PRESETS"
-                      :key="icon"
-                      type="button"
-                      @click="bookForm.icon = icon"
-                      class="h-9 rounded-xl flex items-center justify-center text-lg transition-all tap-scale"
-                      :class="bookForm.icon === icon ? 'bg-violet-600/40 border-2 border-violet-400 scale-105' : 'bg-gray-800/80 border border-gray-700/60 hover:bg-gray-700'"
-                    >
-                      {{ icon }}
-                    </button>
+              <form class="cxm-form" @submit.prevent="submitBookForm">
+                <div class="cxm-body">
+                  <div class="cxm-f">
+                    <label>ชื่อสมุดบัญชี <i>*</i></label>
+                    <input v-model="bookForm.name" type="text" placeholder="เช่น สมุดส่วนตัว, งานฟรีแลนซ์, ท่องเที่ยว" required maxlength="50" class="cxm-in" />
                   </div>
-                </div>
 
-                <!-- Color presets -->
-                <div>
-                  <label class="block text-xs font-semibold text-gray-300 mb-1.5">สีประจำสมุด</label>
-                  <div class="grid grid-cols-5 gap-2">
-                    <button
-                      v-for="color in BOOK_COLOR_PRESETS"
-                      :key="color"
-                      type="button"
-                      @click="bookForm.color = color"
-                      class="h-8 rounded-xl flex items-center justify-center transition-all tap-scale"
-                      :style="{
-                        backgroundColor: color,
-                        boxShadow: bookForm.color === color ? `0 0 12px ${color}` : 'none',
-                        border: bookForm.color === color ? '2px solid #ffffff' : '1px solid rgba(255,255,255,0.2)'
-                      }"
-                    >
-                      <span v-if="bookForm.color === color" class="text-white text-xs font-bold">✓</span>
-                    </button>
+                  <div class="cxm-f">
+                    <label>ไอคอนประจำสมุด</label>
+                    <div class="cxm-icons">
+                      <button v-for="icon in BOOK_ICON_PRESETS" :key="icon" type="button" :class="{ on: bookForm.icon === icon }" @click="bookForm.icon = icon">{{ icon }}</button>
+                    </div>
                   </div>
+
+                  <div class="cxm-f">
+                    <label>สีประจำสมุด</label>
+                    <div class="cxm-colors">
+                      <button
+                        v-for="color in BOOK_COLOR_PRESETS"
+                        :key="color"
+                        type="button"
+                        :class="{ on: bookForm.color === color }"
+                        :style="{ backgroundColor: color }"
+                        :aria-label="color"
+                        @click="bookForm.color = color"
+                      >{{ bookForm.color === color ? '✓' : '' }}</button>
+                    </div>
+                  </div>
+
+                  <label class="cxm-switch">
+                    <span>
+                      <strong>ตั้งเป็นสมุดหลัก (Default)</strong>
+                      <small>เมื่อบันทึกรายการใหม่จะเลือกสมุดนี้เป็นค่าเริ่มต้น</small>
+                    </span>
+                    <input v-model="bookForm.isDefault" type="checkbox" />
+                    <i></i>
+                  </label>
                 </div>
 
-                <!-- Set as default checkbox -->
-                <label class="flex items-center gap-3 p-3 rounded-xl border border-gray-700/60 bg-gray-800/40 cursor-pointer hover:bg-gray-800/70 transition-all">
-                  <input
-                    v-model="bookForm.isDefault"
-                    type="checkbox"
-                    class="accent-violet-500 w-4 h-4 rounded"
-                  />
-                  <div>
-                    <p class="text-xs font-semibold text-white">ตั้งเป็นสมุดหลัก (Default)</p>
-                    <p class="text-[11px] text-gray-400">เมื่อบันทึกรายการใหม่จะเลือกสมุดนี้เป็นค่าเริ่มต้น</p>
-                  </div>
-                </label>
-
-                <div class="flex items-center gap-3 pt-2">
-                  <button
-                    type="button"
-                    @click="isBookFormModalOpen = false"
-                    class="flex-1 py-2.5 rounded-xl bg-gray-800/80 hover:bg-gray-800 border border-gray-700/60 text-sm font-medium text-gray-300 hover:text-white transition-all tap-scale"
-                  >
-                    ยกเลิก
+                <footer class="cxm-foot">
+                  <button type="button" class="cxm-btn" @click="isBookFormModalOpen = false">ยกเลิก</button>
+                  <button type="submit" class="cxm-btn cxm-btn--main" :disabled="isSubmittingBook">
+                    <span v-if="isSubmittingBook" class="cxm-spin"></span>
+                    {{ editingBookId ? 'บันทึกการแก้ไข' : 'สร้างสมุด' }}
                   </button>
-                  <button
-                    type="submit"
-                    :disabled="isSubmittingBook"
-                    class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 disabled:opacity-50 text-sm font-semibold text-white shadow-md shadow-violet-500/20 transition-all flex items-center justify-center gap-2 tap-scale"
-                  >
-                    <span v-if="isSubmittingBook" class="inline-block w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
-                    <span>{{ editingBookId ? 'บันทึกการแก้ไข' : 'สร้างสมุด' }}</span>
-                  </button>
-                </div>
+                </footer>
               </form>
             </div>
           </Transition>
-          <div class="absolute inset-0 z-0 bg-black/70 backdrop-blur-sm" @click="isBookFormModalOpen = false"></div>
         </div>
       </Transition>
     </Teleport>
@@ -3539,106 +2232,351 @@ const exportToPDF = async () => {
 </script>
 
 <style scoped>
-/* Tabs */
-.cashflow-view-tabs {
-  padding: 0.35rem;
-  overflow-x: auto;
-  border: 1px solid var(--border-subtle);
-  border-radius: 1rem;
-  background: var(--bg-card);
-  box-shadow: var(--shadow-sm);
+.cx { max-width: 1240px; margin: 0 auto; padding: 24px 18px 96px; display: flex; flex-direction: column; gap: 18px; color: var(--text-primary); }
+.cx :is(h1, h2, h3, p, ol, ul) { margin: 0; }
+.cx :is(ol, ul) { padding: 0; list-style: none; }
+.cx .in { color: var(--ink-emerald); }
+.cx .out { color: var(--ink-rose); }
+.cx .amber { color: var(--ink-amber); }
+.cx button { cursor: pointer; font-family: inherit; }
+.cx button:disabled { opacity: .45; cursor: not-allowed; }
+
+/* ───── header ───── */
+.cx-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.cx-head h1 { font-size: 32px; font-weight: 800; letter-spacing: -.035em; line-height: 1.1; margin-top: 4px; }
+.cx-head-title p { margin-top: 6px; font-size: 13px; color: var(--text-muted); }
+.cx-eyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--brand-ink); }
+.cx-eyebrow i { width: 7px; height: 7px; border-radius: 50%; background: var(--brand); box-shadow: 0 0 0 4px color-mix(in srgb, var(--brand) 22%, transparent); }
+.cx-eyebrow--light { color: #c7d2fe; }
+.cx-head-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.cx-ghost, .cx-solid { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 16px; border-radius: 999px; font-size: 13px; font-weight: 700; transition: transform .15s, background .15s, box-shadow .15s; }
+.cx-ghost { border: 1px solid var(--border-default); background: var(--bg-card); color: var(--text-secondary); }
+.cx-ghost:not(:disabled):hover { background: var(--bg-elevated); color: var(--text-primary); }
+.cx-solid { border: 0; color: #fff; background: linear-gradient(135deg, var(--brand), var(--brand-2)); box-shadow: 0 8px 22px -8px var(--brand); }
+.cx-solid:not(:disabled):hover { transform: translateY(-1px); box-shadow: 0 12px 26px -8px var(--brand); }
+.cx-spin { display: inline-block; animation: cx-rot 1s linear infinite; }
+@keyframes cx-rot { to { transform: rotate(360deg); } }
+
+/* ───── wallets ───── */
+.cx-wallets { display: flex; align-items: center; gap: 12px; }
+.cx-wallet-row { flex: 1; min-width: 0; display: flex; gap: 10px; overflow-x: auto; padding: 4px 2px 8px; scrollbar-width: none; }
+.cx-wallet-row::-webkit-scrollbar { display: none; }
+.cx-wallet { --bk: var(--brand); flex-shrink: 0; display: flex; align-items: center; gap: 10px; min-width: 150px; padding: 10px 16px 10px 10px; border-radius: 16px; border: 1px solid var(--border-subtle); background: var(--bg-card); color: var(--text-secondary); text-align: left; transition: transform .15s, border-color .15s, box-shadow .15s; }
+.cx-wallet:hover { transform: translateY(-1px); border-color: var(--border-default); }
+.cx-wallet.on { border-color: var(--bk); background: color-mix(in srgb, var(--bk) 12%, var(--bg-card)); color: var(--text-primary); box-shadow: 0 10px 24px -14px var(--bk); }
+.cx-wallet-ico { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 12px; background: var(--bg-elevated); font-size: 18px; }
+.cx-wallet-ico--tint { background: color-mix(in srgb, var(--bk) 20%, transparent); }
+.cx-wallet-txt { display: flex; flex-direction: column; min-width: 0; }
+.cx-wallet-txt strong { font-size: 13px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px; }
+.cx-wallet-txt small { font-size: 11px; color: var(--text-muted); }
+.cx-wallet-tools { display: flex; gap: 6px; flex-shrink: 0; }
+.cx-pill { height: 32px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--border-subtle); background: var(--bg-card); color: var(--text-secondary); font-size: 12px; font-weight: 700; white-space: nowrap; }
+.cx-pill:hover { color: var(--text-primary); background: var(--bg-elevated); }
+.cx-pill--accent { background: var(--brand-soft); border-color: var(--brand-border); color: var(--brand-ink); }
+
+.cx-alert { display: flex; gap: 10px; align-items: center; padding: 12px 16px; border-radius: 14px; border: 1px solid color-mix(in srgb, var(--ink-amber) 40%, transparent); background: color-mix(in srgb, var(--ink-amber) 10%, transparent); color: var(--ink-amber); font-size: 13px; font-weight: 600; }
+
+/* ───── summary ───── */
+.cx-summary { display: grid; grid-template-columns: 1.6fr 1fr 1fr; gap: 14px; }
+.cx-balance { position: relative; overflow: hidden; display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 26px; border-radius: 26px; color: #fff; background: linear-gradient(135deg, #1e3a8a, #312e81); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08), 0 24px 50px -28px #1e3a8a; }
+.cx-balance::before, .cx-balance::after { content: ''; position: absolute; border-radius: 50%; background: rgba(255, 255, 255, .05); pointer-events: none; }
+.cx-balance::before { width: 220px; height: 220px; right: -60px; top: -90px; }
+.cx-balance::after { width: 140px; height: 140px; left: 38%; bottom: -80px; }
+.cx-balance-info { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; min-width: 0; }
+.cx-balance-amt { font-size: 38px; font-weight: 800; letter-spacing: -.035em; line-height: 1.05; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.cx-balance-amt.neg { color: #ffd1d6; }
+.cx-state { padding: 3px 12px; border-radius: 99px; background: rgba(255, 255, 255, .12); color: #e0e7ff; font-size: 11px; font-weight: 800; backdrop-filter: blur(4px); }
+.cx-balance-note { font-size: 12px; color: #c7d2fe; }
+.cx-gauge { position: relative; z-index: 1; width: 104px; height: 104px; flex-shrink: 0; }
+.cx-gauge svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.cx-gauge circle { fill: none; stroke-width: 9; }
+.cx-gauge-bg { stroke: rgba(255, 255, 255, .12); }
+.cx-gauge-fg { stroke: #fff; stroke-linecap: round; transition: stroke-dasharray .6s; }
+.cx-gauge > div { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.cx-gauge b { font-size: 20px; font-weight: 800; line-height: 1; }
+.cx-gauge small { font-size: 10px; opacity: .8; margin-top: 2px; }
+
+.cx-kpi { display: flex; flex-direction: column; justify-content: center; gap: 8px; padding: 20px; border-radius: 22px; background: var(--bg-card); border: 1px solid var(--border-subtle); }
+.cx-kpi-top { display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 700; color: var(--text-secondary); }
+.cx-kpi-top button { margin-left: auto; height: 26px; padding: 0 11px; border-radius: 999px; border: 1px solid var(--border-subtle); background: var(--bg-elevated); color: var(--text-secondary); font-size: 11px; font-weight: 700; }
+.cx-kpi-ico { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 10px; font-size: 15px; font-weight: 800; }
+.cx-kpi--in .cx-kpi-ico { background: color-mix(in srgb, var(--ink-emerald) 16%, transparent); color: var(--ink-emerald); }
+.cx-kpi--out .cx-kpi-ico { background: color-mix(in srgb, var(--ink-rose) 16%, transparent); color: var(--ink-rose); }
+.cx-kpi > b { font-size: 24px; font-weight: 800; letter-spacing: -.02em; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.cx-kpi--in > b { color: var(--ink-emerald); }
+.cx-kpi--out > b { color: var(--ink-rose); }
+.cx-kpi > small { font-size: 11px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ───── tabs ───── */
+.cx-tabs { display: flex; gap: 4px; padding: 4px; border-radius: 999px; background: var(--bg-elevated); overflow-x: auto; scrollbar-width: none; align-self: flex-start; max-width: 100%; }
+.cx-tabs::-webkit-scrollbar { display: none; }
+.cx-tab { flex-shrink: 0; display: inline-flex; align-items: center; gap: 7px; height: 38px; padding: 0 16px; border-radius: 999px; border: 0; background: transparent; color: var(--text-muted); font-size: 13px; font-weight: 700; transition: background .15s, color .15s; }
+.cx-tab:hover { color: var(--text-primary); }
+.cx-tab.on { background: var(--bg-card); color: var(--brand-ink); box-shadow: 0 2px 10px rgba(0, 0, 0, .12); }
+.cx-tab em { font-style: normal; min-width: 20px; padding: 1px 7px; border-radius: 99px; background: var(--brand-soft); color: var(--brand-ink); font-size: 10px; font-weight: 800; text-align: center; }
+.cx-pane { display: flex; flex-direction: column; gap: 14px; }
+
+/* ───── shared ───── */
+.cx-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.cx-card { display: flex; flex-direction: column; gap: 16px; padding: 20px; border-radius: 22px; background: var(--bg-card); border: 1px solid var(--border-subtle); }
+.cx-card-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.cx-card-head h2 { font-size: 16px; font-weight: 800; letter-spacing: -.01em; }
+.cx-card-head p { margin-top: 2px; font-size: 12px; color: var(--text-muted); }
+.cx-tools { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.cx-field { height: 38px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--border-subtle); background: var(--bg-elevated); color: var(--text-primary); font-size: 13px; }
+.cx-field:focus { outline: 2px solid color-mix(in srgb, var(--brand) 35%, transparent); border-color: var(--brand); }
+.cx-push { margin-left: auto; }
+.cx-count { padding: 5px 12px; border-radius: 99px; background: var(--bg-elevated); font-size: 12px; font-weight: 700; color: var(--text-secondary); }
+.cx-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.cx-stats > div { padding: 14px 16px; border-radius: 16px; background: var(--bg-elevated); }
+.cx-stats span { display: block; font-size: 11px; color: var(--text-muted); }
+.cx-stats b { display: block; margin-top: 4px; font-size: 18px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.cx-stats b small { font-size: 11px; font-weight: 600; color: var(--text-muted); }
+.cx-empty { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 52px 20px; text-align: center; border-radius: 22px; border: 1px dashed var(--border-default); background: color-mix(in srgb, var(--bg-card) 60%, transparent); }
+.cx-empty > span { font-size: 38px; }
+.cx-empty p { max-width: 420px; font-size: 12px; color: var(--text-muted); }
+.cx-skel { display: grid; gap: 10px; }
+.cx-skel i { height: 76px; border-radius: 18px; background: var(--bg-elevated); animation: cx-pulse 1.2s ease-in-out infinite; }
+@keyframes cx-pulse { 50% { opacity: .5; } }
+.cx-bar { height: 7px; border-radius: 99px; overflow: hidden; background: var(--bg-elevated); }
+.cx-bar i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--ink-rose), color-mix(in srgb, var(--ink-rose) 60%, var(--ink-amber))); transition: width .5s; }
+.cx-tag { display: inline-flex; padding: 1px 9px; border-radius: 99px; font-size: 10px; font-weight: 700; }
+
+/* ───── ranking ───── */
+.cx-rank { display: flex; flex-direction: column; gap: 14px; }
+.cx-rank li { display: flex; align-items: center; gap: 12px; }
+.cx-rank-no { width: 30px; height: 30px; flex-shrink: 0; display: grid; place-items: center; border-radius: 10px; background: color-mix(in srgb, var(--ink-rose) 16%, transparent); color: var(--ink-rose); font-size: 13px; font-weight: 800; }
+.cx-rank--in .cx-rank-no { background: color-mix(in srgb, var(--ink-emerald) 16%, transparent); color: var(--ink-emerald); }
+.cx-rank--in .cx-bar i { background: linear-gradient(90deg, var(--ink-emerald), color-mix(in srgb, var(--ink-emerald) 60%, var(--ink-sky))); }
+.cx-rank-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 7px; }
+.cx-rank-line { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; }
+.cx-rank-line strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cx-rank-line b { font-variant-numeric: tabular-nums; }
+.cx-rank li > em { font-style: normal; width: 44px; text-align: right; font-size: 12px; font-weight: 700; color: var(--text-muted); }
+
+/* ───── recurring ───── */
+.cx-group { display: flex; flex-direction: column; gap: 12px; }
+.cx-group h3 { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 800; color: var(--text-secondary); }
+.cx-group h3 em { font-style: normal; padding: 1px 9px; border-radius: 99px; background: var(--bg-elevated); font-size: 11px; }
+.cx-bills { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 12px; }
+.cx-bill { display: flex; flex-direction: column; gap: 14px; padding: 16px; border-radius: 22px; background: var(--bg-card); border: 1px solid var(--border-subtle); cursor: pointer; transition: transform .15s, border-color .15s; }
+.cx-bill:hover { transform: translateY(-2px); border-color: var(--border-default); }
+.cx-bill-main { display: flex; align-items: center; gap: 14px; }
+.cx-ring { --p: 0; --c: var(--ink-amber); width: 52px; height: 52px; flex-shrink: 0; display: grid; place-items: center; border-radius: 50%; background: conic-gradient(var(--c) calc(var(--p) * 1%), var(--bg-elevated) 0); position: relative; }
+.cx-ring.late { --c: var(--ink-rose); }
+.cx-ring::before { content: ''; position: absolute; inset: 5px; border-radius: 50%; background: var(--bg-card); }
+.cx-ring span { position: relative; font-size: 11px; font-weight: 800; }
+.cx-bill-title { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; align-items: flex-start; }
+.cx-bill-title strong { font-size: 15px; overflow-wrap: anywhere; }
+.cx-bill-title small { font-size: 11px; color: var(--text-muted); }
+.cx-bill-amt { font-size: 18px; font-weight: 800; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.cx-bill-foot { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding-top: 12px; border-top: 1px dashed var(--border-subtle); }
+.cx-badge { padding: 2px 9px; border-radius: 99px; font-size: 11px; font-weight: 700; }
+.cx-countdown { flex: 1; font-size: 11px; font-weight: 700; color: var(--ink-amber); }
+.cx-paid { height: 32px; padding: 0 14px; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--ink-emerald) 38%, transparent); background: color-mix(in srgb, var(--ink-emerald) 14%, transparent); color: var(--ink-emerald); font-size: 12px; font-weight: 800; }
+.cx-paid:not(:disabled):hover { background: var(--ink-emerald); color: #fff; }
+
+/* ───── daily ───── */
+.cx-days { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
+.cx-day { display: grid; grid-template-columns: 54px 1fr; gap: 10px 14px; padding: 14px; border-radius: 22px; background: var(--bg-card); border: 1px solid var(--border-subtle); }
+.cx-day-date { grid-row: span 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 8px 0; border-radius: 16px; background: var(--brand-soft); color: var(--brand-ink); }
+.cx-day-date b { font-size: 22px; line-height: 1; }
+.cx-day-date span { font-size: 10px; margin-top: 2px; }
+.cx-day-name { display: flex; flex-direction: column; justify-content: center; }
+.cx-day-name strong { font-size: 14px; }
+.cx-day-name small { font-size: 11px; color: var(--text-muted); }
+.cx-day-fig { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.cx-day-fig span { display: flex; flex-direction: column; padding: 8px 10px; border-radius: 12px; background: var(--bg-elevated); font-size: 12px; font-weight: 800; font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; }
+.cx-day-fig small { font-size: 10px; font-weight: 600; color: var(--text-muted); }
+
+/* ───── ledger ───── */
+.cx-ledger { display: flex; flex-direction: column; gap: 14px; }
+.cx-lg { border-radius: 22px; overflow: hidden; background: var(--bg-card); border: 1px solid var(--border-subtle); }
+.cx-lg > header { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; padding: 14px 18px; background: var(--bg-elevated); }
+.cx-lg-date { display: flex; flex-direction: column; }
+.cx-lg-date strong { font-size: 14px; }
+.cx-lg-date small { font-size: 11px; color: var(--text-muted); }
+.cx-lg-sum { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.cx-lg li { display: flex; align-items: center; gap: 14px; padding: 13px 18px; border-top: 1px solid var(--border-subtle); transition: background .15s; }
+.cx-lg li:first-child { border-top: 0; }
+.cx-lg li:hover { background: color-mix(in srgb, var(--bg-elevated) 55%, transparent); }
+.cx-av { width: 36px; height: 36px; flex-shrink: 0; display: grid; place-items: center; border-radius: 12px; font-size: 16px; font-weight: 800; background: color-mix(in srgb, var(--ink-rose) 15%, transparent); color: var(--ink-rose); }
+.cx-lg li.income .cx-av { background: color-mix(in srgb, var(--ink-emerald) 15%, transparent); color: var(--ink-emerald); }
+.cx-li-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.cx-li-title { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.cx-li-title strong { font-size: 14px; }
+.cx-li-main small, .cx-li-amt small { font-size: 11px; color: var(--text-muted); }
+.cx-li-amt { display: flex; flex-direction: column; align-items: flex-end; }
+.cx-li-amt b { font-size: 14px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.cx-li-tools { display: flex; gap: 4px; }
+.cx-li-tools button { width: 32px; height: 32px; border-radius: 10px; border: 1px solid var(--border-subtle); background: var(--bg-elevated); color: var(--text-secondary); font-size: 13px; }
+.cx-li-tools button:not(:disabled):hover { color: var(--text-primary); border-color: var(--border-default); }
+.cx-li-tools .del { color: var(--ink-rose); }
+.cx-pager { display: flex; justify-content: center; align-items: center; gap: 10px; flex-wrap: wrap; }
+.cx-pager > div { display: flex; gap: 4px; overflow-x: auto; }
+.cx-pager button { min-width: 36px; height: 36px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--border-subtle); background: var(--bg-card); color: var(--text-secondary); font-size: 13px; font-weight: 700; }
+.cx-pager button.on { background: var(--brand); border-color: var(--brand); color: #fff; }
+
+@media (max-width: 960px) {
+  .cx-summary { grid-template-columns: 1fr 1fr; }
+  .cx-balance { grid-column: 1 / -1; }
+  .cx-grid2 { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  .cx { padding: 16px 12px 88px; }
+  .cx-head h1 { font-size: 26px; }
+  .cx-lbl { display: none; }
+  .cx-ghost { padding: 0 13px; }
+  .cx-wallets { flex-direction: column; align-items: stretch; }
+  .cx-wallet-tools { justify-content: flex-end; }
+  .cx-summary { grid-template-columns: 1fr; }
+  .cx-balance { padding: 20px; }
+  .cx-balance-amt { font-size: 30px; }
+  .cx-gauge { width: 84px; height: 84px; }
+  .cx-stats { grid-template-columns: 1fr; }
+  .cx-bills, .cx-days { grid-template-columns: 1fr; }
+  .cx-tabs { border-radius: 18px; }
+  .cx-li-tools { flex-direction: column; }
+  .cx-lg li { gap: 10px; padding: 12px; }
 }
 
-.cashflow-view-tabs > div {
-  min-width: 480px;
-}
+/* ───── modals (teleported → :global) ───── */
+:global(.cxm-overlay) { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(3, 5, 12, .62); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+:global(.cxm-overlay--top) { z-index: 70; }
+:global(.cxm) { --ac: var(--brand); position: relative; width: 100%; max-width: 480px; max-height: min(88vh, 760px); display: flex; flex-direction: column; overflow: hidden; border-radius: 28px; border: 1px solid var(--border-default); background: var(--bg-card); color: var(--text-primary); box-shadow: 0 40px 100px -20px rgba(0, 0, 0, .55); }
+:global(.cxm--in) { --ac: var(--ink-emerald); }
+:global(.cxm--out) { --ac: var(--ink-rose); }
+:global(.cxm--amber) { --ac: var(--ink-amber); }
+:global(.cxm-head) { position: relative; display: flex; align-items: center; gap: 14px; padding: 20px 22px 18px; background: linear-gradient(160deg, color-mix(in srgb, var(--ac) 20%, transparent), transparent 75%); }
+:global(.cxm-badge) { width: 46px; height: 46px; flex-shrink: 0; display: grid; place-items: center; border-radius: 16px; font-size: 22px; background: color-mix(in srgb, var(--ac) 22%, var(--bg-card)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ac) 40%, transparent); }
+:global(.cxm-head-txt) { flex: 1; min-width: 0; }
+:global(.cxm-head-txt h3) { margin: 0; font-size: 17px; font-weight: 800; letter-spacing: -.01em; }
+:global(.cxm-head-txt p) { margin: 2px 0 0; font-size: 12px; color: var(--text-muted); }
+:global(.cxm-x) { width: 34px; height: 34px; flex-shrink: 0; border-radius: 50%; border: 0; background: var(--bg-elevated); color: var(--text-secondary); font-size: 13px; cursor: pointer; }
+:global(.cxm-x:hover) { color: var(--text-primary); background: var(--bg-surface, var(--bg-elevated)); }
+:global(.cxm-form) { display: flex; flex-direction: column; min-height: 0; flex: 1; }
+:global(.cxm-body) { display: flex; flex-direction: column; gap: 16px; padding: 4px 22px 20px; overflow-y: auto; flex: 1; min-height: 0; }
+:global(.cxm-body--flush) { padding: 0 0 6px; gap: 0; }
+:global(.cxm-foot) { display: flex; align-items: center; gap: 10px; padding: 14px 22px; border-top: 1px solid var(--border-subtle); background: var(--bg-elevated); }
+:global(.cxm-foot--between) { justify-content: space-between; font-size: 13px; color: var(--text-secondary); }
+:global(.cxm-foot--between b) { font-size: 16px; font-weight: 800; color: var(--ac); }
+:global(.cxm-grow) { flex: 1; }
+:global(.cxm-btn) { height: 42px; padding: 0 20px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border-radius: 999px; border: 1px solid var(--border-default); background: var(--bg-card); color: var(--text-secondary); font-size: 13px; font-weight: 700; font-family: inherit; cursor: pointer; transition: transform .15s, background .15s; }
+:global(.cxm-btn:hover) { color: var(--text-primary); }
+:global(.cxm-btn--main) { border: 0; color: #fff; background: linear-gradient(135deg, var(--ac), color-mix(in srgb, var(--ac) 60%, var(--brand-2))); box-shadow: 0 8px 20px -8px var(--ac); }
+:global(.cxm-btn--main:hover) { color: #fff; }
+:global(.cxm-form .cxm-foot .cxm-btn--main) { flex: 1; }
+:global(.cxm-btn--danger) { border-color: color-mix(in srgb, var(--ink-rose) 40%, transparent); background: color-mix(in srgb, var(--ink-rose) 12%, transparent); color: var(--ink-rose); }
+:global(.cxm-btn--danger:hover) { color: var(--ink-rose); }
+:global(.cxm-btn--sm) { height: 32px; padding: 0 14px; font-size: 12px; }
+:global(.cxm-btn:disabled) { opacity: .5; cursor: not-allowed; }
+:global(.cxm-spin) { display: inline-block; width: 14px; height: 14px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, .4); border-top-color: #fff; animation: cx-rot .8s linear infinite; }
 
-@media (min-width: 640px) {
-  .cashflow-view-tabs > div {
-    min-width: 0;
-  }
-}
+:global(.cxm-row) { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+:global(.cxm-f) { position: relative; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+:global(.cxm-f > label) { font-size: 12px; font-weight: 700; color: var(--text-secondary); }
+:global(.cxm-f label i), :global(.cxm-money label i) { font-style: normal; color: var(--ink-rose); }
+:global(.cxm-f label small), :global(.cxm-money label small) { font-weight: 500; font-size: 10px; color: var(--text-muted); margin-left: 4px; }
+:global(.cxm-in) { width: 100%; padding: 11px 14px; border-radius: 14px; border: 1px solid var(--border-default); background: var(--bg-elevated); color: var(--text-primary); font-size: 14px; font-family: inherit; outline: none; transition: border-color .15s, box-shadow .15s; }
+:global(.cxm-in:focus) { border-color: var(--ac); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ac) 22%, transparent); }
+:global(textarea.cxm-in) { resize: none; }
 
-.tab-button {
-  @apply px-3 py-2.5 rounded-xl flex items-center justify-center gap-2 transition-all border text-xs sm:text-sm font-semibold;
-  background: transparent;
-  border-color: transparent;
-  color: var(--text-secondary);
-}
+:global(.cxm-seg) { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: 16px; background: var(--bg-elevated); }
+:global(.cxm-seg--3) { grid-template-columns: repeat(3, 1fr); }
+:global(.cxm-seg button) { height: 40px; border-radius: 12px; border: 0; background: transparent; color: var(--text-muted); font-size: 13px; font-weight: 700; font-family: inherit; cursor: pointer; transition: background .15s, color .15s; }
+:global(.cxm-seg button.on) { background: var(--bg-card); color: var(--text-primary); box-shadow: 0 2px 8px rgba(0, 0, 0, .18); }
+:global(.cxm-seg button.seg-in.on) { background: var(--ink-emerald); color: #fff; }
+:global(.cxm-seg button.seg-out.on) { background: var(--ink-rose); color: #fff; }
+:global(.cxm-seg--3 button.on) { background: var(--brand); color: #fff; }
 
-.tab-button:hover {
-  background: var(--bg-elevated);
-  border-color: var(--border-subtle);
-  color: var(--text-primary);
-}
+:global(.cxm-money) { display: flex; flex-direction: column; gap: 6px; padding: 16px; border-radius: 20px; background: color-mix(in srgb, var(--ac) 9%, var(--bg-elevated)); border: 1px solid color-mix(in srgb, var(--ac) 25%, transparent); }
+:global(.cxm-money > label) { font-size: 12px; font-weight: 700; color: var(--text-secondary); }
+:global(.cxm-money-box) { display: flex; align-items: center; gap: 8px; }
+:global(.cxm-money-box span) { font-size: 28px; font-weight: 800; color: var(--ac); }
+:global(.cxm-money-box input) { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--text-primary); font-size: 28px; font-weight: 800; font-family: inherit; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+:global(.cxm-money-box input::placeholder) { font-size: 18px; font-weight: 500; color: var(--text-muted); }
+:global(.cxm-calc) { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-muted); }
+:global(.cxm-calc b) { color: var(--ac); font-size: 14px; }
+:global(.cxm-calc button) { height: 24px; padding: 0 10px; border-radius: 99px; border: 0; background: color-mix(in srgb, var(--ac) 22%, transparent); color: var(--ac); font-size: 11px; font-weight: 800; cursor: pointer; }
 
-.tab-button:active {
-  transform: scale(0.97);
-}
+:global(.cxm-menu) { position: absolute; left: 0; right: 0; top: 100%; margin-top: 6px; z-index: 30; max-height: 200px; overflow-y: auto; padding: 6px; border-radius: 16px; border: 1px solid var(--border-default); background: var(--bg-card); box-shadow: 0 18px 40px -10px rgba(0, 0, 0, .45); }
+:global(.cxm-menu button) { display: block; width: 100%; padding: 9px 12px; border: 0; border-radius: 10px; background: transparent; color: var(--text-secondary); font-size: 13px; text-align: left; font-family: inherit; cursor: pointer; }
+:global(.cxm-menu button.hi), :global(.cxm-menu button:hover) { background: color-mix(in srgb, var(--ac) 18%, transparent); color: var(--text-primary); }
+:global(.cxm-menu button.new) { color: var(--ac); }
+:global(.cxm-menu p) { margin: 0; padding: 10px; font-size: 12px; text-align: center; color: var(--text-muted); }
 
-.tab-button-active {
-  background: var(--brand-soft) !important;
-  border-color: var(--brand-border) !important;
-  color: var(--brand-ink) !important;
-  box-shadow: 0 1px 3px rgba(37, 99, 168, 0.12);
-}
+:global(.cxm-switch) { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 14px 16px; border-radius: 18px; border: 1px solid var(--border-subtle); background: var(--bg-elevated); cursor: pointer; }
+:global(.cxm-switch span) { display: flex; flex-direction: column; gap: 2px; }
+:global(.cxm-switch strong) { font-size: 13px; }
+:global(.cxm-switch small) { font-size: 11px; color: var(--text-muted); }
+:global(.cxm-switch input) { position: absolute; opacity: 0; pointer-events: none; }
+:global(.cxm-switch i) { position: relative; width: 44px; height: 26px; flex-shrink: 0; border-radius: 99px; background: var(--border-default); transition: background .2s; }
+:global(.cxm-switch i::after) { content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 2px 6px rgba(0, 0, 0, .3); transition: transform .2s; }
+:global(.cxm-switch input:checked + i) { background: var(--ac); }
+:global(.cxm-switch input:checked + i::after) { transform: translateX(18px); }
+:global(.cxm-switch input:focus-visible + i) { outline: 2px solid var(--ac); outline-offset: 2px; }
 
-.cashflow-tab-icon {
-  font-size: 1rem;
-  line-height: 1;
-}
+:global(.cxm-note) { margin: 0; padding: 12px 14px; border-radius: 16px; background: color-mix(in srgb, var(--ink-sky) 10%, transparent); color: var(--text-secondary); font-size: 12px; line-height: 1.6; }
 
-/* Book Selector Pills */
-.book-pill {
-  @apply px-3.5 py-2 rounded-xl text-xs transition-all flex items-center gap-2 shrink-0 border font-medium;
-  background: var(--bg-elevated);
-  border-color: var(--border-subtle);
-  color: var(--text-secondary);
-}
+:global(.cxm-rank) { margin: 0; padding: 0; list-style: none; }
+:global(.cxm-rank li) { display: flex; gap: 14px; padding: 14px 22px; border-top: 1px solid var(--border-subtle); }
+:global(.cxm-rank li:first-child) { border-top: 0; }
+:global(.cxm-rank li > div) { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 7px; }
+:global(.cxm-rank-no) { width: 30px; height: 30px; flex-shrink: 0; display: grid; place-items: center; border-radius: 10px; background: var(--bg-elevated); color: var(--text-muted); font-size: 13px; font-weight: 800; }
+:global(.cxm-rank-no.top) { background: color-mix(in srgb, var(--ac) 20%, transparent); color: var(--ac); }
+:global(.cxm-rank-line) { display: flex; justify-content: space-between; gap: 8px; font-size: 14px; }
+:global(.cxm-rank-line strong) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+:global(.cxm-rank-line b) { color: var(--ac); font-variant-numeric: tabular-nums; }
+:global(.cxm-rank small) { font-size: 11px; color: var(--text-muted); }
+:global(.cxm--in .cx-bar i) { background: linear-gradient(90deg, var(--ink-emerald), color-mix(in srgb, var(--ink-emerald) 60%, var(--ink-sky))); }
+:global(.cxm .cx-bar) { height: 7px; border-radius: 99px; overflow: hidden; background: var(--bg-elevated); }
+:global(.cxm .cx-bar i) { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--ink-rose), color-mix(in srgb, var(--ink-rose) 60%, var(--ink-amber))); }
+:global(.cxm--in .cx-bar i) { background: linear-gradient(90deg, var(--ink-emerald), color-mix(in srgb, var(--ink-emerald) 60%, var(--ink-sky))); }
 
-.book-pill:hover {
-  background: var(--bg-surface);
-  border-color: var(--border-default);
-  color: var(--text-primary);
-}
+:global(.cxm-sum) { padding: 14px 16px; border-radius: 18px; background: var(--bg-elevated); border: 1px solid var(--border-subtle); display: flex; flex-direction: column; gap: 12px; }
+:global(.cxm-sum-top) { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 13px; }
+:global(.cxm-sum-top span) { padding: 2px 10px; border-radius: 99px; background: var(--brand-soft); color: var(--brand-ink); font-size: 11px; font-weight: 800; flex-shrink: 0; }
+:global(.cxm-sum-top span.empty) { background: color-mix(in srgb, var(--ink-rose) 15%, transparent); color: var(--ink-rose); }
+:global(.cxm-sum-grid) { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center; padding-top: 12px; border-top: 1px dashed var(--border-default); }
+:global(.cxm-sum-grid small) { display: block; font-size: 10px; color: var(--text-muted); }
+:global(.cxm-sum-grid b) { display: block; margin-top: 2px; font-size: 12px; font-weight: 800; overflow: hidden; text-overflow: ellipsis; }
+:global(.cxm-sum .in) { color: var(--ink-emerald); }
+:global(.cxm-sum .out) { color: var(--ink-rose); }
 
-.book-pill:active {
-  transform: scale(0.97);
-}
+:global(.cxm-files) { display: flex; flex-direction: column; gap: 8px; }
+:global(.cxm-files button) { --fc: var(--brand); display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px; border-radius: 18px; border: 1px solid var(--border-default); background: var(--bg-card); color: var(--text-primary); text-align: left; font-family: inherit; cursor: pointer; transition: border-color .15s, transform .15s; }
+:global(.cxm-files button:not(:disabled):hover) { border-color: var(--fc); transform: translateY(-1px); }
+:global(.cxm-files button:disabled) { opacity: .5; cursor: not-allowed; }
+:global(.cxm-files .file-pdf) { --fc: var(--ink-rose); }
+:global(.cxm-files .file-xls) { --fc: var(--ink-emerald); }
+:global(.cxm-files .file-csv) { --fc: var(--ink-sky); }
+:global(.cxm-files button > span) { width: 42px; height: 42px; flex-shrink: 0; display: grid; place-items: center; border-radius: 14px; background: color-mix(in srgb, var(--fc) 16%, transparent); color: var(--fc); font-size: 11px; font-weight: 800; }
+:global(.cxm-files button > div) { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+:global(.cxm-files strong) { font-size: 13px; }
+:global(.cxm-files small) { font-size: 11px; color: var(--text-muted); }
+:global(.cxm-files em) { display: inline-flex; align-items: center; gap: 6px; font-style: normal; padding: 6px 14px; border-radius: 99px; background: var(--fc); color: #fff; font-size: 12px; font-weight: 800; flex-shrink: 0; }
 
-.book-pill-active {
-  background: var(--brand) !important;
-  border-color: var(--brand) !important;
-  color: #ffffff !important;
-  box-shadow: 0 4px 14px rgba(37, 99, 168, 0.3);
-}
+:global(.cxm-bar) { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 12px; color: var(--text-muted); font-weight: 600; }
+:global(.cxm-books) { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; max-height: 320px; overflow-y: auto; }
+:global(.cxm-books li) { --bk: var(--brand); display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 18px; border: 1px solid var(--border-subtle); background: var(--bg-elevated); }
+:global(.cxm-books li > div:nth-child(2)) { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+:global(.cxm-books strong) { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+:global(.cxm-books em) { font-style: normal; padding: 1px 8px; border-radius: 99px; background: var(--brand-soft); color: var(--brand-ink); font-size: 10px; font-weight: 800; }
+:global(.cxm-books small) { font-size: 11px; color: var(--text-muted); }
+:global(.cxm-book-ico) { width: 42px; height: 42px; flex-shrink: 0; display: grid; place-items: center; border-radius: 14px; font-size: 20px; background: color-mix(in srgb, var(--bk) 22%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--bk) 45%, transparent); }
+:global(.cxm-book-tools) { display: flex; gap: 6px; flex-shrink: 0; }
 
-.book-pill-selected {
-  box-shadow: 0 2px 10px rgba(139, 92, 246, 0.18);
-}
+:global(.cxm-icons) { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; }
+:global(.cxm-icons button) { aspect-ratio: 1; display: grid; place-items: center; border-radius: 12px; border: 1px solid var(--border-subtle); background: var(--bg-elevated); font-size: 18px; cursor: pointer; transition: transform .15s; }
+:global(.cxm-icons button.on) { border-color: var(--ac); background: color-mix(in srgb, var(--ac) 22%, transparent); transform: scale(1.08); }
+:global(.cxm-colors) { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+:global(.cxm-colors button) { height: 34px; border-radius: 12px; border: 2px solid transparent; color: #fff; font-size: 13px; font-weight: 800; cursor: pointer; transition: transform .15s; }
+:global(.cxm-colors button.on) { border-color: #fff; transform: scale(1.06); box-shadow: 0 6px 16px -4px currentColor; }
 
-.book-pill-badge {
-  @apply text-[10px] px-1.5 py-0.5 rounded-full font-semibold;
-  background: rgba(255, 255, 255, 0.15);
-  color: currentColor;
-}
-
-.book-pill-active .book-pill-badge {
-  background: rgba(255, 255, 255, 0.25);
-  color: #ffffff;
-}
-
-.book-default-badge {
-  @apply text-[10px] px-1.5 py-0.5 rounded-md font-semibold shrink-0;
-}
-
-/* Scrollbar Hide */
-.scrollbar-none {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
-.scrollbar-none::-webkit-scrollbar {
-  display: none;
+@media (max-width: 640px) {
+  :global(.cxm-overlay) { align-items: flex-end; padding: 0; }
+  :global(.cxm) { max-width: none; max-height: 92vh; border-radius: 28px 28px 0 0; }
+  :global(.cxm-row) { grid-template-columns: 1fr; }
+  :global(.cxm-foot) { padding-bottom: calc(14px + env(safe-area-inset-bottom)); }
 }
 </style>

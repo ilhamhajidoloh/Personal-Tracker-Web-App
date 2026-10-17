@@ -1,111 +1,157 @@
 <template>
-<AppTabsLayout>
-    <main class="events-board">
-      <header class="events-board__header">
-        <div>
-          <p class="events-board__eyebrow">PLANNER / EVENTS</p>
+  <AppTabsLayout>
+    <main class="ev">
+      <!-- Hero -->
+      <header class="ev-hero">
+        <div class="ev-hero__glow" aria-hidden="true"></div>
+        <div class="ev-hero__text">
+          <span class="ev-chip ev-chip--glass">✦ Planner</span>
           <h1>กิจกรรมของฉัน</h1>
-          <p class="events-board__intro">วางแผน ติดตาม และจัดการทุกนัดหมายจากพื้นที่เดียว</p>
+          <p>วางแผน ติดตาม และจัดการทุกนัดหมายจากพื้นที่เดียว</p>
         </div>
-        <div class="events-board__actions">
+        <div class="ev-hero__actions">
           <input ref="icsFileInput" type="file" accept=".ics,text/calendar" class="hidden" @change="importIcsFile">
-          <button type="button" class="events-button events-button--quiet" :disabled="isImporting" @click="icsFileInput?.click()">{{ isImporting ? 'กำลังนำเข้า…' : 'นำเข้า .ics' }}</button>
-          <button type="button" class="events-button events-button--quiet" :disabled="isExporting || !events.length" @click="exportIcsFile">{{ isExporting ? 'กำลังส่งออก…' : 'ส่งออก .ics' }}</button>
-          <button type="button" class="events-button events-button--quiet" :disabled="isExportingPdf || !events.length" @click="exportPdfFile">{{ isExportingPdf ? 'กำลังสร้าง…' : 'PDF' }}</button>
-          <button type="button" class="events-button events-button--primary" @click="isEntryModalOpen = true">+ เพิ่มกิจกรรม</button>
+          <button type="button" class="ev-btn ev-btn--glass" :disabled="isImporting" @click="icsFileInput?.click()">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14" /></svg>
+            {{ isImporting ? 'กำลังนำเข้า…' : 'นำเข้า' }}
+          </button>
+          <button type="button" class="ev-btn ev-btn--glass" :disabled="isExporting || !events.length" @click="exportIcsFile">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3m0 0L8 7m4-4l4 4M5 21h14" /></svg>
+            {{ isExporting ? 'กำลังส่งออก…' : '.ics' }}
+          </button>
+          <button type="button" class="ev-btn ev-btn--glass" :disabled="isExportingPdf || !events.length" @click="exportPdfFile">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h7l5 5v13H7zM14 3v5h5" /></svg>
+            {{ isExportingPdf ? 'กำลังสร้าง…' : 'PDF' }}
+          </button>
+          <button type="button" class="ev-btn ev-btn--primary" @click="isEntryModalOpen = true">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+            เพิ่มกิจกรรม
+          </button>
         </div>
       </header>
 
-      <div v-if="errorMessage" class="events-alert">{{ errorMessage }}</div>
 
-      <section class="events-summary">
-        <div class="events-summary__item"><span>ทั้งหมด</span><strong>{{ events.length }}</strong></div>
-        <div class="events-summary__item"><span>กำลังดำเนินอยู่</span><strong>{{ ongoingEventsCount }}</strong></div>
-        <div class="events-summary__item"><span>กำลังจะมาถึง</span><strong>{{ upcomingEventsCount }}</strong></div>
-        <div class="events-summary__item"><span>สิ้นสุดแล้ว</span><strong>{{ pastEventsCount }}</strong></div>
+      <div v-if="errorMessage" class="ev-alert" role="alert">
+        <span>⚠</span>{{ errorMessage }}
+      </div>
+
+      <!-- Stats -->
+      <section class="ev-stats" aria-label="สรุปกิจกรรม">
+        <div class="ev-stat ev-stat--all"><i>◎</i><div><span>ทั้งหมด</span><strong>{{ events.length }}</strong></div></div>
+        <div class="ev-stat ev-stat--live"><i>●</i><div><span>กำลังดำเนินอยู่</span><strong>{{ ongoingEventsCount }}</strong></div></div>
+        <div class="ev-stat ev-stat--next"><i>➜</i><div><span>กำลังจะมาถึง</span><strong>{{ upcomingEventsCount }}</strong></div></div>
+        <div class="ev-stat ev-stat--done"><i>✓</i><div><span>สิ้นสุดแล้ว</span><strong>{{ pastEventsCount }}</strong></div></div>
       </section>
 
-      <section v-if="ongoingEvents.length" class="events-live" aria-label="กิจกรรมที่กำลังดำเนินอยู่">
-        <div class="events-live__heading">
-          <div><span class="events-live__signal"></span><p>HAPPENING NOW</p></div>
-          <strong>{{ ongoingEvents.length }} กิจกรรมกำลังดำเนินอยู่</strong>
+      <!-- Live now -->
+      <section v-if="ongoingEvents.length" class="ev-now" aria-label="กิจกรรมที่กำลังดำเนินอยู่">
+        <div class="ev-now__head">
+          <span class="ev-now__badge"><i></i>Happening now</span>
+          <span class="ev-now__count">{{ ongoingEvents.length }} กิจกรรมกำลังดำเนินอยู่</span>
         </div>
-        <div class="events-live__list">
-          <article v-for="item in ongoingEvents" :key="item.id" class="events-live__item">
-            <div class="events-live__content">
-              <span class="events-live__type">{{ getEventTypeName(item.event_type) }}</span>
-              <h2>{{ item.title }}</h2>
-              <p>{{ displayEventDateTime(item) }}</p>
+        <div class="ev-now__grid">
+          <article v-for="item in ongoingEvents" :key="item.id" class="ev-now-card">
+            <div class="ev-now-card__top">
+              <span class="ev-chip ev-chip--live">{{ getEventTypeName(item.event_type) }}</span>
+              <div class="ev-now-card__timer">
+                <small>เหลือเวลา</small>
+                <strong>{{ getOngoingEventDetails(item).countdownText }}</strong>
+              </div>
             </div>
-            <div class="events-live__countdown">
-              <span>เหลือเวลา</span>
-              <strong>{{ getOngoingEventDetails(item).countdownText }}</strong>
-            </div>
-            <div class="events-live__progress-wrap">
-              <div class="events-live__progress" aria-label="ความคืบหน้า"><i :style="{ width: getOngoingEventDetails(item).progress + '%' }"></i></div>
-              <span>เวลาคงเหลือ {{ getOngoingEventDetails(item).progress }}%</span>
-            </div>
+            <h2>{{ item.title }}</h2>
+            <p>{{ displayEventDateTime(item) }}</p>
+            <div class="ev-bar" aria-label="ความคืบหน้า"><i :style="{ width: getOngoingEventDetails(item).progress + '%' }"></i></div>
+            <small class="ev-now-card__pct">เวลาคงเหลือ {{ getOngoingEventDetails(item).progress }}%</small>
           </article>
         </div>
       </section>
 
-      <section class="events-workspace">
-        <div class="events-toolbar">
-          <div class="events-tabs" role="tablist" aria-label="ตัวกรองกิจกรรม">
-            <button v-for="tab in subTabs" :key="tab.value" type="button" :class="{ 'is-active': activeSubTab === tab.value }" @click="activeSubTab = tab.value">
-              {{ tab.label }} <b>{{ tab.count }}</b>
+
+      <!-- Workspace -->
+      <section class="ev-panel">
+        <div class="ev-bar-tools">
+          <div class="ev-seg" role="tablist" aria-label="ตัวกรองกิจกรรม">
+            <button v-for="tab in subTabs" :key="tab.value" type="button" role="tab" :aria-selected="activeSubTab === tab.value" :class="{ 'is-active': activeSubTab === tab.value }" @click="activeSubTab = tab.value">
+              {{ tab.label }}<b>{{ tab.count }}</b>
             </button>
           </div>
-          <div class="events-filter">
-            <input v-model="searchQuery" type="search" placeholder="ค้นหาชื่อหรือรายละเอียดกิจกรรม">
-            <select v-if="viewMode === 'list'" v-model.number="itemsPerPage" @change="currentPage = 1" aria-label="จำนวนรายการต่อหน้า">
+          <div class="ev-tools">
+            <label class="ev-search">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>
+              <input v-model="searchQuery" type="search" placeholder="ค้นหาชื่อหรือรายละเอียด">
+            </label>
+            <select v-if="viewMode === 'list'" v-model.number="itemsPerPage" class="ev-select" aria-label="จำนวนรายการต่อหน้า" @change="currentPage = 1">
               <option :value="10">10 รายการ</option><option :value="20">20 รายการ</option><option :value="50">50 รายการ</option>
             </select>
-            <div class="events-view-switch" aria-label="มุมมอง"><button type="button" :class="{ 'is-active': viewMode === 'list' }" @click="viewMode = 'list'">รายการ</button><button type="button" :class="{ 'is-active': viewMode === 'calendar' }" @click="viewMode = 'calendar'">ปฏิทิน</button></div>
-            <button type="button" class="events-icon-button" :disabled="isLoading" title="รีเฟรช" @click="loadEvents">↻</button>
+            <div class="ev-toggle" aria-label="มุมมอง">
+              <button type="button" :class="{ 'is-active': viewMode === 'list' }" @click="viewMode = 'list'">รายการ</button>
+              <button type="button" :class="{ 'is-active': viewMode === 'calendar' }" @click="viewMode = 'calendar'">ปฏิทิน</button>
+            </div>
+            <button type="button" class="ev-round" :disabled="isLoading" title="รีเฟรช" aria-label="รีเฟรช" @click="loadEvents">↻</button>
           </div>
         </div>
 
-        <div v-if="isLoading" class="events-loading"><span></span><span></span><span></span></div>
-        <div v-else-if="!filteredEvents.length && viewMode === 'list'" class="events-empty">
-          <div>◌</div><h2>{{ searchQuery ? 'ไม่พบกิจกรรมที่ค้นหา' : 'ยังไม่มีรายการในมุมมองนี้' }}</h2>
+        <div v-if="isLoading" class="ev-skeleton"><span></span><span></span><span></span></div>
+
+        <div v-else-if="!filteredEvents.length && viewMode === 'list'" class="ev-empty">
+          <div class="ev-empty__art">◌</div>
+          <h2>{{ searchQuery ? 'ไม่พบกิจกรรมที่ค้นหา' : 'ยังไม่มีรายการในมุมมองนี้' }}</h2>
           <p>{{ searchQuery ? 'ลองเปลี่ยนคำค้นหา หรือเลือกตัวกรองอื่น' : 'เริ่มบันทึกนัดหมายหรือกิจกรรมแรกของคุณ' }}</p>
-          <button v-if="!searchQuery" type="button" class="events-button events-button--primary" @click="isEntryModalOpen = true">เพิ่มกิจกรรม</button>
+          <button v-if="!searchQuery" type="button" class="ev-btn ev-btn--primary" @click="isEntryModalOpen = true">+ เพิ่มกิจกรรม</button>
         </div>
-        <section v-else-if="viewMode === 'calendar'" class="events-calendar" :class="`events-calendar--${calendarLayout}`">
-          <header class="events-calendar__header">
-            <button type="button" :aria-label="`ก่อนหน้า${calendarLayoutLabel}`" @click="moveCalendarMonth(-1)">‹</button>
-            <div><h2>{{ calendarMonthLabel }}</h2><p>{{ calendarLayoutLabel }}</p><button type="button" @click="goToCurrentMonth">วันนี้</button></div>
-            <button type="button" :aria-label="`ถัดไป${calendarLayoutLabel}`" @click="moveCalendarMonth(1)">›</button>
+
+        <!-- Calendar -->
+        <section v-else-if="viewMode === 'calendar'" class="ev-cal" :class="`ev-cal--${calendarLayout}`">
+          <header class="ev-cal__head">
+            <button type="button" class="ev-round" :aria-label="`ก่อนหน้า${calendarLayoutLabel}`" @click="moveCalendarMonth(-1)">‹</button>
+            <div class="ev-cal__title">
+              <h2>{{ calendarMonthLabel }}</h2>
+              <div><span>{{ calendarLayoutLabel }}</span><button type="button" @click="goToCurrentMonth">วันนี้</button></div>
+            </div>
+            <button type="button" class="ev-round" :aria-label="`ถัดไป${calendarLayoutLabel}`" @click="moveCalendarMonth(1)">›</button>
           </header>
-          <div v-if="calendarLayout !== 'day'" class="events-calendar__weekdays"><span v-for="day in calendarVisibleWeekdays" :key="day">{{ day }}</span></div>
-          <div class="events-calendar__grid">
-            <article v-for="day in calendarDays" :key="day.key" class="events-calendar__day" :class="{ 'is-outside': !day.isCurrentMonth, 'is-today': day.isToday }">
-              <span class="events-calendar__date">{{ day.day }}</span>
-              <div class="events-calendar__items">
-                <button v-for="item in getCalendarEvents(day.key)" :key="item.id" type="button" class="events-calendar__event" :class="`events-calendar__event--${getEventStatusMeta(item).status}`" :title="`${item.title} · ${displayEventDateTime(item)}`" @click="openEditModal(item)">
+          <div v-if="calendarLayout !== 'day'" class="ev-cal__weekdays"><span v-for="day in calendarVisibleWeekdays" :key="day">{{ day }}</span></div>
+          <div class="ev-cal__grid">
+            <article v-for="day in calendarDays" :key="day.key" class="ev-cal__day" :class="{ 'is-outside': !day.isCurrentMonth, 'is-today': day.isToday }">
+              <span class="ev-cal__num">{{ day.day }}</span>
+              <div class="ev-cal__items">
+                <button v-for="item in getCalendarEvents(day.key)" :key="item.id" type="button" class="ev-pill" :class="`ev-pill--${getEventStatusMeta(item).status}`" :title="`${item.title} · ${displayEventDateTime(item)}`" @click="openEditModal(item)">
                   <b>{{ item.start_time ? formatTime(item.start_time) : 'ทั้งวัน' }}</b><span>{{ item.title }}</span>
                 </button>
               </div>
             </article>
           </div>
         </section>
-        <div v-else class="events-list">
-          <article v-for="item in paginatedEvents" :key="item.id" class="event-row" :class="`event-row--${getEventStatusMeta(item).status}`">
-            <div class="event-row__date"><span>{{ getMonthShort(getTimelineDate(item)) }}</span><strong>{{ getDay(getTimelineDate(item)) }}</strong></div>
-            <div class="event-row__body">
-              <div class="event-row__meta">
-                <span class="event-status" :style="getEventStatusBadgeStyle(item)">{{ getEventStatusText(item) }}</span>
-                <span class="event-type" :class="getEventBadgeClass(item.event_type)">{{ getEventTypeName(item.event_type) }}</span>
-                <span v-if="item.google_event_id" class="event-google">Google Calendar</span>
+
+        <!-- List -->
+        <div v-else class="ev-list">
+          <article v-for="item in paginatedEvents" :key="item.id" class="ev-card" :class="`ev-card--${getEventStatusMeta(item).status}`">
+            <div class="ev-card__date">
+              <span>{{ getMonthShort(getTimelineDate(item)) }}</span>
+              <strong>{{ getDay(getTimelineDate(item)) }}</strong>
+            </div>
+            <div class="ev-card__body">
+              <div class="ev-card__tags">
+                <span class="ev-tag ev-tag--status" :style="getEventStatusBadgeStyle(item)">{{ getEventStatusText(item) }}</span>
+                <span class="ev-tag" :class="getEventBadgeClass(item.event_type)">{{ getEventTypeName(item.event_type) }}</span>
+                <span v-if="item.google_event_id" class="ev-tag ev-tag--google">Google Calendar</span>
               </div>
               <h2>{{ item.title }}</h2>
-              <p class="event-row__time">{{ formatDate(getTimelineDate(item)) }} · {{ displayEventDateTime(item) }}</p>
-              <p v-if="item.description" class="event-row__description">{{ item.description }}</p>
-              <div v-if="getEventStatusMeta(item).status === 'ongoing'" class="event-progress"><span>กำลังดำเนินอยู่ · เหลือ {{ getOngoingEventDetails(item).countdownText }}</span><i><b :style="{ width: getOngoingEventDetails(item).progress + '%' }"></b></i><em>เวลาคงเหลือ {{ getOngoingEventDetails(item).progress }}%</em></div>
-              <div v-else-if="item.id === nextUpcomingEvent?.id" class="event-progress event-progress--next"><span>เริ่มในอีก {{ getUpcomingEventDetails(item).countdownText }}</span><i><b :style="{ width: getUpcomingEventDetails(item).progress + '%' }"></b></i><em>ผ่านรอบนับถอยหลัง {{ getUpcomingEventDetails(item).progress }}%</em></div>
+              <p class="ev-card__time">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                {{ formatDate(getTimelineDate(item)) }} · {{ displayEventDateTime(item) }}
+              </p>
+              <p v-if="item.description" class="ev-card__desc">{{ item.description }}</p>
+              <div v-if="getEventStatusMeta(item).status === 'ongoing'" class="ev-prog">
+                <div><span>กำลังดำเนินอยู่ · เหลือ {{ getOngoingEventDetails(item).countdownText }}</span><em>{{ getOngoingEventDetails(item).progress }}%</em></div>
+                <div class="ev-bar"><i :style="{ width: getOngoingEventDetails(item).progress + '%' }"></i></div>
+              </div>
+              <div v-else-if="item.id === nextUpcomingEvent?.id" class="ev-prog ev-prog--next">
+                <div><span>เริ่มในอีก {{ getUpcomingEventDetails(item).countdownText }}</span><em>{{ getUpcomingEventDetails(item).progress }}%</em></div>
+                <div class="ev-bar"><i :style="{ width: getUpcomingEventDetails(item).progress + '%' }"></i></div>
+              </div>
             </div>
-            <div class="event-row__actions">
+            <div class="ev-card__actions">
               <button type="button" :disabled="isSyncingId === item.id || isDeletingId === item.id" title="ซิงค์ Google Calendar" @click="syncSingleEvent(item.id)">{{ isSyncingId === item.id ? '…' : 'Sync' }}</button>
               <button type="button" title="แก้ไข" @click="openEditModal(item)">แก้ไข</button>
               <button type="button" class="is-danger" :disabled="isDeletingId === item.id || isSyncingId === item.id" title="ลบ" @click="deleteEvent(item.id)">{{ isDeletingId === item.id ? '…' : 'ลบ' }}</button>
@@ -113,28 +159,61 @@
           </article>
         </div>
 
-        <footer v-if="viewMode === 'list' && totalPages > 1" class="events-pagination">
+        <footer v-if="viewMode === 'list' && totalPages > 1" class="ev-pager">
           <span>{{ pageInfo }}</span>
-          <div><button type="button" :disabled="currentPage === 1" @click="currentPage = Math.max(1, currentPage - 1)">ก่อนหน้า</button><button v-for="page in totalPages" :key="page" type="button" :class="{ 'is-current': currentPage === page }" @click="currentPage = page">{{ page }}</button><button type="button" :disabled="currentPage === totalPages" @click="currentPage = Math.min(totalPages, currentPage + 1)">ถัดไป</button></div>
+          <div>
+            <button type="button" :disabled="currentPage === 1" @click="currentPage = Math.max(1, currentPage - 1)">‹ ก่อนหน้า</button>
+            <button v-for="page in totalPages" :key="page" type="button" :class="{ 'is-current': currentPage === page }" @click="currentPage = page">{{ page }}</button>
+            <button type="button" :disabled="currentPage === totalPages" @click="currentPage = Math.min(totalPages, currentPage + 1)">ถัดไป ›</button>
+          </div>
         </footer>
       </section>
     </main>
 
+
+    <!-- Editor -->
     <Teleport to="body">
       <Transition name="backdrop">
-        <div v-if="isEntryModalOpen" class="event-editor" @click.self="isEntryModalOpen = false">
-          <form class="event-editor__panel" @submit.prevent="submitEvent">
-            <header><div><p>EVENT EDITOR</p><h2>{{ isEditing ? 'แก้ไขกิจกรรม' : 'สร้างกิจกรรมใหม่' }}</h2></div><button type="button" aria-label="ปิด" @click="() => { isEntryModalOpen = false; resetForm() }">×</button></header>
-            <div class="event-editor__content">
-              <label>ชื่อกิจกรรม<input v-model="form.title" type="text" maxlength="100" required placeholder="เช่น ประชุมทีม"></label>
-              <fieldset><legend>รูปแบบเวลา</legend><div class="event-type-picker"><label v-for="opt in eventTypeOptions" :key="opt.value" :class="{ 'is-selected': form.eventType === opt.value }"><input v-model="form.eventType" type="radio" :value="opt.value"><span>{{ opt.icon }}</span>{{ opt.label }}</label></div></fieldset>
-              <div v-if="form.eventType === 'same_day_time'" class="event-editor__grid"><label>วันที่<input v-model="form.startDate" type="date" required></label><label>เริ่ม<input v-model="form.startTime" type="time" required></label><label>สิ้นสุด<input v-model="form.endTime" type="time" required></label></div>
-              <div v-else-if="form.eventType === 'same_day_all_day'" class="event-editor__grid"><label>วันที่<input v-model="form.startDate" type="date" required></label></div>
-              <div v-else class="event-editor__grid"><label>วันเริ่ม<input v-model="form.startDate" type="date" required></label><label>เวลาเริ่ม<input v-model="form.startTime" type="time" required></label><label>วันสิ้นสุด<input v-model="form.endDate" type="date" required></label><label>เวลาสิ้นสุด<input v-model="form.endTime" type="time" required></label></div>
-              <label>รายละเอียด<textarea v-model="form.description" rows="3" placeholder="เพิ่มรายละเอียด (ถ้ามี)"></textarea></label>
-              <label>แจ้งเตือนล่วงหน้า<select v-model="form.reminderMinutes"><option v-for="opt in activeReminderOptions" :key="String(opt.value)" :value="opt.value">{{ opt.label }}</option></select></label>
+        <div v-if="isEntryModalOpen" class="ev-modal" @click.self="isEntryModalOpen = false">
+          <form class="ev-sheet" @submit.prevent="submitEvent">
+            <header class="ev-sheet__head">
+              <div>
+                <span class="ev-chip">{{ isEditing ? '✎ Edit' : '✦ New' }}</span>
+                <h2>{{ isEditing ? 'แก้ไขกิจกรรม' : 'สร้างกิจกรรมใหม่' }}</h2>
+              </div>
+              <button type="button" class="ev-round" aria-label="ปิด" @click="() => { isEntryModalOpen = false; resetForm() }">×</button>
+            </header>
+            <div class="ev-sheet__body">
+              <label class="ev-field"><span>ชื่อกิจกรรม</span><input v-model="form.title" type="text" maxlength="100" required placeholder="เช่น ประชุมทีม"></label>
+              <fieldset class="ev-field">
+                <legend>รูปแบบเวลา</legend>
+                <div class="ev-types">
+                  <label v-for="opt in eventTypeOptions" :key="opt.value" :class="{ 'is-selected': form.eventType === opt.value }">
+                    <input v-model="form.eventType" type="radio" :value="opt.value"><i>{{ opt.icon }}</i><span>{{ opt.label }}</span>
+                  </label>
+                </div>
+              </fieldset>
+              <div v-if="form.eventType === 'same_day_time'" class="ev-grid">
+                <label class="ev-field"><span>วันที่</span><input v-model="form.startDate" type="date" required></label>
+                <label class="ev-field"><span>เริ่ม</span><input v-model="form.startTime" type="time" required></label>
+                <label class="ev-field"><span>สิ้นสุด</span><input v-model="form.endTime" type="time" required></label>
+              </div>
+              <div v-else-if="form.eventType === 'same_day_all_day'" class="ev-grid ev-grid--one">
+                <label class="ev-field"><span>วันที่</span><input v-model="form.startDate" type="date" required></label>
+              </div>
+              <div v-else class="ev-grid ev-grid--two">
+                <label class="ev-field"><span>วันเริ่ม</span><input v-model="form.startDate" type="date" required></label>
+                <label class="ev-field"><span>เวลาเริ่ม</span><input v-model="form.startTime" type="time" required></label>
+                <label class="ev-field"><span>วันสิ้นสุด</span><input v-model="form.endDate" type="date" required></label>
+                <label class="ev-field"><span>เวลาสิ้นสุด</span><input v-model="form.endTime" type="time" required></label>
+              </div>
+              <label class="ev-field"><span>รายละเอียด</span><textarea v-model="form.description" rows="3" placeholder="เพิ่มรายละเอียด (ถ้ามี)"></textarea></label>
+              <label class="ev-field"><span>แจ้งเตือนล่วงหน้า</span><select v-model="form.reminderMinutes"><option v-for="opt in activeReminderOptions" :key="String(opt.value)" :value="opt.value">{{ opt.label }}</option></select></label>
             </div>
-            <footer><button type="button" class="events-button events-button--quiet" @click="() => { isEntryModalOpen = false; resetForm() }">ยกเลิก</button><button type="submit" class="events-button events-button--primary" :disabled="isSubmitting">{{ isSubmitting ? 'กำลังบันทึก…' : 'บันทึกกิจกรรม' }}</button></footer>
+            <footer class="ev-sheet__foot">
+              <button type="button" class="ev-btn ev-btn--ghost" @click="() => { isEntryModalOpen = false; resetForm() }">ยกเลิก</button>
+              <button type="submit" class="ev-btn ev-btn--primary" :disabled="isSubmitting">{{ isSubmitting ? 'กำลังบันทึก…' : 'บันทึกกิจกรรม' }}</button>
+            </footer>
           </form>
         </div>
       </Transition>
@@ -1111,24 +1190,202 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+.ev { --r: 1.1rem; max-width: 1200px; min-width: 0; margin: 0 auto; padding: 1.25rem 1.25rem 4rem; color: var(--text-primary); overflow-x: clip; display: grid; gap: 1.1rem; }
+.ev svg { width: 1.05em; height: 1.05em; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.ev button, .ev-modal button { font: inherit; cursor: pointer; transition: transform .15s ease, background .15s ease, box-shadow .15s ease, opacity .15s ease; }
+.ev button:disabled, .ev-modal button:disabled { cursor: not-allowed; opacity: .5; }
 
-.events-board { max-width: 1200px; min-width: 0; margin: 0 auto; padding: 2rem 1.25rem 4rem; color: var(--text-primary); overflow-x: clip; }
-.events-board__header { display: flex; justify-content: space-between; gap: 2rem; align-items: flex-start; padding: 1.5rem 0 2rem; border-bottom: 1px solid var(--border-subtle); }
-.events-board__eyebrow, .event-editor header p { margin: 0; color: var(--brand-ink); font: 800 .68rem/1.2 ui-monospace, monospace; letter-spacing: .16em; }
-.events-board h1 { margin: .5rem 0; font-size: clamp(2rem, 4vw, 3.25rem); letter-spacing: -.06em; line-height: 1; }
-.events-board__intro { margin: 0; color: var(--text-muted); }.events-board__actions { display: flex; gap: .5rem; flex-wrap: wrap; justify-content: flex-end; }
-.events-button, .events-icon-button, .events-tabs button, .event-row__actions button, .events-pagination button { border: 0; cursor: pointer; font: inherit; transition: .18s ease; }.events-button { padding: .7rem .9rem; border-radius: .65rem; font-size: .8rem; font-weight: 700; }.events-button:disabled, button:disabled { cursor: not-allowed; opacity: .5; }.events-button--primary { background: var(--brand); color: #fff; box-shadow: var(--brand-glow); }.events-button--quiet { color: var(--text-secondary); background: var(--bg-elevated); border: 1px solid var(--border-subtle); }
-.events-alert { padding: .8rem 1rem; margin-top: 1rem; border-radius: .7rem; color: var(--ink-amber); background: var(--event-status-soon-soft); border: 1px solid var(--event-status-soon-border); }
-.events-summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; margin: 1.25rem 0; background: var(--border-subtle); border: 1px solid var(--border-subtle); border-radius: 1rem; overflow: hidden; }.events-summary__item { background: var(--bg-card); padding: 1rem 1.2rem; }.events-summary span { display:block; color:var(--text-muted); font-size:.72rem; }.events-summary strong { display:block; margin-top:.25rem; font-size:1.55rem; }
-.events-live { margin: 0 0 1.25rem; padding: 1rem; border: 1px solid var(--event-status-ongoing-border); border-radius: 1rem; background: var(--event-status-ongoing-soft); box-shadow: var(--event-status-ongoing-shadow); }.events-live__heading { display:flex; align-items:center; justify-content:space-between; gap:1rem; margin:0 0 .8rem; }.events-live__heading>div{display:flex;align-items:center;gap:.55rem}.events-live__heading p{margin:0;font:800 .68rem/1 ui-monospace,monospace;letter-spacing:.12em;color:var(--event-status-ongoing-ink)}.events-live__heading strong{font-size:.72rem;color:var(--event-status-ongoing-ink)}.events-live__signal{width:.55rem;height:.55rem;border-radius:50%;background:var(--event-status-ongoing-ink);box-shadow:0 0 0 0 var(--event-status-ongoing-ink);animation:events-live-pulse 1.5s infinite}@keyframes events-live-pulse{70%{box-shadow:0 0 0 .55rem transparent}100%{box-shadow:0 0 0 0 transparent}}.events-live__list{display:grid;gap:.6rem}.events-live__item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:.75rem;padding:.9rem;background:var(--bg-card);border:1px solid var(--event-status-ongoing-border);border-radius:.7rem}.events-live__type{font-size:.65rem;font-weight:800;color:var(--event-status-ongoing-ink)}.events-live__content h2{margin:.3rem 0 .15rem;font-size:1rem}.events-live__content p,.events-live__countdown span{margin:0;color:var(--text-muted);font-size:.72rem}.events-live__countdown{text-align:right}.events-live__countdown strong{display:block;margin-top:.2rem;font-family:ui-monospace,monospace;font-size:1rem;color:var(--event-status-ongoing-ink)}.events-live__progress-wrap{grid-column:1/-1}.events-live__progress-wrap span{display:block;margin-top:.35rem;text-align:right;font-size:.66rem;font-weight:700;color:var(--event-status-ongoing-ink)}.events-live__progress{width:100%;height:4px;background:var(--bg-elevated-2);border-radius:99px;overflow:hidden}.events-live__progress i{display:block;height:100%;background:var(--event-status-ongoing-ink);transition:width 1s linear}
-.events-workspace { min-width:0; overflow:hidden; border: 1px solid var(--border-subtle); border-radius: 1rem; background: var(--bg-card); }.events-toolbar { display:flex; justify-content:space-between; gap:1rem; padding: .85rem; border-bottom:1px solid var(--border-subtle); }.events-tabs { min-width:0; max-width:100%; display:flex; gap:.25rem; overflow:auto; }.events-tabs button { white-space:nowrap; padding:.55rem .7rem; border-radius:.55rem; background:transparent; color:var(--text-muted); font-size:.78rem; }.events-tabs button.is-active { background:var(--bg-elevated); color:var(--text-primary); }.events-tabs b { margin-left:.25rem; color:var(--brand-ink); }.events-filter { min-width:0; display:flex; gap:.45rem; }.events-filter input, .events-filter select, .event-editor input, .event-editor select, .event-editor textarea { min-width:0; color:var(--text-primary); background:var(--bg-elevated); border:1px solid var(--border-default); border-radius:.55rem; outline:none; }.events-filter input { width:16rem; padding:.55rem .7rem; font-size:.78rem; }.events-filter select { padding:0 .45rem; font-size:.75rem; }.events-icon-button { flex:0 0 2.2rem; width:2.2rem; border-radius:.55rem; background:var(--bg-elevated); color:var(--text-primary); border:1px solid var(--border-default); }
-.events-view-switch{display:flex;padding:.18rem;background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:.6rem}.events-view-switch button{padding:.35rem .5rem;border:0;border-radius:.4rem;background:transparent;color:var(--text-muted);font-size:.7rem;font-weight:700;white-space:nowrap}.events-view-switch button.is-active{color:#fff;background:var(--brand)}
-.events-calendar{padding:1rem}.events-calendar__header{display:grid;grid-template-columns:2.4rem 1fr 2.4rem;align-items:center;gap:.75rem;margin-bottom:1rem;text-align:center}.events-calendar__header>button{width:2.4rem;height:2.4rem;border:1px solid var(--border-default);border-radius:.55rem;background:var(--bg-elevated);color:var(--text-primary);font-size:1.4rem}.events-calendar__header h2{margin:0;font-size:1rem}.events-calendar__header div button{margin-top:.2rem;border:0;background:transparent;color:var(--brand-ink);font-size:.7rem;font-weight:700}.events-calendar__weekdays,.events-calendar__grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr))}.events-calendar__weekdays{margin-bottom:.35rem}.events-calendar__weekdays span{padding:.35rem;text-align:center;color:var(--text-muted);font-size:.67rem;font-weight:800}.events-calendar__grid{border-top:1px solid var(--border-subtle);border-left:1px solid var(--border-subtle)}.events-calendar__day{min-width:0;min-height:7.8rem;padding:.38rem;border-right:1px solid var(--border-subtle);border-bottom:1px solid var(--border-subtle);background:var(--bg-card)}.events-calendar__day.is-outside{background:var(--bg-elevated);opacity:.56}.events-calendar__day.is-today .events-calendar__date{color:#fff;background:var(--brand)}.events-calendar__date{display:grid;place-items:center;width:1.55rem;height:1.55rem;margin-bottom:.28rem;border-radius:50%;font-size:.7rem;font-weight:800}.events-calendar__items{display:grid;gap:.2rem}.events-calendar__event{min-width:0;padding:.25rem .3rem;border:0;border-left:2px solid var(--border-default);border-radius:.2rem;background:var(--bg-elevated);color:var(--text-primary);text-align:left;cursor:pointer;font-size:.62rem;line-height:1.25}.events-calendar__event b{margin-right:.2rem;font-size:.58rem;color:var(--text-muted)}.events-calendar__event span{display:inline}.events-calendar__event--ongoing{border-left-color:var(--event-status-ongoing-ink)}.events-calendar__event--soon{border-left-color:var(--event-status-soon-ink)}.events-calendar__event--past{border-left-color:var(--event-status-past-ink)}
-.events-calendar__header p{margin:.1rem 0 0;color:var(--text-muted);font-size:.62rem}.events-calendar--day .events-calendar__grid{grid-template-columns:1fr}.events-calendar--day .events-calendar__day{min-height:clamp(22rem,55vh,36rem);padding:.75rem}.events-calendar--day .events-calendar__date{width:2rem;height:2rem;font-size:.85rem}.events-calendar--day .events-calendar__event{padding:.45rem .55rem;font-size:.78rem}.events-calendar--day .events-calendar__event b{font-size:.7rem}.events-calendar--day .events-calendar__event span{display:inline}
-.events-loading { padding: 2rem; display:grid; gap:.7rem; }.events-loading span { height:5rem; border-radius:.75rem; background:var(--bg-elevated); animation:events-pulse 1.2s infinite alternate; }@keyframes events-pulse{to{opacity:.45}}.events-empty { padding:5rem 1rem; text-align:center; }.events-empty>div{font-size:3rem;color:var(--brand-ink)}.events-empty h2{margin:.5rem 0}.events-empty p{color:var(--text-muted);margin:0 0 1rem}
-.events-list { padding: .75rem; display:grid; gap:.55rem; }.event-row { display:grid; grid-template-columns:4rem minmax(0,1fr) auto; gap:1rem; align-items:start; padding:1rem; border:1px solid var(--border-subtle); border-left:3px solid var(--border-default); border-radius:.8rem; }.event-row--ongoing{border-left-color:var(--event-status-ongoing-ink)}.event-row--soon{border-left-color:var(--event-status-soon-ink)}.event-row__date{text-align:center;padding:.35rem;background:var(--bg-elevated);border-radius:.55rem}.event-row__date span{display:block;text-transform:uppercase;font-size:.65rem;color:var(--text-muted)}.event-row__date strong{font-size:1.45rem}.event-row__meta{display:flex;gap:.4rem;flex-wrap:wrap}.event-status,.event-type,.event-google{font-size:.65rem;font-weight:700;padding:.22rem .45rem;border-radius:99px;border:1px solid}.event-google{color:var(--ink-sky);border-color:rgba(28,111,208,.25);background:rgba(28,111,208,.1)}.event-row h2{margin:.45rem 0 .2rem;font-size:1rem}.event-row__time,.event-row__description{margin:.15rem 0;color:var(--text-muted);font-size:.78rem}.event-row__description{color:var(--text-secondary)}.event-progress{margin-top:.7rem;font-size:.72rem;color:var(--event-status-ongoing-ink)}.event-progress--next{color:var(--brand-ink)}.event-progress i{display:block;height:4px;margin-top:.35rem;background:var(--bg-elevated-2);border-radius:99px;overflow:hidden}.event-progress b{display:block;height:100%;background:currentColor}.event-progress em{display:block;margin-top:.35rem;font-size:.66rem;font-style:normal;font-weight:700}.event-row__actions{display:flex;gap:.25rem}.event-row__actions button{padding:.4rem .5rem;border-radius:.45rem;background:var(--bg-elevated);color:var(--text-secondary);font-size:.7rem}.event-row__actions .is-danger{color:var(--ink-rose)}
-.events-pagination{display:flex;justify-content:space-between;gap:1rem;align-items:center;padding:1rem;border-top:1px solid var(--border-subtle);font-size:.75rem;color:var(--text-muted)}.events-pagination div{display:flex;gap:.25rem}.events-pagination button{min-width:2rem;padding:.4rem;border-radius:.4rem;background:var(--bg-elevated);color:var(--text-secondary)}.events-pagination button.is-current{background:var(--brand);color:#fff}
-.event-editor{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:1rem;background:rgba(4,8,18,.68);backdrop-filter:blur(10px)}.event-editor__panel{width:min(100%,42rem);max-height:calc(100vh - 2rem);display:flex;flex-direction:column;overflow:hidden;background:var(--bg-card);border:1px solid var(--border-strong);border-radius:1rem;box-shadow:var(--shadow-lg)}.event-editor header,.event-editor footer{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border-bottom:1px solid var(--border-subtle)}.event-editor header h2{margin:.25rem 0 0;font-size:1.15rem}.event-editor header button{font-size:1.4rem;background:none;border:0;color:var(--text-muted)}.event-editor__content{overflow:auto;padding:1.25rem;display:grid;gap:1rem}.event-editor label,.event-editor legend{font-size:.75rem;font-weight:700;color:var(--text-secondary)}.event-editor input,.event-editor select,.event-editor textarea{box-sizing:border-box;display:block;width:100%;margin-top:.4rem;padding:.65rem;font:inherit}.event-editor textarea{resize:vertical}.event-editor fieldset{border:0;padding:0;margin:0}.event-type-picker{display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;margin-top:.4rem}.event-type-picker label{margin:0;padding:.65rem .35rem;text-align:center;border:1px solid var(--border-subtle);border-radius:.6rem;background:var(--bg-elevated);font-size:.68rem}.event-type-picker label.is-selected{border-color:var(--brand);color:var(--brand-ink)}.event-type-picker input{position:absolute;opacity:0}.event-type-picker span{display:block;font-size:1.1rem}.event-editor__grid{display:grid;grid-template-columns:repeat(2,1fr);gap:.75rem}.event-editor footer{border-top:1px solid var(--border-subtle);border-bottom:0;justify-content:flex-end}
-@media(max-width:960px){.events-calendar__day{min-height:6.5rem}.events-calendar__event b{display:none}.events-calendar__event span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
-@media(max-width:760px){.events-board{width:100%;box-sizing:border-box;padding:1rem 1rem 3rem}.events-board__header,.events-toolbar{flex-direction:column}.events-board__actions{justify-content:flex-start}.events-summary{grid-template-columns:repeat(2,1fr)}.events-live__item{grid-template-columns:minmax(0,1fr)}.events-live__content,.event-row__body{min-width:0}.events-live__countdown{text-align:left}.events-filter{width:100%;max-width:100%}.events-filter input{width:100%;flex:1}.events-filter select{max-width:6.4rem}.events-view-switch{flex:0 0 auto}.events-tabs{width:100%;scrollbar-width:none}.events-tabs::-webkit-scrollbar{display:none}.event-row{grid-template-columns:3.3rem minmax(0,1fr)}.event-row__actions{grid-column:2;justify-content:flex-start;flex-wrap:wrap}.events-pagination{flex-direction:column}.events-pagination>div{max-width:100%;overflow-x:auto}.events-calendar{padding:.55rem}.events-calendar__header{margin-bottom:.6rem}.events-calendar__weekdays span{padding:.25rem 0;font-size:.58rem}.events-calendar__day{min-height:4.7rem;padding:.22rem}.events-calendar__date{width:1.3rem;height:1.3rem;margin-bottom:.15rem;font-size:.62rem}.events-calendar__items{gap:.12rem}.events-calendar__event{padding:.16rem .2rem;font-size:.55rem}.events-calendar__event span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.event-editor{padding:.65rem}.event-editor__panel{max-width:100%}.event-editor__grid{grid-template-columns:1fr}.event-type-picker{grid-template-columns:1fr}}
+/* chips / buttons */
+.ev-chip { display: inline-flex; align-items: center; gap: .35rem; padding: .28rem .65rem; border-radius: 99px; font-size: .68rem; font-weight: 800; letter-spacing: .04em; color: var(--brand-ink); background: color-mix(in srgb, var(--brand) 14%, transparent); }
+.ev-chip--glass { color: #fff; background: rgba(255,255,255,.18); backdrop-filter: blur(8px); }
+.ev-chip--live { color: var(--event-status-ongoing-ink); background: var(--event-status-ongoing-soft); }
+.ev-btn { display: inline-flex; align-items: center; gap: .45rem; padding: .62rem 1rem; border: 0; border-radius: 99px; font-size: .8rem; font-weight: 700; }
+.ev-btn:not(:disabled):hover { transform: translateY(-1px); }
+.ev-btn--primary { color: #fff; background: linear-gradient(135deg, var(--brand), color-mix(in srgb, var(--brand) 55%, #a855f7)); box-shadow: 0 8px 22px -8px var(--brand); }
+.ev-btn--glass { color: #fff; background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.28); backdrop-filter: blur(10px); }
+.ev-btn--glass:not(:disabled):hover { background: rgba(255,255,255,.26); }
+.ev-btn--ghost { color: var(--text-secondary); background: var(--bg-elevated); }
+.ev-round { display: grid; place-items: center; flex: 0 0 2.4rem; width: 2.4rem; height: 2.4rem; border: 1px solid var(--border-subtle); border-radius: 50%; color: var(--text-primary); background: var(--bg-elevated); font-size: 1.15rem; }
+.ev-round:not(:disabled):hover { background: var(--bg-elevated-2); transform: rotate(0) scale(1.06); }
+
+/* hero */
+.ev-hero { position: relative; overflow: hidden; display: flex; justify-content: space-between; gap: 1.5rem; align-items: flex-end; flex-wrap: wrap; padding: 2rem; border-radius: 1.6rem; color: #fff; background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #db2777 100%); box-shadow: 0 24px 50px -24px rgba(124,58,237,.6); }
+.ev-hero__glow { position: absolute; inset: -40% -10% auto auto; width: 26rem; height: 26rem; border-radius: 50%; background: radial-gradient(circle, rgba(255,255,255,.35), transparent 65%); pointer-events: none; }
+.ev-hero__text { position: relative; }
+.ev-hero h1 { margin: .7rem 0 .3rem; font-size: clamp(1.9rem, 4vw, 3rem); font-weight: 800; letter-spacing: -.04em; line-height: 1.05; }
+.ev-hero p { margin: 0; opacity: .85; font-size: .92rem; }
+.ev-hero__actions { position: relative; display: flex; flex-wrap: wrap; gap: .5rem; }
+.ev-hero .ev-btn--primary { color: #4f46e5; background: #fff; box-shadow: 0 8px 24px -8px rgba(0,0,0,.4); }
+
+.ev-alert { display: flex; gap: .6rem; align-items: center; padding: .85rem 1.1rem; border-radius: var(--r); color: var(--ink-amber); background: var(--event-status-soon-soft); border: 1px solid var(--event-status-soon-border); font-size: .85rem; }
+
+/* stats */
+.ev-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .8rem; }
+.ev-stat { display: flex; align-items: center; gap: .85rem; padding: 1rem 1.1rem; border-radius: var(--r); background: var(--bg-card); border: 1px solid var(--border-subtle); }
+.ev-stat i { display: grid; place-items: center; width: 2.6rem; height: 2.6rem; border-radius: .85rem; font-style: normal; font-size: 1rem; color: var(--c); background: color-mix(in srgb, var(--c) 15%, transparent); }
+.ev-stat span { display: block; font-size: .7rem; color: var(--text-muted); }
+.ev-stat strong { display: block; font-size: 1.6rem; line-height: 1.1; letter-spacing: -.03em; }
+.ev-stat--all { --c: var(--brand); }
+.ev-stat--live { --c: var(--event-status-ongoing-ink); }
+.ev-stat--next { --c: var(--ink-sky, #0ea5e9); }
+.ev-stat--done { --c: var(--text-muted); }
+
+/* now */
+.ev-now { padding: 1.1rem; border-radius: 1.3rem; border: 1px solid var(--event-status-ongoing-border); background: linear-gradient(160deg, var(--event-status-ongoing-soft), transparent 70%); }
+.ev-now__head { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: .85rem; flex-wrap: wrap; }
+.ev-now__badge { display: inline-flex; align-items: center; gap: .5rem; font-size: .72rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--event-status-ongoing-ink); }
+.ev-now__badge i { width: .55rem; height: .55rem; border-radius: 50%; background: currentColor; animation: ev-pulse 1.6s infinite; }
+.ev-now__count { font-size: .75rem; color: var(--text-muted); }
+@keyframes ev-pulse { 0% { box-shadow: 0 0 0 0 currentColor; } 70%, 100% { box-shadow: 0 0 0 .6rem transparent; } }
+.ev-now__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr)); gap: .8rem; }
+.ev-now-card { padding: 1rem 1.1rem; border-radius: 1rem; background: var(--bg-card); border: 1px solid var(--event-status-ongoing-border); box-shadow: 0 10px 30px -18px var(--event-status-ongoing-ink); }
+.ev-now-card__top { display: flex; justify-content: space-between; align-items: flex-start; gap: .6rem; }
+.ev-now-card__timer { text-align: right; }
+.ev-now-card__timer small { display: block; font-size: .64rem; color: var(--text-muted); }
+.ev-now-card__timer strong { font: 800 1rem ui-monospace, monospace; color: var(--event-status-ongoing-ink); }
+.ev-now-card h2 { margin: .7rem 0 .2rem; font-size: 1.05rem; letter-spacing: -.01em; overflow-wrap: anywhere; }
+.ev-now-card p { margin: 0 0 .8rem; font-size: .76rem; color: var(--text-muted); }
+.ev-now-card__pct { display: block; margin-top: .4rem; text-align: right; font-size: .64rem; font-weight: 700; color: var(--event-status-ongoing-ink); }
+.ev-bar { height: .38rem; border-radius: 99px; background: var(--bg-elevated-2); overflow: hidden; }
+.ev-bar i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--event-status-ongoing-ink), color-mix(in srgb, var(--event-status-ongoing-ink) 50%, #fff)); transition: width 1s linear; }
+
+/* panel */
+.ev-panel { min-width: 0; overflow: hidden; border-radius: 1.4rem; background: var(--bg-card); border: 1px solid var(--border-subtle); box-shadow: 0 20px 40px -30px rgba(0,0,0,.35); }
+.ev-bar-tools { display: flex; flex-direction: column; gap: .75rem; padding: 1rem; border-bottom: 1px solid var(--border-subtle); }
+.ev-seg { display: flex; gap: .25rem; padding: .25rem; width: fit-content; max-width: 100%; overflow-x: auto; scrollbar-width: none; border-radius: 99px; background: var(--bg-elevated); }
+.ev-seg::-webkit-scrollbar { display: none; }
+.ev-seg button { display: inline-flex; align-items: center; gap: .4rem; white-space: nowrap; padding: .5rem .9rem; border: 0; border-radius: 99px; color: var(--text-muted); background: transparent; font-size: .78rem; font-weight: 700; }
+.ev-seg button b { padding: .05rem .45rem; border-radius: 99px; font-size: .68rem; background: var(--bg-elevated-2); }
+.ev-seg button.is-active { color: var(--text-primary); background: var(--bg-card); box-shadow: 0 2px 8px rgba(0,0,0,.14); }
+.ev-seg button.is-active b { color: #fff; background: var(--brand); }
+.ev-tools { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+.ev-search { flex: 1 1 14rem; display: flex; align-items: center; gap: .5rem; padding: 0 .9rem; border-radius: 99px; background: var(--bg-elevated); border: 1px solid var(--border-subtle); color: var(--text-muted); }
+.ev-search:focus-within { border-color: var(--brand); box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 18%, transparent); }
+.ev-search input { flex: 1; min-width: 0; padding: .65rem 0; border: 0; outline: none; background: transparent; color: var(--text-primary); font-size: .82rem; }
+.ev-select { height: 2.4rem; padding: 0 .8rem; border-radius: 99px; border: 1px solid var(--border-subtle); background: var(--bg-elevated); color: var(--text-primary); font-size: .76rem; outline: none; }
+.ev-toggle { display: flex; padding: .2rem; border-radius: 99px; background: var(--bg-elevated); border: 1px solid var(--border-subtle); }
+.ev-toggle button { padding: .4rem .85rem; border: 0; border-radius: 99px; color: var(--text-muted); background: transparent; font-size: .74rem; font-weight: 700; white-space: nowrap; }
+.ev-toggle button.is-active { color: #fff; background: var(--brand); }
+
+/* skeleton / empty */
+.ev-skeleton { display: grid; gap: .75rem; padding: 1rem; }
+.ev-skeleton span { height: 5.5rem; border-radius: var(--r); background: linear-gradient(90deg, var(--bg-elevated), var(--bg-elevated-2), var(--bg-elevated)); background-size: 200% 100%; animation: ev-shimmer 1.3s infinite linear; }
+@keyframes ev-shimmer { to { background-position: -200% 0; } }
+.ev-empty { display: grid; justify-items: center; gap: .5rem; padding: 4.5rem 1rem; text-align: center; }
+.ev-empty__art { display: grid; place-items: center; width: 5rem; height: 5rem; border-radius: 50%; font-size: 2.2rem; color: var(--brand-ink); background: color-mix(in srgb, var(--brand) 12%, transparent); }
+.ev-empty h2 { margin: .5rem 0 0; font-size: 1.1rem; }
+.ev-empty p { margin: 0 0 .8rem; color: var(--text-muted); font-size: .85rem; }
+
+/* list cards */
+.ev-list { display: grid; gap: .75rem; padding: 1rem; }
+.ev-card { --c: var(--border-default); position: relative; display: grid; grid-template-columns: 4.2rem minmax(0, 1fr) auto; gap: 1rem; align-items: start; padding: 1rem 1.1rem; border-radius: 1.1rem; border: 1px solid var(--border-subtle); background: var(--bg-card); transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
+.ev-card::before { content: ''; position: absolute; left: 0; top: 1rem; bottom: 1rem; width: 4px; border-radius: 0 4px 4px 0; background: var(--c); }
+.ev-card:hover { transform: translateY(-2px); border-color: var(--border-default); box-shadow: 0 16px 30px -22px rgba(0,0,0,.45); }
+.ev-card--ongoing { --c: var(--event-status-ongoing-ink); background: linear-gradient(120deg, var(--event-status-ongoing-soft), var(--bg-card) 55%); }
+.ev-card--soon { --c: var(--event-status-soon-ink); }
+.ev-card--future { --c: var(--brand); }
+.ev-card--past { --c: var(--event-status-past-ink); }
+.ev-card--past .ev-card__body, .ev-card--past .ev-card__date { opacity: .72; }
+.ev-card__date { display: grid; place-items: center; align-content: center; height: 4.4rem; border-radius: 1rem; background: color-mix(in srgb, var(--c) 13%, var(--bg-elevated)); }
+.ev-card__date span { font-size: .64rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--c); }
+.ev-card__date strong { font-size: 1.55rem; line-height: 1; letter-spacing: -.04em; }
+.ev-card__body { min-width: 0; }
+.ev-card__tags { display: flex; flex-wrap: wrap; gap: .35rem; }
+.ev-tag { padding: .2rem .55rem; border: 1px solid transparent; border-radius: 99px; font-size: .64rem; font-weight: 700; }
+.ev-tag--google { color: var(--ink-sky); background: rgba(28,111,208,.1); border-color: rgba(28,111,208,.22); }
+.ev-card h2 { margin: .55rem 0 .25rem; font-size: 1.05rem; letter-spacing: -.01em; overflow-wrap: anywhere; }
+.ev-card__time { display: flex; align-items: center; gap: .4rem; margin: 0; font-size: .78rem; color: var(--text-muted); }
+.ev-card__desc { margin: .5rem 0 0; font-size: .8rem; line-height: 1.55; color: var(--text-secondary); overflow-wrap: anywhere; }
+.ev-prog { margin-top: .8rem; max-width: 30rem; color: var(--event-status-ongoing-ink); }
+.ev-prog--next { color: var(--brand-ink); }
+.ev-prog > div:first-child { display: flex; justify-content: space-between; gap: .75rem; margin-bottom: .35rem; font-size: .72rem; font-weight: 600; }
+.ev-prog em { font-style: normal; font-weight: 800; }
+.ev-prog .ev-bar i { background: linear-gradient(90deg, currentColor, color-mix(in srgb, currentColor 55%, #fff)); }
+.ev-card__actions { display: flex; gap: .3rem; opacity: .85; }
+.ev-card:hover .ev-card__actions { opacity: 1; }
+.ev-card__actions button { padding: .42rem .8rem; border: 0; border-radius: 99px; color: var(--text-secondary); background: var(--bg-elevated); font-size: .72rem; font-weight: 700; }
+.ev-card__actions button:not(:disabled):hover { background: var(--bg-elevated-2); color: var(--text-primary); }
+.ev-card__actions .is-danger { color: var(--ink-rose); }
+.ev-card__actions .is-danger:not(:disabled):hover { background: color-mix(in srgb, var(--ink-rose) 14%, transparent); color: var(--ink-rose); }
+
+/* pager */
+.ev-pager { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; padding: .9rem 1rem; border-top: 1px solid var(--border-subtle); font-size: .76rem; color: var(--text-muted); }
+.ev-pager > div { display: flex; gap: .25rem; max-width: 100%; overflow-x: auto; }
+.ev-pager button { min-width: 2.1rem; padding: .42rem .7rem; border: 0; border-radius: 99px; color: var(--text-secondary); background: var(--bg-elevated); font-weight: 700; }
+.ev-pager button.is-current { color: #fff; background: var(--brand); }
+
+/* calendar */
+.ev-cal { padding: 1rem; }
+.ev-cal__head { display: flex; justify-content: space-between; align-items: center; gap: .75rem; margin-bottom: 1rem; }
+.ev-cal__title { text-align: center; }
+.ev-cal__title h2 { margin: 0; font-size: 1.1rem; letter-spacing: -.02em; }
+.ev-cal__title div { display: flex; justify-content: center; align-items: center; gap: .5rem; margin-top: .25rem; font-size: .68rem; color: var(--text-muted); }
+.ev-cal__title button { padding: .15rem .6rem; border: 0; border-radius: 99px; color: var(--brand-ink); background: color-mix(in srgb, var(--brand) 14%, transparent); font-size: .68rem; font-weight: 800; }
+.ev-cal__weekdays, .ev-cal__grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: .35rem; }
+.ev-cal__weekdays { margin-bottom: .35rem; }
+.ev-cal__weekdays span { padding: .3rem; text-align: center; font-size: .68rem; font-weight: 800; color: var(--text-muted); }
+.ev-cal__day { min-width: 0; min-height: 7.6rem; padding: .45rem; border-radius: .85rem; background: var(--bg-elevated); border: 1px solid transparent; }
+.ev-cal__day.is-outside { opacity: .45; }
+.ev-cal__day.is-today { border-color: var(--brand); background: color-mix(in srgb, var(--brand) 8%, var(--bg-card)); }
+.ev-cal__num { display: grid; place-items: center; width: 1.6rem; height: 1.6rem; margin-bottom: .3rem; border-radius: 50%; font-size: .72rem; font-weight: 800; }
+.ev-cal__day.is-today .ev-cal__num { color: #fff; background: var(--brand); }
+.ev-cal__items { display: grid; gap: .22rem; }
+.ev-pill { --c: var(--brand); min-width: 0; padding: .25rem .4rem; border: 0; border-radius: .45rem; text-align: left; font-size: .62rem; line-height: 1.25; color: var(--text-primary); background: color-mix(in srgb, var(--c) 16%, var(--bg-card)); }
+.ev-pill:hover { background: color-mix(in srgb, var(--c) 28%, var(--bg-card)); }
+.ev-pill b { margin-right: .25rem; font-size: .58rem; color: var(--c); }
+.ev-pill--ongoing { --c: var(--event-status-ongoing-ink); }
+.ev-pill--soon { --c: var(--event-status-soon-ink); }
+.ev-pill--past { --c: var(--event-status-past-ink); }
+.ev-cal--day .ev-cal__grid { grid-template-columns: 1fr; }
+.ev-cal--day .ev-cal__day { min-height: clamp(20rem, 55vh, 34rem); padding: .8rem; }
+.ev-cal--day .ev-pill { padding: .5rem .65rem; font-size: .8rem; }
+
+/* editor */
+.ev-modal { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 1rem; background: rgba(6,8,20,.6); backdrop-filter: blur(12px); }
+.ev-sheet { width: min(100%, 40rem); max-height: calc(100vh - 2rem); display: flex; flex-direction: column; overflow: hidden; border-radius: 1.6rem; background: var(--bg-card); border: 1px solid var(--border-default); box-shadow: 0 40px 80px -30px rgba(0,0,0,.6); color: var(--text-primary); }
+.ev-sheet__head { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; padding: 1.3rem 1.4rem 1rem; background: linear-gradient(135deg, color-mix(in srgb, var(--brand) 14%, transparent), transparent); }
+.ev-sheet__head h2 { margin: .5rem 0 0; font-size: 1.3rem; letter-spacing: -.02em; }
+.ev-sheet__body { display: grid; gap: 1rem; padding: 1.1rem 1.4rem; overflow: auto; }
+.ev-sheet__foot { display: flex; justify-content: flex-end; gap: .5rem; padding: 1rem 1.4rem; border-top: 1px solid var(--border-subtle); }
+.ev-field { display: block; min-width: 0; margin: 0; padding: 0; border: 0; }
+.ev-field > span, .ev-field > legend { display: block; margin-bottom: .4rem; padding: 0; font-size: .74rem; font-weight: 700; color: var(--text-secondary); }
+.ev-field input, .ev-field select, .ev-field textarea { box-sizing: border-box; display: block; width: 100%; min-width: 0; padding: .7rem .85rem; font: inherit; font-size: .88rem; color: var(--text-primary); background: var(--bg-elevated); border: 1px solid var(--border-subtle); border-radius: .85rem; outline: none; transition: border-color .15s, box-shadow .15s; }
+.ev-field input:focus, .ev-field select:focus, .ev-field textarea:focus { border-color: var(--brand); box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 18%, transparent); }
+.ev-field textarea { resize: vertical; }
+.ev-types { display: grid; grid-template-columns: repeat(3, 1fr); gap: .5rem; }
+.ev-types label { position: relative; display: grid; justify-items: center; gap: .2rem; padding: .8rem .4rem; text-align: center; border-radius: .95rem; border: 1.5px solid var(--border-subtle); background: var(--bg-elevated); font-size: .72rem; font-weight: 700; cursor: pointer; transition: .15s ease; }
+.ev-types label:hover { border-color: var(--border-default); }
+.ev-types label.is-selected { border-color: var(--brand); color: var(--brand-ink); background: color-mix(in srgb, var(--brand) 10%, var(--bg-elevated)); }
+.ev-types input { position: absolute; opacity: 0; pointer-events: none; }
+.ev-types i { font-style: normal; font-size: 1.3rem; }
+.ev-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .75rem; }
+.ev-grid--one { grid-template-columns: 1fr; }
+.ev-grid--two { grid-template-columns: repeat(2, 1fr); }
+
+/* responsive */
+@media (max-width: 960px) {
+  .ev-cal__day { min-height: 6rem; }
+  .ev-pill b { display: none; }
+  .ev-pill span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}
+@media (max-width: 760px) {
+  .ev { padding: .75rem .75rem 3rem; }
+  .ev-hero { padding: 1.4rem 1.2rem; border-radius: 1.3rem; align-items: flex-start; }
+  .ev-hero__actions { width: 100%; }
+  .ev-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ev-stat { padding: .8rem; }
+  .ev-card { grid-template-columns: 3.4rem minmax(0, 1fr); gap: .75rem; padding: .9rem; }
+  .ev-card__date { height: 3.8rem; }
+  .ev-card__actions { grid-column: 1 / -1; flex-wrap: wrap; }
+  .ev-cal { padding: .6rem; }
+  .ev-cal__day { min-height: 4.6rem; padding: .25rem; border-radius: .6rem; }
+  .ev-cal__grid, .ev-cal__weekdays { gap: .2rem; }
+  .ev-pill { padding: .15rem .25rem; font-size: .55rem; }
+  .ev-pager { flex-direction: column; align-items: flex-start; }
+  .ev-modal { padding: 0; align-items: end; }
+  .ev-sheet { width: 100%; max-height: 92vh; border-radius: 1.6rem 1.6rem 0 0; }
+  .ev-types { grid-template-columns: 1fr; }
+  .ev-types label { grid-template-columns: auto 1fr; justify-items: start; text-align: left; padding: .65rem .85rem; gap: .6rem; }
+  .ev-grid, .ev-grid--two { grid-template-columns: 1fr; }
+}
 </style>

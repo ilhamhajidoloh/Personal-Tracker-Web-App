@@ -1,361 +1,343 @@
 <template>
-  <div class="auth-page min-h-[100dvh] relative lg:grid lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]" style="background-color: var(--bg-base);">
-    <!-- Brand panel (desktop / large tablet) -->
-    <div class="auth-brand-panel hidden lg:flex relative overflow-hidden flex-col justify-between p-10 xl:p-14" style="background: var(--brand-panel); color: #f4f1ea;">
-      <div class="auth-orb auth-orb-one" aria-hidden="true"></div>
-      <div class="auth-orb auth-orb-two" aria-hidden="true"></div>
-      <div class="relative flex items-center gap-3">
-        <div class="w-11 h-11 rounded-xl flex items-center justify-center" style="background: rgba(255,255,255,0.12);">
-          <span class="font-semibold text-xl">M</span>
-        </div>
-        <p class="font-semibold text-lg tracking-tight">MyLife</p>
-      </div>
-      <div class="relative max-w-md">
-        <p class="text-[11px] tracking-[0.18em] uppercase" style="color: rgba(244,241,234,0.62);">Personal tracker</p>
-        <h2 class="mt-3 text-[2rem] xl:text-[2.35rem] font-semibold leading-snug tracking-tight">จัดการทุกด้านของชีวิตในที่เดียว</h2>
-        <p class="mt-4 text-[15px] leading-relaxed" style="color: rgba(244,241,234,0.78);">การเงิน ตารางเรียน งานที่ต้องทำ และกิจกรรมสำคัญ — เป็นระเบียบ และพร้อมเตือนคุณผ่าน LINE</p>
-        <div class="mt-8 flex flex-wrap gap-2">
-          <span v-for="f in features" :key="f" class="inline-flex items-center rounded-full px-3 py-1.5 text-[13px] font-medium" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.14);">{{ f }}</span>
-        </div>
-      </div>
-      <p class="relative text-xs" style="color: rgba(244,241,234,0.5);">© {{ new Date().getFullYear() }} MyLife · Personal Tracker</p>
-    </div>
-
-    <!-- Right side: forms -->
-    <div class="relative flex items-center justify-center px-4 py-6 sm:px-8 sm:py-10 min-h-[100dvh] lg:min-h-0">
-    <!-- Loading / Redirecting -->
-    <div
-      v-if="isCheckingSession || isRedirecting"
-      class="relative rounded-2xl p-8 sm:p-10 flex flex-col items-center gap-4 max-w-sm w-full animate-fade-in"
-      style="background: var(--bg-card); border: 1px solid var(--border-subtle); box-shadow: var(--shadow-md);"
-    >
-      <div class="w-12 h-12 rounded-xl flex items-center justify-center" style="background: var(--brand); color: var(--brand-on);">
-        <span class="font-semibold text-xl">M</span>
-      </div>
-      <span class="inline-block w-8 h-8 border-[2.5px] border-t-transparent rounded-full animate-spin" style="border-color: var(--brand); border-top-color: transparent;"></span>
-      <div class="text-center space-y-1">
-        <p class="text-base font-semibold" style="color: var(--text-primary);">
-          {{ isRedirecting ? 'กำลังพาไปที่ Dashboard...' : 'กำลังตรวจสอบเซสชัน...' }}
-        </p>
-        <p class="text-sm" style="color: var(--text-muted);">{{ sessionCheckHint }}</p>
-      </div>
-    </div>
-
-    <!-- Login Card -->
-    <div v-else class="auth-card auth-card-new relative rounded-2xl max-w-[420px] w-full overflow-hidden animate-slide-up" style="background: var(--bg-card); border: 1px solid var(--border-subtle); box-shadow: var(--shadow-md);">
-      <!-- Card header -->
-      <div class="px-5 pt-7 pb-4 sm:px-8 sm:pt-8 sm:pb-5 text-center">
-        <div class="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-4 lg:hidden" style="background: var(--brand); color: var(--brand-on);">
-          <span class="font-semibold text-xl">M</span>
-        </div>
-        <p class="lg:hidden text-[11px] tracking-[0.16em] uppercase mb-1.5" style="color: var(--text-muted);">MyLife</p>
-        <h1 class="text-[1.45rem] sm:text-[1.6rem] font-semibold tracking-tight" style="color: var(--text-primary);">ยินดีต้อนรับ</h1>
-        <p class="text-sm mt-1.5 leading-relaxed" style="color: var(--text-muted);">เข้าสู่ระบบเพื่อจัดการชีวิตของคุณ</p>
-      </div>
-
-      <div class="px-5 pb-6 sm:px-8 sm:pb-8 space-y-5">
-        <!-- Messages -->
-        <Transition name="slide-down">
-          <div
-            v-if="errorMessage"
-            class="flex items-start gap-2.5 rounded-xl p-3.5 text-sm"
-            style="background: var(--event-status-soon-soft); border: 1px solid var(--event-status-soon-border); color: var(--ink-rose);"
-            role="alert"
-          >
-            <span class="shrink-0 mt-0.5" aria-hidden="true">!</span>
-            <span>{{ errorMessage }}</span>
+  <div class="modern-auth-container">
+    <!-- Left Brand Panel -->
+    <aside class="brand-panel">
+      <div class="brand-content">
+        <!-- Header -->
+        <div class="brand-header">
+          <div class="brand-logo">
+            <span>M</span>
           </div>
-        </Transition>
-        <Transition name="slide-down">
-          <div
-            v-if="successMessage"
-            class="flex items-start gap-2.5 rounded-xl p-3.5 text-sm"
-            style="background: var(--event-status-ongoing-soft); border: 1px solid var(--event-status-ongoing-border); color: var(--ink-emerald);"
-            role="status"
-          >
-            <span class="shrink-0 mt-0.5" aria-hidden="true">✓</span>
-            <span>{{ successMessage }}</span>
-          </div>
-        </Transition>
-        <Transition name="slide-down">
-          <div
-            v-if="isLoading && loadingHint"
-            class="flex items-center gap-2 rounded-xl p-3 text-xs font-medium"
-            style="background: var(--event-status-soon-soft); border: 1px solid var(--event-status-soon-border); color: var(--ink-amber);"
-          >
-            <span>{{ loadingHint }}</span>
-          </div>
-        </Transition>
-
-        <!-- Tab switcher -->
-        <div class="flex rounded-xl p-1 gap-1" style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);" role="tablist">
-          <button
-            type="button"
-            @click="isSignUp = false"
-            class="flex-1 py-2.5 px-3 rounded-[10px] text-sm font-semibold tap-scale touch-target"
-            :style="!isSignUp ? 'background: var(--brand); color: var(--brand-on);' : 'color: var(--text-muted);'"
-            :aria-selected="!isSignUp"
-          >
-            ลงชื่อเข้าใช้
-          </button>
-          <button
-            type="button"
-            @click="isSignUp = true"
-            class="flex-1 py-2.5 px-3 rounded-[10px] text-sm font-semibold tap-scale touch-target"
-            :style="isSignUp ? 'background: var(--brand); color: var(--brand-on);' : 'color: var(--text-muted);'"
-            :aria-selected="isSignUp"
-          >
-            สมัครสมาชิก
-          </button>
+          <h1 class="brand-name">MyLife</h1>
         </div>
 
-        <!-- Sign In Form -->
-        <form v-if="!isSignUp" @submit.prevent="handleSignIn" class="space-y-4">
-          <div>
-            <label class="block text-xs font-medium mb-1.5" style="color: var(--text-secondary);">อีเมล</label>
-            <input
-              v-model="email"
-              type="email"
-              placeholder="your@email.com"
-              required
-              autocomplete="email"
-              class="w-full input-glass text-sm"
-            />
+        <!-- Main Content -->
+        <div class="brand-main">
+          <span class="brand-tagline">PERSONAL TRACKER</span>
+          <h2 class="brand-headline">จัดการทุกด้านของชีวิต<br>ในที่เดียว</h2>
+          <p class="brand-description">
+            การเงิน ตารางเรียน งานที่ต้องทำ และกิจกรรมสำคัญ<br>
+            เป็นระเบียบ พร้อมเตือนคุณผ่าน LINE
+          </p>
+          <div class="feature-pills">
+            <span v-for="f in features" :key="f" class="feature-pill">{{ f }}</span>
           </div>
-          <div>
-            <label class="block text-xs font-medium mb-1.5" style="color: var(--text-secondary);">รหัสผ่าน</label>
-            <input
-              v-model="password"
-              type="password"
-              placeholder="••••••••"
-              required
-              autocomplete="current-password"
-              class="w-full input-glass text-sm"
-            />
-          </div>
-          <button
-            type="submit"
-            :disabled="isLoading"
-            class="w-full btn-primary text-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none tap-scale touch-target"
-          >
-            <span v-if="isLoading" class="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-            {{ isLoading ? 'กำลังเข้าสู่ระบบ...' : 'ลงชื่อเข้าใช้' }}
-          </button>
-        </form>
+        </div>
 
-        <!-- Sign Up Flow (Step 1 & Step 2) -->
-        <div v-else class="space-y-4">
-          <!-- Step 1: Account Information -->
-          <form v-if="signUpStep === 'credentials'" @submit.prevent="proceedToModuleSelection" class="space-y-4">
-            <div class="flex items-center justify-between mb-1">
-              <span class="text-xs font-medium px-2 py-0.5 rounded-full" style="background: var(--brand-soft); color: var(--brand-ink);">
-                ขั้นตอนที่ 1/2: ข้อมูลบัญชี
-              </span>
+        <!-- Footer -->
+        <p class="brand-footer">© {{ new Date().getFullYear() }} MyLife · Personal Tracker</p>
+      </div>
+
+      <div class="brand-orb brand-orb-1"></div>
+      <div class="brand-orb brand-orb-2"></div>
+    </aside>
+
+    <!-- Right Auth Panel -->
+    <main class="auth-panel">
+      <!-- Loading State -->
+      <div v-if="isCheckingSession || isRedirecting" class="auth-card loading-card">
+        <div class="loading-brand">
+          <span>M</span>
+        </div>
+        <div class="loading-spinner"></div>
+        <div class="loading-text">
+          <p class="loading-title">
+            {{ isRedirecting ? 'กำลังพาไปที่ Dashboard...' : 'กำลังตรวจสอบเซสชัน...' }}
+          </p>
+          <p class="loading-subtitle">{{ sessionCheckHint }}</p>
+        </div>
+      </div>
+
+      <!-- Auth Card -->
+      <div v-else class="auth-card">
+        <!-- Header -->
+        <div class="card-header">
+          <div class="mobile-brand">
+            <div class="mobile-brand-icon">
+              <span>M</span>
             </div>
-            <div>
-              <label class="block text-xs font-medium mb-1.5" style="color: var(--text-secondary);">ชื่อที่แสดง</label>
-              <input
-                v-model="fullName"
-                type="text"
-                placeholder="ชื่อของคุณ"
-                autocomplete="name"
-                class="w-full input-glass text-sm"
-              />
+            <span class="mobile-brand-text">MyLife</span>
+          </div>
+          <h1 class="card-title">ยินดีต้อนรับ</h1>
+          <p class="card-subtitle">เข้าสู่ระบบเพื่อจัดการชีวิตของคุณ</p>
+        </div>
+
+        <div class="card-body">
+          <!-- Messages -->
+          <Transition name="slide">
+            <div v-if="errorMessage" class="message-box error-box" role="alert">
+              <svg class="message-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="8" x2="12" y2="12"/>
+                <line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
+              <span>{{ errorMessage }}</span>
             </div>
-            <div>
-              <label class="block text-xs font-medium mb-1.5" style="color: var(--text-secondary);">อีเมล</label>
+          </Transition>
+
+          <Transition name="slide">
+            <div v-if="successMessage" class="message-box success-box" role="status">
+              <svg class="message-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                <polyline points="22 4 12 14.01 9 11.01"/>
+              </svg>
+              <span>{{ successMessage }}</span>
+            </div>
+          </Transition>
+
+          <Transition name="slide">
+            <div v-if="isLoading && loadingHint" class="message-box warning-box">
+              <svg class="message-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                <line x1="12" y1="9" x2="12" y2="13"/>
+                <line x1="12" y1="17" x2="12.01" y2="17"/>
+              </svg>
+              <span class="hint-text">{{ loadingHint }}</span>
+            </div>
+          </Transition>
+
+          <!-- Tab Switcher -->
+          <div class="tab-switcher" role="tablist">
+            <button
+              type="button"
+              @click="isSignUp = false"
+              class="tab-button"
+              :class="{ 'is-active': !isSignUp }"
+              :aria-selected="!isSignUp"
+            >
+              ลงชื่อเข้าใช้
+            </button>
+            <button
+              type="button"
+              @click="isSignUp = true"
+              class="tab-button"
+              :class="{ 'is-active': isSignUp }"
+              :aria-selected="isSignUp"
+            >
+              สมัครสมาชิก
+            </button>
+          </div>
+
+          <!-- Sign In Form -->
+          <form v-if="!isSignUp" @submit.prevent="handleSignIn" class="auth-form">
+            <div class="form-field">
+              <label class="field-label">อีเมล</label>
               <input
                 v-model="email"
                 type="email"
                 placeholder="your@email.com"
                 required
                 autocomplete="email"
-                class="w-full input-glass text-sm"
+                class="field-input"
               />
             </div>
-            <div>
-              <label class="block text-xs font-medium mb-1.5" style="color: var(--text-secondary);">รหัสผ่าน</label>
+            <div class="form-field">
+              <label class="field-label">รหัสผ่าน</label>
               <input
                 v-model="password"
                 type="password"
                 placeholder="••••••••"
                 required
-                minlength="6"
-                autocomplete="new-password"
-                class="w-full input-glass text-sm"
-              />
-              <p class="text-[11px] mt-1.5" style="color: var(--text-muted);">อย่างน้อย 6 ตัวอักษร</p>
-            </div>
-            <div>
-              <label class="block text-xs font-medium mb-1.5" style="color: var(--text-secondary);">ยืนยันรหัสผ่าน</label>
-              <input
-                v-model="confirmPassword"
-                type="password"
-                placeholder="••••••••"
-                required
-                minlength="6"
-                autocomplete="new-password"
-                class="w-full input-glass text-sm"
+                autocomplete="current-password"
+                class="field-input"
               />
             </div>
             <button
               type="submit"
-              :disabled="!isCredentialsValid"
-              class="w-full btn-primary text-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none tap-scale touch-target"
+              :disabled="isLoading"
+              class="submit-button"
             >
-              <span>ถัดไป: เลือกฟังก์ชันที่ต้องการใช้</span>
-              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+              <span v-if="isLoading" class="button-spinner"></span>
+              {{ isLoading ? 'กำลังเข้าสู่ระบบ...' : 'ลงชื่อเข้าใช้' }}
             </button>
           </form>
 
-          <!-- Step 2: Feature Selection (Onboarding) -->
-          <div v-else class="space-y-4 animate-fade-in">
-            <div class="flex items-center justify-between gap-2 flex-wrap">
-              <span class="text-xs font-medium px-2 py-0.5 rounded-full" style="background: var(--brand-soft); color: var(--brand-ink);">
-                ขั้นตอนที่ 2/2: ปรับแต่งการใช้งาน
-              </span>
-              <div class="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  @click="selectAllModules"
-                  class="text-[12px] font-medium hover:underline"
-                  style="color: var(--brand-ink);"
-                >
-                  เลือกทั้งหมด
-                </button>
-                <span class="text-xs" style="color: var(--text-muted);">·</span>
-                <button
-                  type="button"
-                  @click="selectMinimalModules"
-                  class="text-[12px] font-medium hover:underline"
-                  style="color: var(--text-secondary);"
-                >
-                  เฉพาะการเงิน
-                </button>
+          <!-- Sign Up Flow -->
+          <div v-else class="auth-form">
+            <!-- Step 1: Credentials -->
+            <form v-if="signUpStep === 'credentials'" @submit.prevent="proceedToModuleSelection" class="form-content">
+              <div class="step-indicator">
+                <span class="step-badge">ขั้นตอนที่ 1/2: ข้อมูลบัญชี</span>
               </div>
-            </div>
 
-            <div>
-              <h3 class="text-sm font-bold" style="color: var(--text-primary);">คุณต้องการใช้งานฟังก์ชันใดบ้าง?</h3>
-              <p class="text-[11.5px] mt-0.5" style="color: var(--text-muted);">
-                เลือกเฉพาะส่วนที่ต้องใช้เพื่อความเรียบง่าย (เปิด-ปิดเพิ่มภายหลังได้ตลอดเวลา)
-              </p>
-            </div>
+              <div class="form-field">
+                <label class="field-label">ชื่อที่แสดง</label>
+                <input
+                  v-model="fullName"
+                  type="text"
+                  placeholder="ชื่อของคุณ"
+                  autocomplete="name"
+                  class="field-input"
+                />
+              </div>
 
-            <!-- Module list checkboxes -->
-            <div class="space-y-2 max-h-[260px] overflow-y-auto pr-1">
-              <div
-                v-for="mod in allModules"
-                :key="mod.id"
-                @click="toggleSelectedModule(mod.id)"
-                class="flex items-start gap-3 p-3 rounded-xl border cursor-pointer tap-scale"
-                :style="selectedSignUpModules.includes(mod.id)
-                  ? 'background: var(--brand-soft); border-color: var(--brand-border);'
-                  : 'background: var(--bg-elevated); border-color: var(--border-subtle);'"
+              <div class="form-field">
+                <label class="field-label">อีเมล</label>
+                <input
+                  v-model="email"
+                  type="email"
+                  placeholder="your@email.com"
+                  required
+                  autocomplete="email"
+                  class="field-input"
+                />
+              </div>
+
+              <div class="form-field">
+                <label class="field-label">รหัสผ่าน</label>
+                <input
+                  v-model="password"
+                  type="password"
+                  placeholder="••••••••"
+                  required
+                  minlength="6"
+                  autocomplete="new-password"
+                  class="field-input"
+                />
+                <p class="field-hint">อย่างน้อย 6 ตัวอักษร</p>
+              </div>
+
+              <div class="form-field">
+                <label class="field-label">ยืนยันรหัสผ่าน</label>
+                <input
+                  v-model="confirmPassword"
+                  type="password"
+                  placeholder="••••••••"
+                  required
+                  minlength="6"
+                  autocomplete="new-password"
+                  class="field-input"
+                />
+              </div>
+
+              <button
+                type="submit"
+                :disabled="!isCredentialsValid"
+                class="submit-button next-button"
               >
-                <div class="text-lg shrink-0 mt-0.5">{{ mod.icon }}</div>
-                <div class="flex-1 min-w-0">
-                  <div class="flex items-center justify-between gap-2">
-                    <p class="text-[13px] font-semibold" :style="{ color: selectedSignUpModules.includes(mod.id) ? 'var(--brand-ink)' : 'var(--text-primary)' }">
-                      {{ mod.label }}
-                    </p>
-                    <div
-                      class="w-5 h-5 rounded-md flex items-center justify-center text-[11px] shrink-0 font-semibold"
-                      :style="selectedSignUpModules.includes(mod.id) ? 'background: var(--brand); color: var(--brand-on);' : 'border: 1px solid var(--border-default); background: transparent; color: transparent;'"
-                    >
-                      <span v-if="selectedSignUpModules.includes(mod.id)">✓</span>
-                    </div>
-                  </div>
-                  <p class="text-[11px] mt-0.5 leading-tight line-clamp-2" style="color: var(--text-muted);">
-                    {{ mod.description }}
-                  </p>
+                <span>ถัดไป: เลือกฟังก์ชันที่ต้องการใช้</span>
+                <svg class="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M5 12h14M12 5l7 7-7 7"/>
+                </svg>
+              </button>
+            </form>
+
+            <!-- Step 2: Module Selection -->
+            <div v-else class="form-content module-selection">
+              <div class="step-header">
+                <span class="step-badge">ขั้นตอนที่ 2/2: ปรับแต่งการใช้งาน</span>
+                <div class="quick-actions">
+                  <button type="button" @click="selectAllModules" class="quick-action">
+                    เลือกทั้งหมด
+                  </button>
+                  <span class="separator">·</span>
+                  <button type="button" @click="selectMinimalModules" class="quick-action minimal">
+                    เฉพาะการเงิน
+                  </button>
                 </div>
               </div>
-            </div>
 
-            <div class="flex items-center gap-2 pt-1">
-              <button
-                type="button"
-                @click="signUpStep = 'credentials'"
-                class="px-4 py-2.5 rounded-xl text-xs font-bold border transition-all tap-scale"
-                style="background: var(--bg-elevated); border-color: var(--border-subtle); color: var(--text-secondary);"
-              >
-                ← ย้อนกลับ
-              </button>
-              <button
-                type="button"
-                @click="handleSignUp"
-                :disabled="isLoading || selectedSignUpModules.length === 0"
-                class="flex-1 btn-primary text-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none tap-scale touch-target"
-              >
-                <span v-if="isLoading" class="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                <span>{{ isLoading ? 'กำลังสร้างบัญชี...' : 'ยืนยันและสร้างบัญชี' }}</span>
-              </button>
-            </div>
-          </div>
-        </div>
+              <div class="selection-intro">
+                <h3 class="selection-title">คุณต้องการใช้งานฟังก์ชันใดบ้าง?</h3>
+                <p class="selection-description">
+                  เลือกเฉพาะส่วนที่ต้องใช้เพื่อความเรียบง่าย (เปิด-ปิดเพิ่มภายหลังได้ตลอดเวลา)
+                </p>
+              </div>
 
-        <!-- Divider with enhanced styling -->
-        <div class="relative flex items-center gap-3 my-1">
-          <div class="flex-1 h-px" style="background: linear-gradient(to right, transparent, var(--border-default), transparent);"></div>
-          <span class="text-xs font-medium px-2 py-1 rounded-md" style="color: var(--text-muted); background: var(--bg-elevated);">หรือ</span>
-          <div class="flex-1 h-px" style="background: linear-gradient(to left, transparent, var(--border-default), transparent);"></div>
-        </div>
+              <div class="module-list">
+                <div
+                  v-for="mod in allModules"
+                  :key="mod.id"
+                  @click="toggleSelectedModule(mod.id)"
+                  class="module-item"
+                  :class="{ 'is-selected': selectedSignUpModules.includes(mod.id) }"
+                >
+                  <div class="module-icon">{{ mod.icon }}</div>
+                  <div class="module-info">
+                    <div class="module-header">
+                      <p class="module-label">{{ mod.label }}</p>
+                      <div class="module-checkbox">
+                        <svg v-if="selectedSignUpModules.includes(mod.id)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                          <polyline points="20 6 9 17 4 12"/>
+                        </svg>
+                      </div>
+                    </div>
+                    <p class="module-description">{{ mod.description }}</p>
+                  </div>
+                </div>
+              </div>
 
-        <!-- Google Sign In Button Container - Enhanced -->
-        <div class="w-full flex flex-col items-center gap-3">
-          <!-- Official Google Button Container with Enhanced Wrapper -->
-          <div class="w-full google-btn-wrapper">
-            <div ref="googleBtnRef" class="w-full flex justify-center min-h-[44px]"></div>
-          </div>
-
-          <!-- Fallback Custom Google Button -->
-          <button
-            v-if="!isGoogleBtnRendered"
-            @click="handleGoogleSignIn"
-            :disabled="isLoading"
-            class="group w-full relative overflow-hidden rounded-xl py-3 px-4 font-semibold text-sm flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 hover-lift"
-            style="background: #ffffff; border: 1.5px solid var(--border-default); color: #1f1f1f; box-shadow: 0 1px 3px rgba(0,0,0,0.08);"
-          >
-            <!-- Hover effect background -->
-            <span class="absolute inset-0 bg-gradient-to-br from-transparent to-gray-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
-
-            <!-- Google Logo SVG -->
-            <svg class="w-5 h-5 shrink-0 relative z-10 group-hover:scale-110 transition-transform duration-300" viewBox="0 0 24 24">
-              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-            </svg>
-
-            <!-- Button Text -->
-            <span class="relative z-10 group-hover:translate-x-0.5 transition-transform duration-300">
-              {{ isLoading ? 'กำลังเชื่อมต่อ...' : 'ลงชื่อเข้าใช้ด้วย Google' }}
-            </span>
-
-            <!-- Loading Spinner -->
-            <span v-if="isLoading" class="inline-block w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin relative z-10"></span>
-          </button>
-
-          <!-- Benefits text -->
-          <div class="w-full rounded-lg p-3 flex items-start gap-2.5 text-left" style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);">
-            <svg class="w-4 h-4 shrink-0 mt-0.5" style="color: var(--brand);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-              <path d="M9 12l2 2 4-4"/>
-            </svg>
-            <div class="flex-1 min-w-0">
-              <p class="text-xs font-medium" style="color: var(--text-primary);">ปลอดภัย รวดเร็ว ไม่ต้องจำรหัสผ่าน</p>
-              <p class="text-[11px] mt-0.5 leading-relaxed" style="color: var(--text-muted);">เข้าใช้งานด้วย Google Account ของคุณ</p>
+              <div class="action-buttons">
+                <button
+                  type="button"
+                  @click="signUpStep = 'credentials'"
+                  class="back-button"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                  </svg>
+                  ย้อนกลับ
+                </button>
+                <button
+                  type="button"
+                  @click="handleSignUp"
+                  :disabled="isLoading || selectedSignUpModules.length === 0"
+                  class="submit-button confirm-button"
+                >
+                  <span v-if="isLoading" class="button-spinner"></span>
+                  <span>{{ isLoading ? 'กำลังสร้างบัญชี...' : 'ยืนยันและสร้างบัญชี' }}</span>
+                </button>
+              </div>
             </div>
           </div>
-        </div>
 
-        <p class="text-xs text-center leading-relaxed" style="color: var(--text-muted);">
-          เมื่อลงชื่อเข้าใช้สำเร็จ ระบบจะพาไปที่ Dashboard อัตโนมัติ
-        </p>
+          <!-- Divider -->
+          <div class="divider">
+            <span class="divider-line"></span>
+            <span class="divider-text">หรือ</span>
+            <span class="divider-line"></span>
+          </div>
+
+          <!-- Google Sign In -->
+          <div class="google-section">
+            <div class="google-button-wrapper">
+              <div ref="googleBtnRef" class="google-official-button"></div>
+            </div>
+
+            <button
+              v-if="!isGoogleBtnRendered"
+              @click="handleGoogleSignIn"
+              :disabled="isLoading"
+              class="google-fallback-button"
+            >
+              <svg class="google-icon" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+              </svg>
+              <span>{{ isLoading ? 'กำลังเชื่อมต่อ...' : 'ลงชื่อเข้าใช้ด้วย Google' }}</span>
+              <span v-if="isLoading" class="button-spinner gray"></span>
+            </button>
+
+            <div class="google-benefits">
+              <svg class="benefit-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                <path d="M9 12l2 2 4-4"/>
+              </svg>
+              <div class="benefit-text">
+                <p class="benefit-title">ปลอดภัย รวดเร็ว ไม่ต้องจำรหัสผ่าน</p>
+                <p class="benefit-subtitle">เข้าใช้งานด้วย Google Account ของคุณ</p>
+              </div>
+            </div>
+          </div>
+
+          <p class="footer-note">
+            เมื่อลงชื่อเข้าใช้สำเร็จ ระบบจะพาไปที่ Dashboard อัตโนมัติ
+          </p>
+        </div>
       </div>
-    </div>
-    </div>
+    </main>
   </div>
 </template>
 
@@ -685,141 +667,885 @@ const handleGoogleSignIn = async () => {
 </script>
 
 <style scoped>
-.auth-page {
-  background:
-    radial-gradient(circle at 88% 8%, var(--brand-soft), transparent 24rem),
-    var(--bg-base);
+/* ========== Container ========== */
+.modern-auth-container {
+  min-height: 100dvh;
+  display: grid;
+  grid-template-columns: 1fr;
+  background: var(--bg-base);
 }
 
-.auth-brand-panel::after {
-  content: '';
+@media (min-width: 1024px) {
+  .modern-auth-container {
+    grid-template-columns: 45fr 55fr;
+  }
+}
+
+/* ========== Brand Panel ========== */
+.brand-panel {
+  display: none;
+  position: relative;
+  overflow: hidden;
+  background: var(--brand-panel);
+  color: #f4f1ea;
+}
+
+@media (min-width: 1024px) {
+  .brand-panel {
+    display: flex;
+  }
+}
+
+.brand-content {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 3rem;
+  height: 100%;
+}
+
+@media (min-width: 1280px) {
+  .brand-content {
+    padding: 4rem;
+  }
+}
+
+.brand-orb {
   position: absolute;
-  inset: 0;
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.06), transparent 42%);
+  border-radius: 50%;
   pointer-events: none;
+  filter: blur(80px);
+  opacity: 0.3;
 }
 
-.auth-orb {
-  position: absolute;
-  border-radius: 999px;
-  pointer-events: none;
-  filter: blur(1px);
-  background: rgba(151, 205, 246, 0.13);
-}
-
-.auth-orb-one {
-  width: 25rem;
-  height: 25rem;
-  right: -11rem;
+.brand-orb-1 {
+  width: 30rem;
+  height: 30rem;
+  background: rgba(151, 205, 246, 0.4);
+  right: -10rem;
   top: -8rem;
 }
 
-.auth-orb-two {
-  width: 16rem;
-  height: 16rem;
+.brand-orb-2 {
+  width: 20rem;
+  height: 20rem;
+  background: rgba(117, 180, 229, 0.3);
   left: -8rem;
   bottom: -6rem;
-  background: rgba(117, 180, 229, 0.09);
 }
 
-.auth-card-new {
-  border-radius: 1.5rem !important;
-  box-shadow: 0 26px 60px -34px rgba(20, 65, 110, 0.5) !important;
+/* Brand Header */
+.brand-header {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
 }
 
-.auth-card-new::before {
-  content: '';
-  position: absolute;
-  inset: 0 0 auto;
-  height: 4px;
-  background: linear-gradient(90deg, var(--brand), var(--brand-2));
+.brand-logo {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  font-weight: 700;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-.auth-card-new > div {
-  position: relative;
+.brand-name {
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
 }
 
-.auth-card-new input {
-  border-radius: 0.875rem;
+/* Brand Main Content */
+.brand-main {
+  max-width: 32rem;
 }
 
-.slide-down-enter-active, .slide-down-leave-active {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.slide-down-enter-from, .slide-down-leave-to {
-  opacity: 0;
-  transform: translateY(-8px);
+.brand-tagline {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  color: rgba(244, 241, 234, 0.7);
 }
 
-.hover-lift {
+.brand-headline {
+  margin-top: 1rem;
+  font-size: 2.25rem;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+@media (min-width: 1280px) {
+  .brand-headline {
+    font-size: 2.75rem;
+  }
+}
+
+.brand-description {
+  margin-top: 1.25rem;
+  font-size: 1rem;
+  line-height: 1.7;
+  color: rgba(244, 241, 234, 0.85);
+}
+
+.feature-pills {
+  margin-top: 2rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.625rem;
+}
+
+.feature-pill {
+  padding: 0.5rem 1rem;
+  border-radius: 9999px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.hover-lift:hover:not(:disabled) {
+.feature-pill:hover {
+  background: rgba(255, 255, 255, 0.15);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.12), 0 2px 4px rgba(0,0,0,0.08);
 }
 
-.hover-lift:active:not(:disabled) {
-  transform: translateY(0);
-  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+.brand-footer {
+  font-size: 0.75rem;
+  color: rgba(244, 241, 234, 0.5);
 }
 
-/* Enhanced Google Button Wrapper Styles */
-.google-btn-wrapper {
+/* ========== Auth Panel ========== */
+.auth-panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  min-height: 100dvh;
+}
+
+@media (min-width: 640px) {
+  .auth-panel {
+    padding: 2.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .auth-panel {
+    min-height: auto;
+  }
+}
+
+/* ========== Auth Card ========== */
+.auth-card {
   position: relative;
+  width: 100%;
+  max-width: 28rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-default);
+  border-radius: 1.5rem;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  animation: slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Style the Google button iframe/container */
-.google-btn-wrapper :deep(iframe) {
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
-  border-radius: 12px !important;
-  overflow: hidden !important;
-}
-
-.google-btn-wrapper :deep(iframe:hover) {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15), 0 2px 6px rgba(0, 0, 0, 0.1) !important;
-}
-
-.google-btn-wrapper :deep(iframe:active) {
-  transform: translateY(0);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12) !important;
-}
-
-/* Add a subtle glow effect on hover */
-.google-btn-wrapper:hover::after {
+.auth-card::before {
   content: '';
   position: absolute;
-  inset: -2px;
-  border-radius: 14px;
-  background: linear-gradient(135deg, rgba(66, 133, 244, 0.15), rgba(52, 168, 83, 0.15), rgba(251, 188, 5, 0.15), rgba(234, 67, 53, 0.15));
-  z-index: -1;
-  opacity: 0;
-  animation: glow-pulse 2s ease-in-out infinite;
-  pointer-events: none;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--brand), var(--brand-2, var(--brand)));
 }
 
-@keyframes glow-pulse {
-  0%, 100% {
-    opacity: 0;
-  }
-  50% {
-    opacity: 0.3;
+/* Loading State */
+.loading-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 3rem 2rem;
+  text-align: center;
+}
+
+.loading-brand {
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 1rem;
+  background: linear-gradient(135deg, var(--brand), var(--brand-2, var(--brand)));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--brand-on);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+.loading-spinner {
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 3px solid var(--brand);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.loading-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.loading-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.loading-subtitle {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+/* Card Header */
+.card-header {
+  padding: 2rem 1.75rem 1.5rem;
+  text-align: center;
+}
+
+@media (min-width: 640px) {
+  .card-header {
+    padding: 2.5rem 2.5rem 1.75rem;
   }
 }
 
-/* Wrapper container for better spacing */
-.google-btn-wrapper > div {
+.mobile-brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+@media (min-width: 1024px) {
+  .mobile-brand {
+    display: none;
+  }
+}
+
+.mobile-brand-icon {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 0.875rem;
+  background: linear-gradient(135deg, var(--brand), var(--brand-2, var(--brand)));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--brand-on);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.mobile-brand-text {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.card-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+
+.card-subtitle {
+  margin-top: 0.5rem;
+  font-size: 0.9375rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+/* Card Body */
+.card-body {
+  padding: 0 1.75rem 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+@media (min-width: 640px) {
+  .card-body {
+    padding: 0 2.5rem 2.5rem;
+  }
+}
+
+/* Message Boxes */
+.message-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1rem;
+  border-radius: 0.875rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.message-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+  flex-shrink: 0;
+  margin-top: 0.125rem;
+}
+
+.error-box {
+  background: var(--event-status-soon-soft);
+  border: 1px solid var(--event-status-soon-border);
+  color: var(--ink-rose);
+}
+
+.success-box {
+  background: var(--event-status-ongoing-soft);
+  border: 1px solid var(--event-status-ongoing-border);
+  color: var(--ink-emerald);
+}
+
+.warning-box {
+  background: var(--event-status-soon-soft);
+  border: 1px solid var(--event-status-soon-border);
+  color: var(--ink-amber);
+}
+
+.hint-text {
+  font-size: 0.8125rem;
+}
+
+/* Tab Switcher */
+.tab-switcher {
+  display: flex;
+  gap: 0.375rem;
+  padding: 0.375rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: 0.875rem;
+}
+
+.tab-button {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  border-radius: 0.625rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.tab-button:hover:not(.is-active) {
+  color: var(--text-secondary);
+  background: var(--bg-card);
+}
+
+.tab-button.is-active {
+  background: var(--brand);
+  color: var(--brand-on);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Forms */
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.form-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.field-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.field-input {
+  width: 100%;
+  padding: 0.875rem 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--border-default);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  font-size: 0.9375rem;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.field-input::placeholder {
+  color: var(--text-muted);
+}
+
+.field-input:focus {
+  outline: none;
+  border-color: var(--brand);
+  background: var(--bg-card);
+  box-shadow: 0 0 0 3px var(--brand-soft);
+}
+
+.field-hint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+/* Buttons */
+.submit-button {
+  width: 100%;
+  padding: 0.875rem 1.25rem;
+  border-radius: 0.875rem;
+  background: var(--brand);
+  color: var(--brand-on);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.625rem;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.submit-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.submit-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.submit-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.button-spinner {
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+.button-spinner.gray {
+  border-color: rgba(0, 0, 0, 0.2);
+  border-top-color: rgba(0, 0, 0, 0.6);
+}
+
+.button-icon {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+/* Step Indicator */
+.step-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.step-badge {
+  padding: 0.375rem 0.875rem;
+  border-radius: 9999px;
+  background: var(--brand-soft);
+  color: var(--brand-ink);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* Module Selection */
+.step-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.quick-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.quick-action {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--brand-ink);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.quick-action:hover {
+  text-decoration: underline;
+}
+
+.quick-action.minimal {
+  color: var(--text-secondary);
+}
+
+.separator {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.selection-intro {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.selection-title {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.selection-description {
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+/* Module List */
+.module-list {
+  max-height: 18rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  padding-right: 0.375rem;
+}
+
+.module-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.875rem;
+  padding: 1rem;
+  border-radius: 0.875rem;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-elevated);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.module-item:hover {
+  border-color: var(--border-hover);
+  transform: translateY(-1px);
+}
+
+.module-item.is-selected {
+  background: var(--brand-soft);
+  border-color: var(--brand-border);
+}
+
+.module-icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.module-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.module-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.625rem;
+}
+
+.module-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.module-item.is-selected .module-label {
+  color: var(--brand-ink);
+}
+
+.module-checkbox {
+  width: 1.375rem;
+  height: 1.375rem;
+  border-radius: 0.375rem;
+  background: transparent;
+  border: 2px solid var(--border-default);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.module-item.is-selected .module-checkbox {
+  background: var(--brand);
+  border-color: var(--brand);
+}
+
+.module-checkbox svg {
+  width: 0.875rem;
+  height: 0.875rem;
+  color: var(--brand-on);
+}
+
+.module-description {
+  margin-top: 0.375rem;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--text-muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Action Buttons */
+.action-buttons {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding-top: 0.5rem;
+}
+
+.back-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.125rem;
+  border-radius: 0.875rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.back-button svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.back-button:hover {
+  background: var(--bg-card);
+  border-color: var(--border-hover);
+}
+
+.confirm-button {
+  flex: 1;
+}
+
+/* Divider */
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  margin: 0.375rem 0;
+}
+
+.divider-line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, transparent, var(--border-default), transparent);
+}
+
+.divider-text {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  padding: 0.375rem 0.75rem;
+  border-radius: 0.5rem;
+  background: var(--bg-elevated);
+}
+
+/* Google Section */
+.google-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+.google-button-wrapper {
+  width: 100%;
+}
+
+.google-official-button {
+  width: 100%;
   display: flex;
   justify-content: center;
-  align-items: center;
-  min-height: 48px;
+  min-height: 3rem;
 }
 
-@media (max-width: 639px) {
-  .auth-card {
-    border-radius: 1rem;
+.google-fallback-button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.875rem;
+  padding: 0.875rem 1.25rem;
+  border-radius: 0.875rem;
+  background: #ffffff;
+  border: 1.5px solid var(--border-default);
+  color: #1f1f1f;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.google-fallback-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.google-fallback-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.google-fallback-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.google-icon {
+  width: 1.375rem;
+  height: 1.375rem;
+  flex-shrink: 0;
+}
+
+.google-benefits {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.875rem;
+  padding: 0.875rem 1rem;
+  border-radius: 0.875rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+}
+
+.benefit-icon {
+  width: 1.125rem;
+  height: 1.125rem;
+  color: var(--brand);
+  flex-shrink: 0;
+  margin-top: 0.125rem;
+}
+
+.benefit-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.benefit-title {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.benefit-subtitle {
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.footer-note {
+  font-size: 0.8125rem;
+  text-align: center;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+/* ========== Animations ========== */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
   }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(1.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.slide-enter-active,
+.slide-leave-active {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.slide-enter-from {
+  opacity: 0;
+  transform: translateY(-0.5rem);
+}
+
+.slide-leave-to {
+  opacity: 0;
+  transform: translateY(-0.25rem);
+}
+
+/* ========== Scrollbar ========== */
+.module-list::-webkit-scrollbar {
+  width: 0.375rem;
+}
+
+.module-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.module-list::-webkit-scrollbar-thumb {
+  background: var(--border-default);
+  border-radius: 9999px;
+}
+
+.module-list::-webkit-scrollbar-thumb:hover {
+  background: var(--border-hover);
 }
 </style>

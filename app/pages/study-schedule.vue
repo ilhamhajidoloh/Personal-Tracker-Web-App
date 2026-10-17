@@ -1,112 +1,227 @@
 <template>
   <AppTabsLayout>
-    <main class="schedule-shell">
-      <header class="schedule-hero">
-        <div>
-          <p class="schedule-kicker">ACADEMIC PLANNER</p>
-          <h1>ตารางเรียนของฉัน</h1>
-          <p class="schedule-subtitle">จัดลำดับวันเรียนและเวลาให้เห็นภาพในมุมเดียว</p>
+    <main class="ss">
+      <!-- Top bar -->
+      <header class="ss-top">
+        <div class="ss-title">
+          <span class="ss-kicker">Study Schedule</span>
+          <h1>ตารางเรียน</h1>
         </div>
-        <div class="hero-actions">
-          <select v-if="terms.length" v-model="selectedTermId" class="term-select">
-            <option v-for="term in terms" :key="term.id" :value="term.id">{{ term.termName }}</option>
-          </select>
-          <button v-if="selectedTermId" type="button" class="icon-action" title="แก้ไขภาคเรียน" @click="openEditTermModal">✎</button>
-          <button type="button" class="outline-action" @click="openCreateTermModal">+ ภาคเรียน</button>
-          <button type="button" class="primary-action" :disabled="!selectedTermId" @click="openCreateScheduleModal">+ เพิ่มคาบเรียน</button>
+        <div class="ss-toolbar">
+          <div class="ss-termbox">
+            <select v-if="terms.length" v-model="selectedTermId" class="ss-select" aria-label="ภาคเรียน">
+              <option v-for="term in terms" :key="term.id" :value="term.id">{{ term.termName }}</option>
+            </select>
+            <span v-else class="ss-faint">ยังไม่มีภาคเรียน</span>
+            <button v-if="selectedTermId" type="button" class="ss-icon" title="แก้ไขภาคเรียน" @click="openEditTermModal">✎</button>
+          </div>
+          <button type="button" class="ss-icon" :disabled="isLoading" title="รีเฟรช" @click="loadSchedules">↻</button>
+          <button type="button" class="ss-btn" @click="openCreateTermModal">ภาคเรียนใหม่</button>
+          <button type="button" class="ss-btn ss-primary" :disabled="!selectedTermId" @click="openCreateScheduleModal">+ เพิ่มคาบเรียน</button>
         </div>
       </header>
 
-      <p v-if="errorMessage" class="schedule-error">{{ errorMessage }}</p>
+      <p v-if="errorMessage" class="ss-alert">{{ errorMessage }}</p>
 
-      <section v-if="!isLoading && !terms.length" class="welcome-panel">
-        <span class="welcome-mark">01</span>
-        <div><h2>เริ่มต้นด้วยภาคเรียน</h2><p>สร้างช่วงเวลาเรียนก่อน แล้วเพิ่มวิชาและคาบเรียนของคุณได้ทันที</p></div>
-        <button class="primary-action" @click="openCreateTermModal">สร้างภาคเรียน</button>
+      <section v-if="!isLoading && !terms.length" class="ss-empty">
+        <div class="ss-empty-mark">📚</div>
+        <h2>เริ่มต้นด้วยการสร้างภาคเรียน</h2>
+        <p>กำหนดช่วงเวลาเรียน แล้วเพิ่มวิชาและคาบเรียนของคุณ</p>
+        <button type="button" class="ss-btn ss-primary" @click="openCreateTermModal">สร้างภาคเรียน</button>
       </section>
 
       <template v-else>
-        <section class="overview-strip">
-          <div class="overview-stat"><span>ภาคเรียนที่เลือก</span><strong>{{ selectedTermName }}</strong></div>
-          <div class="overview-stat"><span>รายวิชา</span><strong>{{ uniqueSubjectsCount }} <small>วิชา</small></strong></div>
-          <div class="overview-stat"><span>คาบเรียนทั้งหมด</span><strong>{{ totalClasses }} <small>คาบ</small></strong></div>
-          <button class="refresh-action" :disabled="isLoading" @click="loadSchedules">↻ {{ isLoading ? 'กำลังโหลด' : 'รีเฟรช' }}</button>
+        <!-- Hero + stats -->
+        <section class="ss-hero-row">
+          <div
+            class="ss-hero"
+            :class="{ idle: !(currentClass || nextClassToday) }"
+            :style="{ '--c': (currentClass || nextClassToday) ? courseTint((currentClass || nextClassToday)!.course_name) : 'var(--brand)' }"
+          >
+            <template v-if="!isInActiveTerm">
+              <span class="ss-chip">นอกช่วงภาคเรียน</span>
+              <h2>{{ offTermMessage }}</h2>
+              <div v-if="nextTermCountdown" class="ss-next-term">
+                <span>ภาคเรียนถัดไป</span>
+                <b>{{ nextTermCountdown.termName }}</b>
+                <small>เริ่มในอีก {{ nextTermCountdown.label }}</small>
+              </div>
+            </template>
+            <template v-else-if="currentClass || nextClassToday">
+              <span class="ss-chip">{{ currentClass ? '● กำลังเรียน' : 'คาบถัดไปวันนี้' }}</span>
+              <h2>{{ (currentClass || nextClassToday)!.course_name }}</h2>
+              <p>
+                {{ formatTimeRange((currentClass || nextClassToday)!.start_time, (currentClass || nextClassToday)!.end_time) }}
+                · {{ (currentClass || nextClassToday)!.location || 'ไม่ระบุสถานที่' }}
+              </p>
+              <div class="ss-meter"><i :style="{ width: `${getClassProgress((currentClass || nextClassToday)!)}%` }"></i></div>
+              <div class="ss-hero-foot">
+                <span>{{ getProgressPhaseLabel((currentClass || nextClassToday)!) }} · {{ Math.round(getClassProgress((currentClass || nextClassToday)!)) }}%</span>
+                <b>{{ getCountdownLabel((currentClass || nextClassToday)!) }}</b>
+              </div>
+            </template>
+            <template v-else>
+              <span class="ss-chip">วันนี้</span>
+              <h2>{{ todaysClasses.length ? 'เรียนครบทุกคาบแล้ว' : 'วันนี้ไม่มีคาบเรียน' }}</h2>
+              <p>ใช้เวลานี้พักผ่อน หรือเคลียร์งานที่ค้างไว้</p>
+            </template>
+          </div>
+
+          <div class="ss-stats">
+            <div class="ss-stat"><b>{{ uniqueSubjectsCount }}</b><span>วิชา</span></div>
+            <div class="ss-stat"><b>{{ totalClasses }}</b><span>คาบ</span></div>
+            <div class="ss-stat"><b>{{ todaysClasses.length }}</b><span>คาบวันนี้</span></div>
+            <div class="ss-stat"><b class="sm">{{ selectedTermName }}</b><span>ภาคเรียน</span></div>
+          </div>
         </section>
 
-        <section class="today-board">
-          <div class="today-heading">
-            <div><p class="schedule-kicker">TODAY / LIVE</p><h2>แผนของวันนี้</h2></div>
-            <span class="date-chip">{{ getDayLabel(todayWeekday) }}</span>
-          </div>
-          <div v-if="!isInActiveTerm" class="today-empty">
-            <strong>ยังไม่อยู่ในช่วงภาคเรียน</strong><span>{{ offTermMessage }}</span>
-            <em v-if="nextTermCountdown">{{ nextTermCountdown.termName }} · เริ่มในอีก {{ nextTermCountdown.label }}</em>
-          </div>
-          <div v-else-if="!todaysClasses.length" class="today-empty"><strong>วันนี้ไม่มีคาบเรียน</strong><span>ใช้เวลานี้พักผ่อน หรือเคลียร์งานที่ค้างไว้</span></div>
-          <div v-else class="today-list">
-            <button
+        <!-- Today stepper -->
+        <section v-if="isInActiveTerm && todaysClasses.length" class="ss-block">
+          <h3 class="ss-h">วัน{{ getDayLabel(todayWeekday) }}นี้</h3>
+          <ol class="ss-steps">
+            <li
               v-for="item in todaysClasses"
               :key="item.id"
-              class="today-session"
-              :class="[
-                getClassStatus(item),
-                { 'is-focus': targetBlinkClass?.id === item.id }
-              ]"
-              :style="{ '--course': courseTint(item.course_name) }"
-              @click="openEditScheduleModal(item)"
+              :class="[getClassStatus(item), { focus: targetBlinkClass?.id === item.id }]"
+              :style="{ '--c': courseTint(item.course_name) }"
             >
-              <span class="session-time">{{ formatTimeRange(item.start_time, item.end_time) }}</span>
-              <span class="session-name">{{ item.course_name }}</span>
-              <span class="session-meta">{{ item.location || 'ไม่ระบุสถานที่' }}</span>
-              <span class="session-status">{{ getCountdownLabel(item) }}</span>
-              <span class="session-progress-head">
-                <span>{{ getProgressPhaseLabel(item) }}</span>
-                <span>{{ Math.round(getClassProgress(item)) }}%</span>
-              </span>
-              <span class="session-progress-track" aria-hidden="true">
-                <span
-                  class="session-progress-fill"
-                  :style="{ width: `${getClassProgress(item)}%` }"
-                ></span>
-              </span>
-            </button>
-          </div>
+              <span class="ss-dot"></span>
+              <button type="button" class="ss-step" @click="openEditScheduleModal(item)">
+                <time>{{ formatTimeRange(item.start_time, item.end_time) }}</time>
+                <strong>{{ item.course_name }}</strong>
+                <small>{{ item.location || 'ไม่ระบุสถานที่' }} · {{ getCountdownLabel(item) }}</small>
+              </button>
+            </li>
+          </ol>
         </section>
 
-        <section class="week-section">
-          <div class="section-heading"><div><p class="schedule-kicker">WEEK AT A GLANCE</p><h2>ตารางประจำสัปดาห์</h2></div><span>{{ totalClasses }} คาบในภาคเรียนนี้</span></div>
-          <div v-if="!schedules.length" class="empty-schedule"><p>ยังไม่มีคาบเรียนในภาคนี้</p><button class="outline-action" @click="openCreateScheduleModal">เพิ่มคาบแรก</button></div>
-          <div v-else class="week-rail">
-            <article v-for="day in gridDays" :key="day.value" class="day-column" :class="{ 'is-today': day.value === todayWeekday }">
-              <header><span>{{ String(day.value).padStart(2, '0') }}</span><h3>{{ day.label }}</h3></header>
-              <div class="day-sessions">
-                <button v-for="item in getSchedulesForDay(day.value)" :key="item.id" class="course-line" :style="{ '--course': courseTint(item.course_name) }" @click="openEditScheduleModal(item)">
-                  <time>{{ formatTimeRange(item.start_time, item.end_time) }}</time><strong>{{ item.course_name }}</strong><small>{{ item.location || 'ไม่ระบุสถานที่' }}</small>
-                </button>
-                <p v-if="!getSchedulesForDay(day.value).length" class="free-note">ว่าง</p>
+        <!-- Week board -->
+        <section class="ss-block">
+          <div class="ss-h-row">
+            <h3 class="ss-h">ตารางสัปดาห์</h3>
+            <span class="ss-faint">{{ totalClasses }} คาบในภาคเรียนนี้</span>
+          </div>
+
+          <div v-if="!schedules.length" class="ss-empty small">
+            <p>ยังไม่มีคาบเรียนในภาคนี้</p>
+            <button type="button" class="ss-btn" @click="openCreateScheduleModal">เพิ่มคาบแรก</button>
+          </div>
+          <div v-else class="ss-board">
+            <div v-for="day in gridDays" :key="day.value" class="ss-col" :class="{ today: day.value === todayWeekday }">
+              <div class="ss-col-head">
+                <span>{{ day.label }}</span>
+                <i>{{ getSchedulesForDay(day.value).length }}</i>
               </div>
-            </article>
+              <button
+                v-for="item in getSchedulesForDay(day.value)"
+                :key="item.id"
+                type="button"
+                class="ss-card"
+                :style="{ '--c': courseTint(item.course_name) }"
+                @click="openEditScheduleModal(item)"
+              >
+                <time>{{ formatTimeRange(item.start_time, item.end_time) }}</time>
+                <strong>{{ item.course_name }}</strong>
+                <small v-if="item.location">{{ item.location }}</small>
+              </button>
+              <p v-if="!getSchedulesForDay(day.value).length" class="ss-free">ว่าง</p>
+            </div>
           </div>
         </section>
 
-        <section class="agenda-section">
-          <div class="section-heading"><div><p class="schedule-kicker">ALL SESSIONS</p><h2>รายการคาบเรียน</h2></div><span>{{ schedulePageInfo }}</span></div>
-          <div class="agenda-list">
-            <article v-for="item in paginatedSchedules" :key="item.id" class="agenda-row" :style="{ '--course': courseTint(item.course_name) }">
-              <time>{{ formatTimeRange(item.start_time, item.end_time) }}</time><div><strong>{{ item.course_name }}</strong><span>{{ getDayLabel(item.day_of_week) }}<i v-if="item.location"> · {{ item.location }}</i></span></div>
-              <div class="row-actions"><button @click="openEditScheduleModal(item)">แก้ไข</button><button class="delete" :disabled="isDeletingId === item.id" @click="deleteSchedule(item.id)">{{ isDeletingId === item.id ? 'กำลังลบ' : 'ลบ' }}</button></div>
-            </article>
+        <!-- All sessions -->
+        <section v-if="schedules.length" class="ss-block">
+          <div class="ss-h-row">
+            <h3 class="ss-h">คาบเรียนทั้งหมด</h3>
+            <span class="ss-faint">{{ schedulePageInfo }}</span>
           </div>
-          <nav v-if="scheduleTotalPages > 1" class="pager"><button :disabled="scheduleCurrentPage === 1" @click="scheduleCurrentPage--">ก่อนหน้า</button><button v-for="page in scheduleTotalPages" :key="page" :class="{ active: page === scheduleCurrentPage }" @click="scheduleCurrentPage = page">{{ page }}</button><button :disabled="scheduleCurrentPage === scheduleTotalPages" @click="scheduleCurrentPage++">ถัดไป</button></nav>
+          <ul class="ss-rows">
+            <li v-for="item in paginatedSchedules" :key="item.id" :style="{ '--c': courseTint(item.course_name) }">
+              <span class="ss-swatch"></span>
+              <div class="ss-row-main">
+                <strong>{{ item.course_name }}</strong>
+                <small>วัน{{ getDayLabel(item.day_of_week) }} · {{ formatTimeRange(item.start_time, item.end_time) }}<template v-if="item.location"> · {{ item.location }}</template></small>
+              </div>
+              <button type="button" class="ss-icon" title="แก้ไข" @click="openEditScheduleModal(item)">✎</button>
+              <button type="button" class="ss-icon danger" title="ลบ" :disabled="isDeletingId === item.id" @click="deleteSchedule(item.id)">{{ isDeletingId === item.id ? '…' : '🗑' }}</button>
+            </li>
+          </ul>
+          <nav v-if="scheduleTotalPages > 1" class="ss-pager">
+            <button type="button" :disabled="scheduleCurrentPage === 1" @click="scheduleCurrentPage--">‹</button>
+            <button v-for="page in scheduleTotalPages" :key="page" type="button" :class="{ on: page === scheduleCurrentPage }" @click="scheduleCurrentPage = page">{{ page }}</button>
+            <button type="button" :disabled="scheduleCurrentPage === scheduleTotalPages" @click="scheduleCurrentPage++">›</button>
+          </nav>
         </section>
       </template>
     </main>
 
-    <Teleport to="body"><div v-if="isScheduleModalOpen" class="dialog-backdrop" @click.self="closeScheduleModal"><form class="schedule-dialog" @submit.prevent="submitSchedule"><header><div><p class="schedule-kicker">CLASS DETAILS</p><h2>{{ formTitle }}</h2></div><button type="button" @click="closeScheduleModal">×</button></header><div class="dialog-body"><label>ชื่อวิชา<input v-model="form.courseName" required maxlength="120" placeholder="เช่น ภาษาอังกฤษ" /></label><label v-if="!isMultiSessionMode">วันเรียน<select v-model.number="form.dayOfWeek"><option v-for="day in dayOptions" :key="day.value" :value="day.value">{{ day.label }}</option></select></label><div v-if="!isMultiSessionMode" class="form-grid"><label>เริ่ม<input v-model="form.startTime" type="time" required /></label><label>สิ้นสุด<input v-model="form.endTime" type="time" required /></label></div><label v-if="!isMultiSessionMode">สถานที่<input v-model="form.location" maxlength="120" placeholder="ไม่บังคับ" /></label><label class="mode-toggle"><input v-model="isMultiSessionMode" type="checkbox" @change="isEditing && toggleMultiSessionInEdit" />เพิ่มหลายคาบสำหรับวิชาเดียวกัน</label><div v-if="isMultiSessionMode" class="multi-editor"><div v-for="(session, index) in multiSessions" :key="index" class="multi-row"><select v-model.number="session.dayOfWeek"><option v-for="day in dayOptions" :key="day.value" :value="day.value">{{ day.label }}</option></select><input v-model="session.startTime" type="time" /><input v-model="session.endTime" type="time" /><input v-model="session.location" placeholder="สถานที่" /><button type="button" @click="removeSession(index)">×</button></div><button type="button" class="outline-action" @click="addSession">+ เพิ่มคาบ</button></div></div><footer><button type="button" class="outline-action" @click="closeScheduleModal">ยกเลิก</button><button class="primary-action" :disabled="isSubmitting">{{ submitButtonText }}</button></footer></form></div></Teleport>
-    <Teleport to="body"><div v-if="isTermModalOpen" class="dialog-backdrop" @click.self="closeTermModal"><form class="schedule-dialog compact" @submit.prevent="submitTerm"><header><div><p class="schedule-kicker">TERM SETTINGS</p><h2>{{ isEditingTerm ? 'แก้ไขภาคเรียน' : 'สร้างภาคเรียน' }}</h2></div><button type="button" @click="closeTermModal">×</button></header><div class="dialog-body"><label>ชื่อภาคเรียน<input v-model="termForm.termName" required maxlength="120" /></label><div class="form-grid"><label>วันเริ่ม<input v-model="termForm.startDate" type="date" required /></label><label>วันสิ้นสุด<input v-model="termForm.endDate" type="date" required /></label></div></div><footer><button type="button" class="outline-action" @click="closeTermModal">ยกเลิก</button><button class="primary-action" :disabled="isSubmittingTerm">{{ isSubmittingTerm ? 'กำลังบันทึก' : 'บันทึก' }}</button></footer></form></div></Teleport>
+    <!-- Class dialog -->
+    <Teleport to="body">
+      <div v-if="isScheduleModalOpen" class="ss-backdrop" @click.self="closeScheduleModal">
+        <form class="ss-dialog" @submit.prevent="submitSchedule">
+          <header>
+            <h2>{{ formTitle }}</h2>
+            <button type="button" class="ss-icon" @click="closeScheduleModal">✕</button>
+          </header>
+          <div class="ss-fields">
+            <label>ชื่อวิชา<input v-model="form.courseName" required maxlength="120" placeholder="เช่น ภาษาอังกฤษ" /></label>
+            <label v-if="!isMultiSessionMode">วันเรียน
+              <select v-model.number="form.dayOfWeek"><option v-for="day in dayOptions" :key="day.value" :value="day.value">{{ day.label }}</option></select>
+            </label>
+            <div v-if="!isMultiSessionMode" class="ss-pair">
+              <label>เริ่ม<input v-model="form.startTime" type="time" required /></label>
+              <label>สิ้นสุด<input v-model="form.endTime" type="time" required /></label>
+            </div>
+            <label v-if="!isMultiSessionMode">สถานที่<input v-model="form.location" maxlength="120" placeholder="ไม่บังคับ" /></label>
+
+            <label class="ss-switch">
+              <input v-model="isMultiSessionMode" type="checkbox" @change="isEditing && toggleMultiSessionInEdit" />
+              เพิ่มหลายคาบสำหรับวิชาเดียวกัน
+            </label>
+
+            <div v-if="isMultiSessionMode" class="ss-sessions">
+              <div v-for="(session, index) in multiSessions" :key="index" class="ss-session">
+                <select v-model.number="session.dayOfWeek"><option v-for="day in dayOptions" :key="day.value" :value="day.value">{{ day.label }}</option></select>
+                <input v-model="session.startTime" type="time" />
+                <input v-model="session.endTime" type="time" />
+                <input v-model="session.location" placeholder="สถานที่" />
+                <button type="button" class="ss-icon danger" @click="removeSession(index)">✕</button>
+              </div>
+              <button type="button" class="ss-btn" @click="addSession">+ เพิ่มคาบ</button>
+            </div>
+          </div>
+          <footer>
+            <button type="button" class="ss-btn" @click="closeScheduleModal">ยกเลิก</button>
+            <button class="ss-btn ss-primary" :disabled="isSubmitting">{{ submitButtonText }}</button>
+          </footer>
+        </form>
+      </div>
+    </Teleport>
+
+    <!-- Term dialog -->
+    <Teleport to="body">
+      <div v-if="isTermModalOpen" class="ss-backdrop" @click.self="closeTermModal">
+        <form class="ss-dialog" @submit.prevent="submitTerm">
+          <header>
+            <h2>{{ isEditingTerm ? 'แก้ไขภาคเรียน' : 'สร้างภาคเรียน' }}</h2>
+            <button type="button" class="ss-icon" @click="closeTermModal">✕</button>
+          </header>
+          <div class="ss-fields">
+            <label>ชื่อภาคเรียน<input v-model="termForm.termName" required maxlength="120" /></label>
+            <div class="ss-pair">
+              <label>วันเริ่ม<input v-model="termForm.startDate" type="date" required /></label>
+              <label>วันสิ้นสุด<input v-model="termForm.endDate" type="date" required /></label>
+            </div>
+          </div>
+          <footer>
+            <button type="button" class="ss-btn" @click="closeTermModal">ยกเลิก</button>
+            <button class="ss-btn ss-primary" :disabled="isSubmittingTerm">{{ isSubmittingTerm ? 'กำลังบันทึก' : 'บันทึก' }}</button>
+          </footer>
+        </form>
+      </div>
+    </Teleport>
   </AppTabsLayout>
 </template>
-
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
@@ -914,7 +1029,13 @@ const findCurrentTerm = (termList: BackendTerm[]): BackendTerm | null => {
   })
   if (activeTerm) return activeTerm
 
-  // 2. Fallback to term with latest start date prior to or closest to today
+  // 2. Outside a term, show the next upcoming term in the selector.
+  const upcomingTerm = termList
+    .filter(t => (t.startDate ? t.startDate.slice(0, 10) : '') > todayStr)
+    .sort((a, b) => (a.startDate || '').localeCompare(b.startDate || ''))[0]
+  if (upcomingTerm) return upcomingTerm
+
+  // 3. If no future term exists, fall back to the most recently started term.
   const sorted = [...termList].sort((a, b) => {
     const startA = a.startDate ? a.startDate.slice(0, 10) : ''
     const startB = b.startDate ? b.startDate.slice(0, 10) : ''
@@ -1101,163 +1222,127 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Itim&display=swap');
+.ss { max-width: 1240px; margin: 0 auto; padding: 24px 18px 90px; display: flex; flex-direction: column; gap: 28px; color: var(--text-primary); }
+.ss h1, .ss h2, .ss h3, .ss p { margin: 0; }
+.ss-faint { color: var(--text-muted); font-size: 12px; }
 
-.schedule-shell { max-width: 1180px; margin: 0 auto; padding: 32px 20px 64px; color: var(--text-primary); }
-.schedule-hero, .section-heading, .today-heading, .schedule-dialog header, .schedule-dialog footer { display:flex; align-items:center; justify-content:space-between; gap:16px; }
-.schedule-hero { padding: 12px 0 34px; border-bottom: 1px solid var(--border-subtle); }
-.schedule-kicker { margin:0 0 5px; color: var(--brand-ink); letter-spacing:.14em; font-size:10px; font-weight:800; }
-h1,h2,h3,p { margin-top:0; }.schedule-hero h1 { margin-bottom:8px; font: 400 clamp(34px,5vw,54px)/.95 'Itim', cursive; }.schedule-subtitle { margin-bottom:0; color:var(--text-muted); font-size:14px; }.hero-actions { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:8px; }
-.term-select,.primary-action,.outline-action,.refresh-action,.icon-action { border-radius:10px; border:1px solid var(--border-default); padding:10px 13px; font-size:13px; font-weight:700; transition:.2s ease; }.term-select { min-width:155px; background:var(--bg-elevated); color:var(--text-primary); }.primary-action { border-color:var(--brand); background:var(--brand); color:white; }.outline-action,.refresh-action,.icon-action { background:transparent; color:var(--text-secondary); }.icon-action { padding:10px 13px; }.primary-action:hover,.outline-action:hover,.refresh-action:hover,.icon-action:hover { transform:translateY(-1px); filter:brightness(1.12); }.primary-action:disabled,.refresh-action:disabled { opacity:.5; cursor:not-allowed; transform:none; }
-.schedule-error { margin:20px 0; padding:12px 14px; border-left:3px solid var(--ink-rose); background:color-mix(in srgb,var(--ink-rose) 10%,transparent); color:var(--text-secondary); }.welcome-panel { margin-top:28px; display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:22px; padding:30px; background:var(--bg-card); border:1px solid var(--border-subtle); }.welcome-mark { color:var(--brand-ink); font-size:32px; font-weight:800; }.welcome-panel h2 { margin-bottom:5px; }.welcome-panel p { margin:0; color:var(--text-muted); font-size:14px; }
-.overview-strip { display:grid; grid-template-columns:1.4fr 1fr 1fr auto; gap:1px; margin:26px 0; background:var(--border-subtle); border:1px solid var(--border-subtle); }.overview-stat,.refresh-action { padding:17px 20px; background:var(--bg-card); }.overview-stat span { display:block; color:var(--text-muted); font-size:11px; margin-bottom:5px; }.overview-stat strong { font-size:16px; }.overview-stat small { color:var(--text-muted); font-weight:500; }.refresh-action { border:0; border-radius:0; }
-.today-board { padding:26px; border:1px solid var(--border-subtle); background:linear-gradient(135deg,color-mix(in srgb,var(--brand) 10%,var(--bg-card)),var(--bg-card) 48%); }.today-heading { margin-bottom:20px; }.today-heading h2,.section-heading h2 { margin:0; font-size:20px; }.date-chip { padding:6px 10px; color:var(--brand-ink); border:1px solid var(--brand-border); font-size:12px; }.today-empty { display:flex; flex-direction:column; gap:5px; padding:25px 0 4px; color:var(--text-muted); font-size:13px; }.today-empty strong { color:var(--text-primary); font-size:16px; }.today-empty em { margin-top:8px; color:var(--brand-ink); font-style:normal; }.today-list { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:10px; }.today-session { text-align:left; padding:15px; border:1px solid color-mix(in srgb,var(--course) 32%,var(--border-subtle)); border-left:3px solid var(--course); background:var(--bg-card); color:var(--text-primary); }.today-session.active { background:color-mix(in srgb,var(--course) 12%,var(--bg-card)); }.today-session.finished { opacity:.55; }.session-time,.session-meta,.session-status { display:block; font-size:11px; color:var(--text-muted); }.session-name { display:block; padding:9px 0 4px; font-weight:800; font-size:14px; }.session-status { margin-top:10px; color:var(--brand-ink); }
-.week-section,.agenda-section { margin-top:28px; }.section-heading { margin:0 0 13px; }.section-heading > span { color:var(--text-muted); font-size:12px; }.week-rail { display:grid; grid-template-columns:repeat(5,minmax(150px,1fr)); overflow-x:auto; border:1px solid var(--border-subtle); }.day-column { min-height:230px; border-right:1px solid var(--border-subtle); background:var(--bg-card); }.day-column:last-child { border:0; }.day-column.is-today { background:color-mix(in srgb,var(--brand) 6%,var(--bg-card)); }.day-column header { display:flex; align-items:baseline; gap:8px; padding:13px; border-bottom:1px solid var(--border-subtle); }.day-column header span { color:var(--brand-ink); font-size:11px; font-weight:800; }.day-column h3 { margin:0; font-size:13px; }.day-sessions { padding:8px; }.course-line { display:block; width:100%; margin-bottom:7px; padding:10px; text-align:left; background:color-mix(in srgb,var(--course) 7%,transparent); border-left:2px solid var(--course); color:var(--text-primary); }.course-line time,.course-line small { display:block; color:var(--text-muted); font-size:10px; }.course-line strong { display:block; margin:4px 0; font-size:12px; }.free-note { padding:8px; color:var(--text-muted); font-size:12px; }.empty-schedule { padding:42px; text-align:center; border:1px dashed var(--border-default); color:var(--text-muted); }.empty-schedule .outline-action { margin-top:8px; }
-.agenda-list { border-top:1px solid var(--border-subtle); }.agenda-row { display:grid; grid-template-columns:150px 1fr auto; gap:20px; align-items:center; padding:16px; border-bottom:1px solid var(--border-subtle); border-left:3px solid var(--course); background:var(--bg-card); }.agenda-row time { color:var(--brand-ink); font-size:12px; font-weight:700; }.agenda-row strong,.agenda-row span { display:block; }.agenda-row span { margin-top:3px; color:var(--text-muted); font-size:12px; }.agenda-row i { font-style:normal; }.row-actions { display:flex; gap:7px; }.row-actions button,.pager button { padding:7px 10px; border:1px solid var(--border-default); background:transparent; color:var(--text-secondary); font-size:12px; }.row-actions .delete { color:var(--ink-rose); }.pager { display:flex; justify-content:center; gap:5px; padding:20px; }.pager button.active { background:var(--brand); color:#fff; border-color:var(--brand); }.pager button:disabled { opacity:.4; }
-.dialog-backdrop { position:fixed; inset:0; z-index:90; display:grid; place-items:center; padding:16px; background:rgba(4,8,16,.78); backdrop-filter:blur(8px); }.schedule-dialog { width:min(100%,560px); max-height:calc(100vh - 32px); overflow:auto; background:var(--bg-card); border:1px solid var(--border-default); box-shadow:0 24px 80px rgba(0,0,0,.4); }.schedule-dialog header,.schedule-dialog footer { padding:18px 20px; border-bottom:1px solid var(--border-subtle); }.schedule-dialog footer { border-top:1px solid var(--border-subtle); border-bottom:0; justify-content:flex-end; }.schedule-dialog h2 { margin:0; font-size:20px; }.schedule-dialog header button { font-size:24px; color:var(--text-muted); }.dialog-body { display:grid; gap:15px; padding:20px; }.dialog-body label { display:grid; gap:6px; color:var(--text-secondary); font-size:12px; font-weight:700; }.dialog-body input,.dialog-body select { width:100%; padding:10px; border:1px solid var(--border-default); background:var(--bg-elevated); color:var(--text-primary); }.form-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }.mode-toggle { display:flex !important; grid-template-columns:auto 1fr; align-items:center; padding-top:4px; }.mode-toggle input { width:auto; }.multi-editor { display:grid; gap:8px; }.multi-row { display:grid; grid-template-columns:1.3fr 1fr 1fr 1.4fr auto; gap:6px; }.multi-row button { color:var(--ink-rose); }
-@media (max-width:720px) { .schedule-shell { padding:22px 14px 48px; }.schedule-hero { align-items:flex-start; flex-direction:column; }.hero-actions { justify-content:flex-start; }.overview-strip { grid-template-columns:1fr 1fr; }.overview-strip .refresh-action { grid-column:span 2; }.week-rail { grid-template-columns:repeat(5,155px); }.agenda-row { grid-template-columns:1fr auto; gap:10px; }.agenda-row time { grid-column:span 2; }.row-actions { grid-column:2; grid-row:2; }.welcome-panel { grid-template-columns:auto 1fr; }.welcome-panel .primary-action { grid-column:span 2; }.multi-row { grid-template-columns:1fr 1fr; }.multi-row input[placeholder] { grid-column:span 2; }.multi-row button { grid-column:2; } }
+/* top bar */
+.ss-top { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.ss-kicker { font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--brand-ink); }
+.ss-title h1 { font-size: 30px; font-weight: 800; letter-spacing: -.03em; }
+.ss-toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ss-termbox { display: flex; align-items: center; gap: 6px; }
+.ss-select { padding: 9px 12px; border-radius: 10px; border: 1px solid var(--border-default); background: var(--bg-card); color: var(--text-primary); font-size: 13px; font-weight: 600; }
+.ss-btn { padding: 9px 16px; border-radius: 10px; border: 1px solid var(--border-default); background: var(--bg-card); color: var(--text-secondary); font-size: 13px; font-weight: 700; transition: filter .15s; }
+.ss-btn:hover { filter: brightness(1.12); }
+.ss-btn:disabled, .ss-icon:disabled { opacity: .45; cursor: not-allowed; }
+.ss-primary { background: var(--brand); border-color: var(--brand); color: #fff; }
+.ss-icon { width: 34px; height: 34px; flex-shrink: 0; display: inline-grid; place-items: center; border-radius: 10px; border: 1px solid var(--border-subtle); background: var(--bg-card); color: var(--text-secondary); font-size: 14px; }
+.ss-icon.danger { color: var(--ink-rose); }
+.ss-alert { padding: 12px 16px; border-radius: 10px; border-left: 4px solid var(--ink-rose); background: color-mix(in srgb, var(--ink-rose) 10%, transparent); color: var(--ink-rose); font-size: 13px; }
 
-/* Modern workspace layer */
-.schedule-shell { max-width: 1560px; padding: clamp(24px, 3vw, 54px) clamp(18px, 3vw, 52px) 80px; }
-.schedule-shell::before { content:''; position:fixed; z-index:-1; width:58vw; height:58vw; right:-22vw; top:7vh; pointer-events:none; background:radial-gradient(circle, color-mix(in srgb,var(--brand) 16%,transparent), transparent 66%); filter:blur(12px); }
-.schedule-hero { min-height:148px; padding:24px clamp(24px,3vw,40px); border:1px solid color-mix(in srgb,var(--border-default) 75%,transparent); border-radius:24px; background:linear-gradient(115deg, color-mix(in srgb,var(--brand) 17%,var(--bg-card)), var(--bg-card) 44%, color-mix(in srgb,var(--brand-2) 11%,var(--bg-card))); box-shadow:0 14px 34px rgba(0,0,0,.1); }
-.schedule-hero h1 { font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif; font-weight:760; letter-spacing:-.05em; font-size:clamp(32px,3.2vw,50px); }
-.schedule-subtitle { max-width:520px; font-size:14px; line-height:1.5; }
-.hero-actions { gap:10px; }.term-select,.primary-action,.outline-action,.refresh-action,.icon-action { min-height:42px; border-radius:13px; padding:10px 15px; }.primary-action { box-shadow:0 8px 22px color-mix(in srgb,var(--brand) 30%,transparent); }.outline-action,.refresh-action,.icon-action { background:color-mix(in srgb,var(--bg-elevated) 74%,transparent); backdrop-filter:blur(10px); }
-.overview-strip { overflow:hidden; gap:0; margin:18px 0 22px; border-radius:18px; background:color-mix(in srgb,var(--border-default) 65%,transparent); box-shadow:0 8px 20px rgba(0,0,0,.05); }.overview-stat,.refresh-action { min-height:76px; display:flex; flex-direction:column; justify-content:center; padding:14px clamp(16px,2vw,24px); border-right:1px solid color-mix(in srgb,var(--border-default) 65%,transparent); background:color-mix(in srgb,var(--bg-card) 92%,transparent); }.overview-stat strong { font-size:18px; letter-spacing:-.025em; }.refresh-action { flex-direction:row; align-items:center; gap:7px; border-right:0; }
-.today-board { position:relative; overflow:hidden; padding:clamp(20px,2.2vw,28px); border-radius:22px; border-color:color-mix(in srgb,var(--brand) 27%,var(--border-subtle)); background:linear-gradient(130deg,color-mix(in srgb,var(--brand) 16%,var(--bg-card)),var(--bg-card) 48%,color-mix(in srgb,var(--brand-2) 8%,var(--bg-card))); box-shadow:0 12px 28px rgba(0,0,0,.07); }.today-heading { margin-bottom:14px; }.today-board::after { content:'TODAY'; position:absolute; right:24px; bottom:-12px; color:color-mix(in srgb,var(--text-primary) 3%,transparent); font-size:clamp(60px,8vw,112px); font-weight:900; letter-spacing:-.1em; pointer-events:none; }.today-empty { padding:12px 0 2px; }.today-list { position:relative; z-index:1; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:12px; }.today-session { min-height:128px; border-radius:14px; border-left-width:4px; box-shadow:0 8px 18px rgba(0,0,0,.06); transition:transform .22s ease, box-shadow .22s ease; }.today-session:hover { transform:translateY(-4px); box-shadow:0 15px 25px rgba(0,0,0,.14); }.session-name { font-size:15px; }
-.session-progress-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:12px; color:var(--text-muted); font-size:10px; font-weight:700; }.session-progress-track { display:block; width:100%; height:6px; margin-top:6px; overflow:hidden; border-radius:999px; background:color-mix(in srgb,var(--text-muted) 15%,transparent); }.session-progress-fill { display:block; height:100%; border-radius:inherit; background:linear-gradient(90deg,var(--course),color-mix(in srgb,var(--course) 58%,white)); box-shadow:0 0 12px color-mix(in srgb,var(--course) 44%,transparent); transition:width 1s linear; }.today-session.active .session-progress-head { color:var(--course); }
-.today-session.is-focus { position:relative; isolation:isolate; animation:class-focus-pulse 1.35s ease-in-out infinite; }.today-session.is-focus::after { content:''; position:absolute; inset:-1px; z-index:-1; border:2px solid var(--course); border-radius:17px; pointer-events:none; animation:class-focus-ring 1.35s ease-out infinite; }.today-session.is-focus .session-name { color:color-mix(in srgb,var(--course) 72%,white); }
-@keyframes class-focus-pulse { 0%,100% { box-shadow:0 8px 18px rgba(0,0,0,.06),0 0 0 0 color-mix(in srgb,var(--course) 0%,transparent); } 50% { box-shadow:0 14px 32px rgba(0,0,0,.15),0 0 22px color-mix(in srgb,var(--course) 35%,transparent); } }
-@keyframes class-focus-ring { 0% { opacity:.9; transform:scale(1); } 70%,100% { opacity:0; transform:scale(1.035); } }
-@media (prefers-reduced-motion: reduce) { .today-session.is-focus,.today-session.is-focus::after { animation:none; }.today-session.is-focus { box-shadow:0 0 0 2px var(--course),0 12px 28px color-mix(in srgb,var(--course) 20%,transparent); } }
-.week-section,.agenda-section { margin-top:40px; }.section-heading { margin-bottom:16px; }.section-heading h2 { font-size:23px; letter-spacing:-.035em; }.week-rail { grid-template-columns:repeat(5,minmax(185px,1fr)); border-radius:22px; box-shadow:0 14px 35px rgba(0,0,0,.08); scrollbar-width:thin; }.day-column { min-height:290px; }.day-column header { padding:17px; }.day-column header span { display:grid; width:28px; height:28px; place-items:center; border-radius:9px; background:color-mix(in srgb,var(--brand) 15%,transparent); }.day-column.is-today header { background:color-mix(in srgb,var(--brand) 8%,transparent); }.day-sessions { padding:10px; }.course-line { border-radius:11px; border-left-width:3px; transition:transform .2s ease, background .2s ease; }.course-line:hover { transform:translateX(3px); background:color-mix(in srgb,var(--course) 14%,transparent); }
-.agenda-list { overflow:hidden; border:1px solid var(--border-subtle); border-radius:20px; box-shadow:0 12px 32px rgba(0,0,0,.06); }.agenda-row { min-height:78px; padding:17px 22px; transition:background .2s ease; }.agenda-row:hover { background:color-mix(in srgb,var(--bg-hover) 75%,var(--bg-card)); }.agenda-row time { font-size:13px; }.row-actions button { border-radius:9px; padding:8px 12px; }.pager button { border-radius:9px; }.welcome-panel { border-radius:24px; box-shadow:0 16px 38px rgba(0,0,0,.08); }
-.schedule-dialog { border-radius:24px; box-shadow:0 28px 100px rgba(0,0,0,.5); }.dialog-body input,.dialog-body select { border-radius:11px; }.dialog-backdrop { background:rgba(4,8,16,.7); }
-@media (max-width:1100px) { .schedule-shell { max-width:100%; }.schedule-hero { min-height:0; }.overview-strip { grid-template-columns:1.35fr 1fr 1fr auto; }.week-rail { grid-template-columns:repeat(5,180px); } }
-@media (max-width:820px) { .schedule-hero { align-items:flex-start; flex-direction:column; }.hero-actions { justify-content:flex-start; }.overview-strip { grid-template-columns:1fr 1fr; }.overview-strip .refresh-action { grid-column:span 2; flex-direction:row; align-items:center; }.today-list { grid-template-columns:repeat(2,minmax(0,1fr)); }.week-rail { grid-template-columns:repeat(5,170px); }.agenda-row { grid-template-columns:130px 1fr auto; } }
-@media (max-width:560px) { .schedule-shell { padding:16px 12px 50px; }.schedule-hero { padding:24px 20px; border-radius:21px; }.schedule-hero h1 { font-size:38px; }.hero-actions { width:100%; display:grid; grid-template-columns:1fr 1fr; }.term-select { grid-column:span 2; width:100%; }.primary-action,.outline-action,.icon-action { justify-content:center; }.overview-strip { border-radius:16px; }.overview-stat,.refresh-action { min-height:76px; padding:14px; }.overview-stat strong { font-size:15px; }.today-board { border-radius:20px; }.today-list { grid-template-columns:1fr; }.week-section,.agenda-section { margin-top:32px; }.agenda-row { grid-template-columns:1fr auto; padding:15px; }.agenda-row time { grid-column:span 2; }.agenda-row > div:not(.row-actions) { min-width:0; }.row-actions { grid-row:2; grid-column:2; }.section-heading { align-items:flex-end; }.section-heading > span { text-align:right; }.form-grid { grid-template-columns:1fr; } }
+/* empty */
+.ss-empty { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 56px 24px; text-align: center; border-radius: 16px; border: 1px dashed var(--border-default); background: var(--bg-card); }
+.ss-empty.small { padding: 28px; }
+.ss-empty-mark { font-size: 40px; }
+.ss-empty h2 { font-size: 22px; font-weight: 800; }
+.ss-empty p { color: var(--text-muted); font-size: 13px; }
 
-/* Weekly schedule responsive layout */
-.week-rail {
-  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-  overflow: visible;
-  gap: 1px;
-  background: var(--border-subtle);
+/* hero */
+.ss-hero-row { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 16px; }
+.ss-hero { --c: var(--brand); display: flex; flex-direction: column; justify-content: center; gap: 8px; padding: 28px; min-height: 200px; border-radius: 20px; color: #fff; background: linear-gradient(135deg, var(--c), color-mix(in srgb, var(--c) 45%, #0b1020)); }
+.ss-hero.idle { background: linear-gradient(135deg, var(--brand), var(--brand-2)); }
+:global(:root.theme-night) .ss-hero.idle { border: 1px solid color-mix(in srgb, var(--brand) 42%, var(--border-subtle)); background: linear-gradient(135deg, #162842, #111d32 58%, #0e1727); box-shadow: inset 0 1px 0 rgba(255,255,255,.05), 0 14px 32px rgba(0,0,0,.22); }
+:global(:root.theme-night) .ss-hero.idle .ss-chip { background: color-mix(in srgb, var(--brand) 25%, transparent); border: 1px solid color-mix(in srgb, var(--brand) 35%, transparent); }
+.ss-hero h2 { font-size: 28px; font-weight: 800; letter-spacing: -.02em; overflow-wrap: anywhere; }
+.ss-hero p { opacity: .85; font-size: 14px; }
+.ss-next-term { display:flex; align-items:baseline; flex-wrap:wrap; gap:6px; margin-top:2px; color:rgba(255,255,255,.84); }.ss-next-term span { padding:3px 8px; border-radius:999px; background:rgba(255,255,255,.13); font-size:10px; font-weight:800; letter-spacing:.04em; }.ss-next-term b { color:#fff; font-size:16px; }.ss-next-term small { font-size:13px; }
+.ss-chip { align-self: flex-start; padding: 4px 12px; border-radius: 99px; background: rgba(255, 255, 255, .2); font-size: 11px; font-weight: 800; letter-spacing: .04em; }
+.ss-meter { height: 6px; margin-top: 10px; border-radius: 99px; background: rgba(255, 255, 255, .25); overflow: hidden; }
+.ss-meter i { display: block; height: 100%; background: #fff; border-radius: inherit; transition: width 1s linear; }
+.ss-hero-foot { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; opacity: .95; }
+
+.ss-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.ss-stat { display: flex; flex-direction: column; justify-content: center; gap: 2px; padding: 16px; border-radius: 16px; background: var(--bg-card); border: 1px solid var(--border-subtle); }
+.ss-stat b { font-size: 30px; font-weight: 800; line-height: 1; }
+.ss-stat b.sm { font-size: 15px; line-height: 1.3; overflow-wrap: anywhere; }
+.ss-stat span { font-size: 11px; color: var(--text-muted); }
+
+/* blocks */
+.ss-block { display: flex; flex-direction: column; gap: 14px; }
+.ss-h { font-size: 18px; font-weight: 800; letter-spacing: -.02em; }
+.ss-h-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+
+/* today stepper */
+.ss-steps { margin: 0 0 0 6px; padding: 0; list-style: none; display: flex; flex-direction: column; border-left: 2px solid var(--border-subtle); }
+.ss-steps li { position: relative; padding: 0 0 12px 22px; --c: var(--brand); }
+.ss-dot { position: absolute; left: -7px; top: 18px; width: 12px; height: 12px; border-radius: 50%; background: var(--c); }
+.ss-step { display: flex; flex-direction: column; gap: 2px; width: 100%; padding: 12px 16px; text-align: left; border-radius: 12px; background: var(--bg-card); border: 1px solid var(--border-subtle); color: var(--text-primary); }
+.ss-step time { font-size: 12px; font-weight: 800; color: var(--c); }
+.ss-step strong { font-size: 16px; }
+.ss-step small { font-size: 12px; color: var(--text-muted); }
+.ss-steps li.active .ss-step { border-color: var(--c); background: color-mix(in srgb, var(--c) 10%, var(--bg-card)); }
+.ss-steps li.active .ss-dot { box-shadow: 0 0 0 4px color-mix(in srgb, var(--c) 30%, transparent); }
+.ss-steps li.finished { opacity: .5; }
+.ss-steps li.focus .ss-step { animation: ss-pulse 1.4s ease-in-out infinite; }
+@keyframes ss-pulse { 50% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--c) 30%, transparent); } }
+@media (prefers-reduced-motion: reduce) { .ss-steps li.focus .ss-step { animation: none; } }
+
+/* week board */
+.ss-board { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(150px, 1fr); gap: 10px; overflow-x: auto; padding-bottom: 6px; }
+.ss-col { display: flex; flex-direction: column; gap: 8px; padding: 10px; border-radius: 16px; background: var(--bg-elevated); }
+.ss-col.today { background: color-mix(in srgb, var(--brand) 8%, var(--bg-elevated)); border: 2px solid color-mix(in srgb, var(--brand) 50%, transparent); }
+.ss-col-head { display: flex; justify-content: space-between; align-items: center; padding: 2px 4px 6px; font-size: 13px; font-weight: 800; }
+.ss-col-head i { font-style: normal; min-width: 22px; padding: 1px 7px; text-align: center; border-radius: 99px; background: var(--bg-card); font-size: 11px; color: var(--text-muted); }
+.ss-card { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; text-align: left; border-radius: 10px; background: var(--bg-card); border-top: 3px solid var(--c); color: var(--text-primary); transition: transform .15s; }
+.ss-card:hover { transform: translateY(-2px); }
+.ss-card time { font-size: 11px; font-weight: 800; color: var(--c); }
+.ss-card strong { font-size: 13px; overflow-wrap: anywhere; }
+.ss-card small { font-size: 11px; color: var(--text-muted); }
+.ss-free { padding: 10px 0; text-align: center; font-size: 12px; color: var(--text-muted); }
+
+/* rows */
+.ss-rows { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; border-radius: 16px; overflow: hidden; border: 1px solid var(--border-subtle); background: var(--bg-card); }
+.ss-rows li { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--border-subtle); }
+.ss-rows li:last-child { border-bottom: 0; }
+.ss-swatch { width: 4px; align-self: stretch; border-radius: 99px; background: var(--c); }
+.ss-row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ss-row-main strong { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ss-row-main small { font-size: 12px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ss-pager { display: flex; justify-content: center; gap: 6px; }
+.ss-pager button { min-width: 34px; height: 34px; border-radius: 10px; border: 1px solid var(--border-subtle); background: var(--bg-card); color: var(--text-secondary); font-size: 13px; }
+.ss-pager button.on { background: var(--brand); border-color: var(--brand); color: #fff; }
+.ss-pager button:disabled { opacity: .35; }
+
+/* dialog */
+.ss-backdrop { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; padding: 16px; background: rgba(4, 8, 16, .6); backdrop-filter: blur(4px); }
+.ss-dialog { display: flex; flex-direction: column; width: min(100%, 520px); max-height: 90vh; border-radius: 18px; background: var(--bg-card); border: 1px solid var(--border-subtle); box-shadow: 0 30px 80px rgba(0, 0, 0, .4); }
+.ss-dialog header, .ss-dialog footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 16px 20px; }
+.ss-dialog header { border-bottom: 1px solid var(--border-subtle); }
+.ss-dialog header h2 { margin: 0; font-size: 18px; font-weight: 800; }
+.ss-dialog footer { justify-content: flex-end; border-top: 1px solid var(--border-subtle); }
+.ss-fields { display: grid; gap: 14px; align-content: start; padding: 18px 20px; overflow-y: auto; }
+.ss-fields label { display: grid; gap: 6px; font-size: 12px; font-weight: 700; color: var(--text-secondary); }
+.ss-fields input, .ss-fields select { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border-subtle); background: var(--bg-elevated); color: var(--text-primary); font-size: 14px; }
+.ss-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.ss-fields .ss-switch { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; background: var(--bg-elevated); }
+.ss-fields .ss-switch input { width: auto; }
+.ss-sessions { display: grid; gap: 10px; }
+.ss-session { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 8px; padding: 10px; border-radius: 12px; background: var(--bg-elevated); align-items: center; }
+.ss-session select, .ss-session input[placeholder] { grid-column: span 3; }
+.ss-session .ss-icon { grid-row: 1 / span 2; grid-column: 4; }
+.ss-fields .ss-session input, .ss-fields .ss-session select { background: var(--bg-card); }
+
+@media (max-width: 860px) {
+  .ss-hero-row { grid-template-columns: 1fr; }
+  .ss-board { grid-auto-flow: row; grid-template-columns: 1fr; overflow: visible; }
 }
-.day-column {
-  min-width: 0;
-  border-right: 0;
-}
-.course-line strong,
-.course-line small {
-  overflow-wrap: anywhere;
-}
-
-@media (min-width: 1181px) {
-  .schedule-shell {
-    width: 100%;
-    max-width: none;
-    margin: 0;
-    padding-right: clamp(24px, 2.25vw, 44px);
-    padding-left: clamp(24px, 2.25vw, 44px);
-  }
-  .week-rail {
-    width: 100%;
-    grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
-  }
-  .day-column {
-    min-height: clamp(290px, 34vh, 440px);
-  }
-  .day-column header {
-    padding: 18px clamp(14px, 1.2vw, 22px);
-  }
-  .day-sessions {
-    padding: clamp(10px, 1vw, 16px);
-  }
-  .course-line {
-    padding: clamp(11px, 1vw, 16px);
-  }
-}
-
-@media (min-width: 821px) and (max-width: 1180px) {
-  .week-rail {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
-    padding: 12px;
-    background: color-mix(in srgb, var(--bg-card) 88%, transparent);
-  }
-  .day-column {
-    min-height: 240px;
-    overflow: hidden;
-    border: 1px solid var(--border-subtle);
-    border-radius: 16px;
-  }
-}
-
-@media (max-width: 820px) {
-  .week-rail {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
-    padding: 10px;
-    overflow: visible;
-    background: color-mix(in srgb, var(--bg-card) 88%, transparent);
-  }
-  .day-column {
-    min-height: 210px;
-    overflow: hidden;
-    border: 1px solid var(--border-subtle);
-    border-radius: 15px;
-  }
-  .day-column header {
-    padding: 13px 14px;
-  }
-}
-
 @media (max-width: 560px) {
-  .week-section .section-heading {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 5px;
-  }
-  .week-section .section-heading > span {
-    text-align: left;
-  }
-  .week-rail {
-    grid-template-columns: 1fr;
-    gap: 9px;
-    padding: 9px;
-    border-radius: 18px;
-  }
-  .day-column {
-    min-height: 0;
-    border-radius: 14px;
-  }
-  .day-column header {
-    position: sticky;
-    top: 0;
-    z-index: 1;
-    padding: 12px 13px;
-  }
-  .day-sessions {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 7px;
-    padding: 9px;
-  }
-  .course-line {
-    margin-bottom: 0;
-    padding: 12px;
-  }
-  .course-line time {
-    font-size: 11px;
-  }
-  .course-line strong {
-    font-size: 13px;
-  }
-  .free-note {
-    margin: 0;
-    padding: 10px 12px;
-  }
+  .ss { padding: 16px 12px 80px; }
+  .ss-hero { padding: 20px; min-height: 0; }
+  .ss-hero h2 { font-size: 22px; }
+  .ss-pair { grid-template-columns: 1fr; }
+  .ss-backdrop { place-items: end center; padding: 0; }
+  .ss-dialog { width: 100%; border-radius: 18px 18px 0 0; }
 }
 </style>
