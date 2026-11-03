@@ -2146,7 +2146,18 @@ const loadProfile = async () => {
   isLoading.value = true; errorMessage.value = ''
   try {
     if (!user.value) { await router.push('/login'); return }
-    const me = await apiFetch<{ userId: string; email: string; fullName: string; profileImageUrl?: string | null; hasGoogle: boolean; hasLine: boolean; hasPassword: boolean; oracleStorageConfigured?: boolean }>('/api/Auth/me')
+    const me = await apiFetch<{ 
+      userId: string; 
+      email: string; 
+      fullName: string; 
+      profileImageUrl?: string | null; 
+      hasGoogle: boolean; 
+      hasLine: boolean; 
+      hasPassword: boolean; 
+      oracleStorageConfigured?: boolean;
+      enabledModules?: string;
+      modules?: AppModuleId[];
+    }>('/api/Auth/me')
     userMe.value = {
       ...me,
       profileImageUrl: normalizeProfileImageUrl(me.userId, me.profileImageUrl),
@@ -2159,6 +2170,8 @@ const loadProfile = async () => {
         email: me.email,
         fullName: me.fullName,
         profileImageUrl: me.profileImageUrl ?? null,
+        enabledModules: me.enabledModules ?? null,
+        modules: me.modules ?? null,
       })
     }
   } catch (error: any) {

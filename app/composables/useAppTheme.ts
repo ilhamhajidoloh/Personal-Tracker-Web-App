@@ -31,6 +31,7 @@ export const useAppTheme = () => {
     const root = document.documentElement
     root.classList.toggle('theme-light', nextTheme === 'light')
     root.classList.toggle('theme-night', nextTheme === 'night')
+    root.classList.toggle('dark', nextTheme === 'night')
   }
 
   const setTheme = (nextTheme: AppTheme, isOverride = true) => {

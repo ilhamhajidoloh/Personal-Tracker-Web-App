@@ -4,6 +4,8 @@ export type AuthSession = {
   email: string
   fullName: string
   profileImageUrl?: string | null
+  enabledModules?: string | null
+  modules?: string[] | null
 }
 
 type BackendAuthResponse = {
@@ -13,6 +15,8 @@ type BackendAuthResponse = {
   email: string
   fullName: string
   profileImageUrl?: string | null
+  enabledModules?: string | null
+  modules?: string[] | null
 }
 
 const decodeJwtExpiry = (token: string): number | null => {
@@ -85,6 +89,25 @@ export const useAuth = () => {
       email: res.email,
       fullName: res.fullName,
       profileImageUrl: normalizeProfileImageUrl(res.userId, res.profileImageUrl ?? session.value?.profileImageUrl ?? null),
+      enabledModules: res.enabledModules ?? session.value?.enabledModules ?? null,
+      modules: res.modules ?? session.value?.modules ?? null,
+    }
+
+    // Cache modules locally if returned by backend
+    if (typeof window !== 'undefined' && res.userId) {
+      try {
+        const storageKey = `mylife_enabled_modules_${res.userId}`
+        if (Array.isArray(res.modules) && res.modules.length > 0) {
+          localStorage.setItem(storageKey, JSON.stringify(res.modules))
+        } else if (typeof res.enabledModules === 'string' && res.enabledModules.trim().length > 0) {
+          const list = res.enabledModules.split(',').map((s) => s.trim()).filter(Boolean)
+          if (list.length > 0) {
+            localStorage.setItem(storageKey, JSON.stringify(list))
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to cache modules from auth session:', e)
+      }
     }
   }
 
@@ -114,10 +137,23 @@ export const useAuth = () => {
     return res
   }
 
-  const register = async (email: string, password: string, fullName: string) => {
+  const register = async (
+    email: string,
+    password: string,
+    fullName: string,
+    modules?: string[] | string
+  ) => {
+    const body: Record<string, unknown> = { email, password, fullName }
+    if (Array.isArray(modules)) {
+      body.modules = modules
+      body.enabledModules = modules.join(',')
+    } else if (typeof modules === 'string') {
+      body.enabledModules = modules
+    }
+
     const res = await $fetch<BackendAuthResponse>(`${config.public.apiBase}/api/Auth/register`, {
       method: 'POST',
-      body: { email, password, fullName },
+      body,
     })
     setSession(res)
     return res

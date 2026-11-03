@@ -68,11 +68,12 @@ const DEFAULT_MODULE_IDS: AppModuleId[] = ALL_APP_MODULES.map((m) => m.id)
 
 const enabledModulesState = ref<AppModuleId[]>([...DEFAULT_MODULE_IDS])
 const isInitialized = ref(false)
+const isSyncingWithDb = ref(false)
 const activeUserId = ref<string | null>(null)
 
-const getStorageKey = (userId: string) => `mylife_enabled_modules_${userId}`
+export const getStorageKey = (userId: string) => `mylife_enabled_modules_${userId}`
 
-const getValidModuleIds = (modules: unknown): AppModuleId[] => {
+export const getValidModuleIds = (modules: unknown): AppModuleId[] => {
   if (!Array.isArray(modules)) return []
   return modules.filter((id): id is AppModuleId =>
     typeof id === 'string' && DEFAULT_MODULE_IDS.includes(id as AppModuleId)
@@ -81,6 +82,38 @@ const getValidModuleIds = (modules: unknown): AppModuleId[] => {
 
 export const useUserModules = () => {
   const { currentUser } = useAuth()
+  const { apiFetch } = useBackendApi()
+
+  const syncFromBackend = async () => {
+    const userId = currentUser.value?.userId
+    const token = currentUser.value?.token
+    if (!userId || !token) return
+
+    try {
+      isSyncingWithDb.value = true
+      const res = await apiFetch<{ enabledModules?: string; modules?: AppModuleId[] }>('/api/Auth/modules')
+      let modules: AppModuleId[] = []
+      if (Array.isArray(res?.modules) && res.modules.length > 0) {
+        modules = getValidModuleIds(res.modules)
+      } else if (typeof res?.enabledModules === 'string') {
+        modules = getValidModuleIds(res.enabledModules.split(','))
+      }
+
+      if (modules.length > 0) {
+        enabledModulesState.value = modules
+        activeUserId.value = userId
+        isInitialized.value = true
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(getStorageKey(userId), JSON.stringify(modules))
+        }
+      }
+    } catch (e) {
+      // Keep local cached preference if network or backend sync fails
+      console.warn('[useUserModules] Background sync from DB skipped or failed:', e)
+    } finally {
+      isSyncingWithDb.value = false
+    }
+  }
 
   const initModules = () => {
     if (typeof window === 'undefined') return
@@ -104,17 +137,22 @@ export const useUserModules = () => {
           enabledModulesState.value = modules
           activeUserId.value = userId
           isInitialized.value = true
+          // Reconcile with Oracle DB asynchronously in background
+          syncFromBackend()
           return
         }
       }
       enabledModulesState.value = [...DEFAULT_MODULE_IDS]
       activeUserId.value = userId
       isInitialized.value = true
+      // Fetch from DB
+      syncFromBackend()
     } catch (e) {
       console.error('Failed to parse saved modules:', e)
       enabledModulesState.value = [...DEFAULT_MODULE_IDS]
       activeUserId.value = userId
       isInitialized.value = true
+      syncFromBackend()
     }
   }
 
@@ -126,10 +164,23 @@ export const useUserModules = () => {
       const validModules = getValidModuleIds(modules)
       if (validModules.length === 0) return false
 
+      // 1. Immediately persist to localStorage for instant UI feedback
       localStorage.setItem(getStorageKey(userId), JSON.stringify(validModules))
       enabledModulesState.value = validModules
       activeUserId.value = userId
       isInitialized.value = true
+
+      // 2. Persist directly to backend database (Oracle DB)
+      apiFetch('/api/Auth/modules', {
+        method: 'PUT',
+        body: {
+          modules: validModules,
+          enabledModules: validModules.join(','),
+        },
+      }).catch((err) => {
+        console.error('[useUserModules] Failed to persist modules to DB:', err)
+      })
+
       return true
     } catch (e) {
       console.error('Failed to save modules to localStorage:', e)
@@ -202,6 +253,7 @@ export const useUserModules = () => {
   return {
     allModules: ALL_APP_MODULES,
     enabledModules: readonly(enabledModulesState),
+    isSyncingWithDb: readonly(isSyncingWithDb),
     isModuleEnabled,
     toggleModule,
     enableModule,
@@ -209,5 +261,6 @@ export const useUserModules = () => {
     setModules,
     enableAllModules,
     initModules,
+    syncFromBackend,
   }
 }
