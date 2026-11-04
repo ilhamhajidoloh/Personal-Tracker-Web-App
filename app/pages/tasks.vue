@@ -338,12 +338,44 @@ const filteredTasks = computed(() => {
   return list
 })
 
+const BANGKOK_TIME_ZONE = 'Asia/Bangkok'
+
+/** Convert an instant to the value required by a datetime-local input in Thailand. */
+const toBangkokDateTimeLocal = (value: string | Date) => {
+  const date = value instanceof Date ? value : new Date(value)
+  if (Number.isNaN(date.getTime())) return typeof value === 'string' ? value.slice(0, 16) : ''
+
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: BANGKOK_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(date)
+  const values = Object.fromEntries(parts.map(part => [part.type, part.value]))
+  return `${values.year}-${values.month}-${values.day}T${values.hour}:${values.minute}`
+}
+
+/** Treat the datetime-local value as Bangkok time before storing it as UTC. */
+const bangkokDateTimeLocalToISOString = (value: string) => {
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/)
+  if (!match) return null
+  const [, year, month, day, hour, minute, second = '0'] = match
+  const utc = new Date(Date.UTC(
+    Number(year), Number(month) - 1, Number(day), Number(hour) - 7, Number(minute), Number(second),
+  ))
+  return Number.isNaN(utc.getTime()) ? null : utc.toISOString()
+}
+
 const formatDeadline = (dateStr: string) => {
   if (!dateStr) return '-'
   try {
     const d = new Date(dateStr)
     if (isNaN(d.getTime())) return dateStr
     return d.toLocaleString('th-TH', {
+      timeZone: BANGKOK_TIME_ZONE,
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -390,7 +422,7 @@ const openCreateTaskModal = () => {
   const now = new Date()
   now.setDate(now.getDate() + 1)
   now.setHours(17, 0, 0, 0)
-  form.deadline = now.toISOString().slice(0, 16)
+  form.deadline = toBangkokDateTimeLocal(now)
   form.isUrgent = false
   isModalOpen.value = true
 }
@@ -400,8 +432,7 @@ const openEditTaskModal = (item: AssignmentTask) => {
   form.title = item.title
   form.subject = item.subject || ''
   try {
-    const d = new Date(item.deadline)
-    form.deadline = d.toISOString().slice(0, 16)
+    form.deadline = toBangkokDateTimeLocal(item.deadline)
   } catch {
     form.deadline = item.deadline
   }
@@ -421,11 +452,12 @@ const submitTask = async () => {
 
   isSubmitting.value = true
   try {
-    const deadlineDate = new Date(form.deadline)
+    const deadline = bangkokDateTimeLocalToISOString(form.deadline)
+    if (!deadline) { toastWarning('รูปแบบวันกำหนดส่งไม่ถูกต้อง'); return }
     const body = {
       title: form.title.trim(),
       subject: form.subject.trim() || null,
-      deadline: deadlineDate.toISOString(),
+      deadline,
       isUrgent: form.isUrgent,
       isCompleted: false,
     }
@@ -453,7 +485,7 @@ const submitTask = async () => {
     void notifyEmail('task', {
       title: form.title.trim(),
       courseName: form.subject?.trim() || null,
-      deadline: form.deadline,
+      deadline,
       isUrgent: form.isUrgent,
     })
   } catch (error: any) {
