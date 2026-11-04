@@ -358,15 +358,24 @@ const toBangkokDateTimeLocal = (value: string | Date) => {
   return `${values.year}-${values.month}-${values.day}T${values.hour}:${values.minute}`
 }
 
-/** Treat the datetime-local value as Bangkok time before storing it as UTC. */
-const bangkokDateTimeLocalToISOString = (value: string) => {
+/**
+ * Task deadlines are civil times in Thailand. The Task API persists DateTime
+ * without its offset, so sending UTC would permanently turn 08:00 into 01:00.
+ */
+const normalizeBangkokDateTimeLocal = (value: string) => {
   const match = value.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/)
   if (!match) return null
   const [, year, month, day, hour, minute, second = '0'] = match
-  const utc = new Date(Date.UTC(
-    Number(year), Number(month) - 1, Number(day), Number(hour) - 7, Number(minute), Number(second),
-  ))
-  return Number.isNaN(utc.getTime()) ? null : utc.toISOString()
+  const local = new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute), Number(second))
+  if (
+    Number.isNaN(local.getTime()) ||
+    local.getFullYear() !== Number(year) ||
+    local.getMonth() !== Number(month) - 1 ||
+    local.getDate() !== Number(day) ||
+    local.getHours() !== Number(hour) ||
+    local.getMinutes() !== Number(minute)
+  ) return null
+  return `${year}-${month}-${day}T${hour}:${minute}:${second.padStart(2, '0')}`
 }
 
 const formatDeadline = (dateStr: string) => {
@@ -456,7 +465,7 @@ const submitTask = async () => {
 
   isSubmitting.value = true
   try {
-    const deadline = bangkokDateTimeLocalToISOString(form.deadline)
+    const deadline = normalizeBangkokDateTimeLocal(form.deadline)
     if (!deadline) { toastWarning('รูปแบบวันกำหนดส่งไม่ถูกต้อง'); return }
     const body = {
       title: form.title.trim(),
