@@ -372,16 +372,20 @@ const bangkokDateTimeLocalToISOString = (value: string) => {
 const formatDeadline = (dateStr: string) => {
   if (!dateStr) return '-'
   try {
-    const d = new Date(dateStr)
-    if (isNaN(d.getTime())) return dateStr
-    return d.toLocaleString('th-TH', {
-      timeZone: BANGKOK_TIME_ZONE,
+    // Keep the list and edit form on one Bangkok-local representation.
+    const localValue = toBangkokDateTimeLocal(dateStr)
+    const [datePart, timePart] = localValue.split('T')
+    if (!datePart || !timePart) return dateStr
+
+    const d = new Date(`${datePart}T00:00:00.000Z`)
+    if (Number.isNaN(d.getTime())) return dateStr
+    const thaiDate = d.toLocaleDateString('th-TH', {
+      timeZone: 'UTC',
       year: 'numeric',
       month: 'short',
       day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
     })
+    return `${thaiDate} ${timePart}`
   } catch {
     return dateStr
   }
