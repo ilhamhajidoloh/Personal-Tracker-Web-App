@@ -708,68 +708,184 @@
             <div v-else-if="!dashboardTasks.length && !dashboardTodos.length" class="py-10 text-center text-xs" style="color: var(--text-muted);">
               ยอดเยี่ยม! ไม่มีงานหรือ To-do ที่ต้องเร่งทำในขณะนี้
             </div>
-            <div v-else class="mt-3 space-y-2">
-              <!-- Tasks list -->
-              <div
-                v-for="task in dashboardTasks"
-                :key="`task-${task.id}`"
-                class="p-3 rounded-2xl border flex items-center justify-between gap-3 text-xs transition-colors hover:bg-black/5 dark:hover:bg-white/5"
-                style="background: var(--bg-elevated); border-color: var(--border-subtle);"
-              >
-                <div class="flex items-center gap-3 min-w-0">
-                  <div
-                    class="w-2 h-7 rounded-full shrink-0"
-                    :style="{ background: task.isUrgent ? 'var(--ink-rose)' : 'var(--brand)' }"
-                  ></div>
-                  <div class="min-w-0">
-                    <p class="font-bold truncate" style="color: var(--text-primary);">{{ task.title }}</p>
-                    <p class="text-[11px] mt-0.5 truncate" style="color: var(--text-muted);">
-                      {{ task.subject || 'งาน' }} • {{ formatTaskDeadline(task.deadline) }}
-                    </p>
-                  </div>
-                </div>
-
-                <span class="px-2.5 py-1 rounded-full text-[10px] font-bold shrink-0" :style="getTaskStatusStyle(task)">
-                  {{ getTaskStatusLabel(task) }}
+            <div v-else class="mt-3 space-y-3">
+              <!-- Tasks Header if both tasks & todos exist -->
+              <div v-if="dashboardTasks.length && dashboardTodos.length" class="flex items-center justify-between pt-1">
+                <span class="text-xs font-bold" style="color: var(--text-primary);">
+                  งานและการบ้าน
+                </span>
+                <span class="text-[10px] px-2 py-0.5 rounded-full font-bold" style="background: var(--brand-soft); color: var(--brand);">
+                  {{ dashboardTasks.length }} รายการ
                 </span>
               </div>
 
-              <!-- Todos list -->
+              <!-- Tasks list with Countdown Time & Progress Bar -->
               <div
-                v-for="todo in dashboardTodos"
-                :key="`todo-${todo.id}`"
-                class="p-3 rounded-2xl border flex items-center justify-between gap-3 text-xs transition-colors hover:bg-black/5 dark:hover:bg-white/5"
+                v-for="task in dashboardTasks"
+                :key="`task-${task.id}`"
+                class="p-3.5 sm:p-4 rounded-2xl border transition-all hover:bg-black/5 dark:hover:bg-white/5"
                 style="background: var(--bg-elevated); border-color: var(--border-subtle);"
               >
-                <div class="flex items-center gap-3 min-w-0">
-                  <div
-                    class="w-2 h-7 rounded-full shrink-0"
-                    :style="{ background: todo.priority === 'high' ? 'var(--ink-rose)' : 'var(--border-strong)' }"
-                  ></div>
-                  <div class="min-w-0">
-                    <p class="font-bold truncate" style="color: var(--text-primary);">{{ todo.title }}</p>
-                    <p class="text-[11px] mt-0.5 truncate" style="color: var(--text-muted);">
-                      กำหนด: {{ todo.due_date ? formatDate(todo.due_date) : 'ไม่มีกำหนด' }}
-                    </p>
+                <!-- Top Row: title, subject, status badge & complete button -->
+                <div class="flex items-start justify-between gap-3">
+                  <div class="flex items-start gap-3 min-w-0">
+                    <div
+                      class="w-2 h-8 rounded-full shrink-0 mt-0.5"
+                      :style="{ background: task.isUrgent ? 'var(--ink-rose)' : 'var(--brand)' }"
+                    ></div>
+                    <div class="min-w-0">
+                      <div class="flex items-center gap-2 flex-wrap">
+                        <NuxtLink
+                          :to="`/tasks`"
+                          class="font-bold text-xs sm:text-sm truncate hover:underline"
+                          style="color: var(--text-primary);"
+                        >
+                          {{ task.title }}
+                        </NuxtLink>
+                        <span
+                          v-if="task.subject"
+                          class="px-2 py-0.5 rounded-md text-[10px] font-semibold"
+                          style="background: var(--brand-soft); color: var(--brand);"
+                        >
+                          {{ task.subject }}
+                        </span>
+                      </div>
+                      <p class="text-[11px] mt-0.5 truncate" style="color: var(--text-muted);">
+                        กำหนดส่ง: {{ formatTaskDeadline(task.deadline) }}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div class="flex items-center gap-2 shrink-0">
+                    <span
+                      class="px-2.5 py-1 rounded-full text-[10px] font-bold shrink-0"
+                      :style="getTaskStatusStyle(task)"
+                    >
+                      {{ getTaskStatusLabel(task) }}
+                    </span>
+                    <button
+                      type="button"
+                      @click="markTaskDone(task.id)"
+                      title="ทำเครื่องหมายเสร็จสิ้น"
+                      class="px-2.5 py-1 rounded-xl text-[10px] font-semibold border transition-all active:scale-95 hover:border-emerald-500 hover:text-emerald-500"
+                      style="background: var(--bg-card); border-color: var(--border-default); color: var(--text-secondary);"
+                    >
+                      ✓ เสร็จสิ้น
+                    </button>
                   </div>
                 </div>
 
-                <div class="flex items-center gap-2 shrink-0">
-                  <span
-                    v-if="todo.priority === 'high'"
-                    class="px-2.5 py-1 rounded-full text-[10px] font-bold"
-                    style="background: rgba(239, 68, 68, 0.1); color: var(--ink-rose);"
-                  >
-                    ด่วน
-                  </span>
-                  <button
-                    type="button"
-                    @click="markTodoDone(todo.id)"
-                    class="px-2.5 py-1 rounded-xl text-[10px] font-semibold border transition-all active:scale-95"
-                    style="background: var(--bg-card); border-color: var(--border-default); color: var(--text-secondary);"
-                  >
-                    เสร็จสิ้น
-                  </button>
+                <!-- Countdown Time & Progress Bar Section -->
+                <div class="mt-3 pt-2.5 border-t" style="border-color: var(--border-subtle);">
+                  <div class="flex items-center justify-between text-[11px] font-bold mb-1.5">
+                    <div class="flex items-center gap-1.5 min-w-0" :style="{ color: getTaskCountdownDetails(task).color }">
+                      <svg class="w-3.5 h-3.5 shrink-0 animate-pulse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10" />
+                        <polyline points="12 6 12 12 16 14" />
+                      </svg>
+                      <span class="truncate">{{ getTaskCountdownDetails(task).countdownText }}</span>
+                    </div>
+                    <span class="text-[10px] num shrink-0" style="color: var(--text-muted);">
+                      {{ getTaskCountdownDetails(task).isOverdue ? 'หมดเวลา' : `${getTaskCountdownDetails(task).progress}% ความเร่งด่วน` }}
+                    </span>
+                  </div>
+
+                  <!-- Urgency Progress Bar -->
+                  <div class="w-full h-1.5 rounded-full overflow-hidden" style="background: var(--bg-elevated-2);">
+                    <div
+                      class="h-full rounded-full transition-all duration-300"
+                      :style="{
+                        width: `${getTaskCountdownDetails(task).progress}%`,
+                        background: getTaskCountdownDetails(task).barColor
+                      }"
+                    ></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Todos Header if both tasks & todos exist -->
+              <div v-if="dashboardTasks.length && dashboardTodos.length" class="flex items-center justify-between pt-2">
+                <span class="text-xs font-bold" style="color: var(--text-primary);">
+                  To-do List ที่ต้องทำ
+                </span>
+                <span class="text-[10px] px-2 py-0.5 rounded-full font-bold" style="background: var(--bg-elevated-2); color: var(--text-muted);">
+                  {{ dashboardTodos.length }} รายการ
+                </span>
+              </div>
+
+              <!-- Todos list with Countdown & Progress Bar -->
+              <div
+                v-for="todo in dashboardTodos"
+                :key="`todo-${todo.id}`"
+                class="p-3.5 sm:p-4 rounded-2xl border transition-all hover:bg-black/5 dark:hover:bg-white/5"
+                style="background: var(--bg-elevated); border-color: var(--border-subtle);"
+              >
+                <div class="flex items-start justify-between gap-3">
+                  <div class="flex items-start gap-3 min-w-0">
+                    <div
+                      class="w-2 h-8 rounded-full shrink-0 mt-0.5"
+                      :style="{ background: todo.priority === 'high' ? 'var(--ink-rose)' : 'var(--border-strong)' }"
+                    ></div>
+                    <div class="min-w-0">
+                      <div class="flex items-center gap-2 flex-wrap">
+                        <p class="font-bold text-xs sm:text-sm truncate" style="color: var(--text-primary);">{{ todo.title }}</p>
+                        <span
+                          v-if="todo.tag"
+                          class="px-2 py-0.5 rounded-md text-[10px] font-semibold"
+                          style="background: var(--bg-elevated-2); color: var(--text-secondary);"
+                        >
+                          {{ todo.tag }}
+                        </span>
+                      </div>
+                      <p class="text-[11px] mt-0.5 truncate" style="color: var(--text-muted);">
+                        กำหนด: {{ todo.due_date ? formatDate(todo.due_date) : 'ไม่มีกำหนด' }}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div class="flex items-center gap-2 shrink-0">
+                    <span
+                      v-if="todo.priority === 'high'"
+                      class="px-2.5 py-1 rounded-full text-[10px] font-bold"
+                      style="background: rgba(239, 68, 68, 0.12); color: var(--ink-rose);"
+                    >
+                      ด่วน
+                    </span>
+                    <button
+                      type="button"
+                      @click="markTodoDone(todo.id)"
+                      class="px-2.5 py-1 rounded-xl text-[10px] font-semibold border transition-all active:scale-95 hover:border-emerald-500 hover:text-emerald-500"
+                      style="background: var(--bg-card); border-color: var(--border-default); color: var(--text-secondary);"
+                    >
+                      ✓ เสร็จสิ้น
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Countdown & Progress Bar for Todo (if due_date exists) -->
+                <div v-if="todo.due_date" class="mt-3 pt-2.5 border-t" style="border-color: var(--border-subtle);">
+                  <div class="flex items-center justify-between text-[11px] font-bold mb-1.5">
+                    <div class="flex items-center gap-1.5 min-w-0" :style="{ color: getTodoCountdownDetails(todo).color }">
+                      <svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10" />
+                        <polyline points="12 6 12 12 16 14" />
+                      </svg>
+                      <span class="truncate">{{ getTodoCountdownDetails(todo).countdownText }}</span>
+                    </div>
+                    <span class="text-[10px] num shrink-0" style="color: var(--text-muted);">
+                      {{ getTodoCountdownDetails(todo).isOverdue ? 'หมดเวลา' : `${getTodoCountdownDetails(todo).progress}%` }}
+                    </span>
+                  </div>
+
+                  <div class="w-full h-1.5 rounded-full overflow-hidden" style="background: var(--bg-elevated-2);">
+                    <div
+                      class="h-full rounded-full transition-all duration-300"
+                      :style="{
+                        width: `${getTodoCountdownDetails(todo).progress}%`,
+                        background: getTodoCountdownDetails(todo).barColor
+                      }"
+                    ></div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1551,13 +1667,20 @@ const dashboardTodos = computed(() => {
     .slice(0, 6)
 })
 
+const padZero = (n: number) => n.toString().padStart(2, '0')
+
 const dashboardTasks = computed(() => {
-  const now = new Date()
+  const nowMs = currentTime.value.getTime()
   return tasks.value
-    .filter(t => !t.isCompleted && (t.isUrgent || new Date(t.deadline) >= now))
+    .filter(t => !t.isCompleted)
     .sort((a, b) => {
+      const aMs = new Date(a.deadline).getTime()
+      const bMs = new Date(b.deadline).getTime()
+      const aOverdue = aMs < nowMs
+      const bOverdue = bMs < nowMs
+      if (aOverdue !== bOverdue) return aOverdue ? -1 : 1
       if (a.isUrgent !== b.isUrgent) return a.isUrgent ? -1 : 1
-      return new Date(a.deadline).getTime() - new Date(b.deadline).getTime()
+      return aMs - bMs
     })
     .slice(0, 6)
 })
@@ -1567,30 +1690,10 @@ const formatTaskDeadline = (dateStr: string) => {
   try {
     const d = new Date(dateStr)
     if (isNaN(d.getTime())) return dateStr
-    const now = new Date()
-    const diffMs = d.getTime() - now.getTime()
-    const diffHours = diffMs / (1000 * 60 * 60)
-    const diffDays = Math.floor(diffHours / 24)
-
-    if (diffMs < 0) {
-      const overdueDays = Math.abs(diffDays)
-      if (overdueDays === 0) return 'เลยกำหนดวันนี้'
-      return `เลยกำหนด ${overdueDays} วัน`
-    }
-    if (diffDays === 0) {
-      const hours = Math.floor(diffHours)
-      if (hours === 0) {
-        const minutes = Math.floor((diffMs / (1000 * 60)))
-        return `อีก ${minutes} นาที`
-      }
-      return `วันนี้ ${d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.`
-    }
-    if (diffDays === 1) {
-      return `พรุ่งนี้ ${d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.`
-    }
     return d.toLocaleDateString('th-TH', {
       day: 'numeric',
       month: 'short',
+      year: '2-digit',
       hour: '2-digit',
       minute: '2-digit',
     })
@@ -1599,38 +1702,200 @@ const formatTaskDeadline = (dateStr: string) => {
   }
 }
 
-const getTaskStatusLabel = (task: TaskRow) => {
-  try {
-    const d = new Date(task.deadline)
-    const now = new Date()
-    const diffMs = d.getTime() - now.getTime()
-    const diffHours = diffMs / (1000 * 60 * 60)
+const getTaskCountdownDetails = (task: TaskRow) => {
+  if (!task.deadline) {
+    return {
+      countdownText: 'ไม่มีกำหนดส่ง',
+      progress: 0,
+      isOverdue: false,
+      isDueSoon: false,
+      color: 'var(--text-muted)',
+      barColor: 'var(--brand)',
+      badgeBg: 'var(--bg-elevated)',
+    }
+  }
 
-    if (diffMs < 0) return 'เลยกำหนด'
-    if (diffHours <= 24) return 'ครบกำหนด'
-    if (task.isUrgent) return 'ด่วน'
-  } catch {}
-  return 'ค้างส่ง'
+  const d = new Date(task.deadline)
+  if (isNaN(d.getTime())) {
+    return {
+      countdownText: task.deadline,
+      progress: 0,
+      isOverdue: false,
+      isDueSoon: false,
+      color: 'var(--text-muted)',
+      barColor: 'var(--brand)',
+      badgeBg: 'var(--bg-elevated)',
+    }
+  }
+
+  const nowMs = currentTime.value.getTime()
+  const deadlineMs = d.getTime()
+  const diffMs = deadlineMs - nowMs
+
+  const windowMs = 7 * 24 * 60 * 60 * 1000 // 7-day urgency window
+
+  if (diffMs < 0) {
+    const overdueMs = Math.abs(diffMs)
+    const overdueHours = overdueMs / (1000 * 60 * 60)
+    const days = Math.floor(overdueHours / 24)
+    const hours = Math.floor(overdueHours % 24)
+    const minutes = Math.floor((overdueMs / (1000 * 60)) % 60)
+    const seconds = Math.floor((overdueMs / 1000) % 60)
+
+    let countdownText = ''
+    if (days > 0) {
+      countdownText = `เลยกำหนด ${days} วัน ${hours} ชม.`
+    } else if (hours > 0) {
+      countdownText = `เลยกำหนด ${padZero(hours)}:${padZero(minutes)}:${padZero(seconds)} ชม.`
+    } else {
+      countdownText = `เลยกำหนด ${minutes} นาที ${padZero(seconds)} วินาที`
+    }
+
+    return {
+      countdownText,
+      progress: 100,
+      isOverdue: true,
+      isDueSoon: false,
+      color: 'var(--ink-rose)',
+      barColor: 'var(--ink-rose)',
+      badgeBg: 'rgba(239, 68, 68, 0.12)',
+    }
+  }
+
+  const diffHours = diffMs / (1000 * 60 * 60)
+  const days = Math.floor(diffHours / 24)
+  const hours = Math.floor(diffHours % 24)
+  const minutes = Math.floor((diffMs / (1000 * 60)) % 60)
+  const seconds = Math.floor((diffMs / 1000) % 60)
+
+  // Progress fills up towards 100% as deadline approaches within the 7-day window
+  const elapsedMs = Math.max(0, windowMs - diffMs)
+  const rawProgress = Math.min(100, Math.max(8, Math.round((elapsedMs / windowMs) * 100)))
+
+  let countdownText = ''
+  let isDueSoon = false
+  let barColor = 'var(--brand)'
+  let color = 'var(--brand-ink)'
+  let badgeBg = 'var(--brand-soft)'
+
+  if (diffHours <= 24) {
+    isDueSoon = true
+    barColor = 'linear-gradient(90deg, var(--ink-amber), var(--ink-rose))'
+    color = 'var(--ink-rose)'
+    badgeBg = 'rgba(239, 68, 68, 0.12)'
+    if (hours === 0) {
+      countdownText = `เหลืออีก ${minutes} นาที ${padZero(seconds)} วินาที`
+    } else {
+      countdownText = `เหลืออีก ${padZero(hours)}:${padZero(minutes)}:${padZero(seconds)} ชม.`
+    }
+  } else if (days <= 3) {
+    barColor = 'linear-gradient(90deg, var(--brand), var(--ink-amber))'
+    color = 'var(--ink-amber)'
+    badgeBg = 'rgba(245, 158, 11, 0.12)'
+    countdownText = `เหลืออีก ${days} วัน ${padZero(hours)}:${padZero(minutes)}:${padZero(seconds)}`
+  } else {
+    barColor = 'var(--brand)'
+    color = 'var(--brand-ink)'
+    badgeBg = 'var(--brand-soft)'
+    countdownText = `เหลืออีก ${days} วัน ${hours} ชม.`
+  }
+
+  return {
+    countdownText,
+    progress: rawProgress,
+    isOverdue: false,
+    isDueSoon,
+    color,
+    barColor,
+    badgeBg,
+  }
+}
+
+const getTodoCountdownDetails = (todo: TodoRow) => {
+  if (!todo.due_date) {
+    return {
+      countdownText: 'ไม่มีกำหนดวัน',
+      progress: 0,
+      isOverdue: false,
+      isDueSoon: false,
+      color: 'var(--text-muted)',
+      barColor: 'var(--border-strong)',
+    }
+  }
+
+  const dueD = new Date(`${todo.due_date}T23:59:59`)
+  if (isNaN(dueD.getTime())) {
+    return {
+      countdownText: todo.due_date,
+      progress: 0,
+      isOverdue: false,
+      isDueSoon: false,
+      color: 'var(--text-muted)',
+      barColor: 'var(--brand)',
+    }
+  }
+
+  const nowMs = currentTime.value.getTime()
+  const diffMs = dueD.getTime() - nowMs
+  const windowMs = 5 * 24 * 60 * 60 * 1000
+
+  if (diffMs < 0) {
+    const overdueDays = Math.max(1, Math.floor(Math.abs(diffMs) / (1000 * 60 * 60 * 24)))
+    return {
+      countdownText: `เลยกำหนด ${overdueDays} วัน`,
+      progress: 100,
+      isOverdue: true,
+      isDueSoon: false,
+      color: 'var(--ink-rose)',
+      barColor: 'var(--ink-rose)',
+    }
+  }
+
+  const diffHours = diffMs / (1000 * 60 * 60)
+  const days = Math.floor(diffHours / 24)
+  const hours = Math.floor(diffHours % 24)
+  const minutes = Math.floor((diffMs / (1000 * 60)) % 60)
+  const seconds = Math.floor((diffMs / 1000) % 60)
+
+  const elapsedMs = Math.max(0, windowMs - diffMs)
+  const progress = Math.min(100, Math.max(10, Math.round((elapsedMs / windowMs) * 100)))
+
+  if (days === 0) {
+    return {
+      countdownText: `ครบกำหนดวันนี้ (${padZero(hours)}:${padZero(minutes)}:${padZero(seconds)})`,
+      progress,
+      isOverdue: false,
+      isDueSoon: true,
+      color: 'var(--ink-amber)',
+      barColor: 'var(--ink-amber)',
+    }
+  }
+
+  return {
+    countdownText: `เหลืออีก ${days} วัน`,
+    progress,
+    isOverdue: false,
+    isDueSoon: false,
+    color: 'var(--brand-ink)',
+    barColor: 'var(--brand)',
+  }
+}
+
+const getTaskStatusLabel = (task: TaskRow) => {
+  const cd = getTaskCountdownDetails(task)
+  if (cd.isOverdue) return 'เลยกำหนด'
+  if (cd.isDueSoon) return 'ส่งเร็วๆ นี้'
+  if (task.isUrgent) return 'ด่วน'
+  return 'กำลังทำ'
 }
 
 const getTaskStatusStyle = (task: TaskRow) => {
-  try {
-    const d = new Date(task.deadline)
-    const now = new Date()
-    const diffMs = d.getTime() - now.getTime()
-    const diffHours = diffMs / (1000 * 60 * 60)
-
-    if (diffMs < 0) {
-      return { color: 'var(--ink-rose)', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)' }
-    }
-    if (diffHours <= 24) {
-      return { color: 'var(--ink-amber)', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.2)' }
-    }
-    if (task.isUrgent) {
-      return { color: 'var(--ink-rose)', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)' }
-    }
-  } catch {}
-  return { color: 'var(--text-secondary)', background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)' }
+  const cd = getTaskCountdownDetails(task)
+  return {
+    color: cd.color,
+    background: cd.badgeBg,
+    border: `1px solid ${cd.isOverdue ? 'rgba(239, 68, 68, 0.25)' : cd.isDueSoon ? 'rgba(245, 158, 11, 0.25)' : 'var(--border-subtle)'}`,
+  }
 }
 
 const dashboardEvents = computed(() => {
@@ -1911,6 +2176,26 @@ const markTodoDone = async (id: string) => {
     todos.value = todos.value.map(t => t.id === id ? { ...t, status: 'completed' } : t)
   } catch (err: any) {
     console.error('Mark done error:', err)
+  }
+}
+
+const markTaskDone = async (id: string) => {
+  const task = tasks.value.find(t => t.id === id)
+  if (!task) return
+  try {
+    await apiFetch(`/api/Task/${id}`, {
+      method: 'PUT',
+      body: {
+        title: task.title,
+        subject: task.subject,
+        deadline: task.deadline,
+        isUrgent: task.isUrgent,
+        isCompleted: true,
+      },
+    })
+    tasks.value = tasks.value.map(t => t.id === id ? { ...t, isCompleted: true } : t)
+  } catch (err: any) {
+    console.error('Mark task done error:', err)
   }
 }
 
