@@ -246,9 +246,19 @@ export const getValidGoogleAccessToken = async (
 }
 
 const addDays = (dateString: string, days: number) => {
-  const date = new Date(`${dateString}T00:00:00`)
-  date.setDate(date.getDate() + days)
+  const date = new Date(`${dateString}T00:00:00.000Z`)
+  date.setUTCDate(date.getUTCDate() + days)
   return date.toISOString().slice(0, 10)
+}
+
+const toGoogleDateTime = (date: string, time: string) => {
+  const parsed = new Date(`${date}T${time}${TH_UTC_OFFSET}`)
+  if (Number.isNaN(parsed.getTime())) {
+    throw new Error(`Invalid Google Calendar date-time: ${date} ${time}`)
+  }
+  // Serialising through Date guarantees a strict RFC 3339 value. Google Calendar
+  // accepts the UTC instant and uses timeZone to display it in Bangkok local time.
+  return parsed.toISOString()
 }
 
 export const toGoogleCalendarEvent = (eventRow: GoogleEventRow) => {
@@ -261,12 +271,12 @@ export const toGoogleCalendarEvent = (eventRow: GoogleEventRow) => {
     body.start = { date: eventRow.start_date }
     body.end = { date: addDays(eventRow.start_date, 1) }
   } else if (eventRow.event_type === 'same_day_time') {
-    body.start = { dateTime: `${eventRow.start_date}T${eventRow.start_time || '00:00:00'}${TH_UTC_OFFSET}`, timeZone: TH_TIME_ZONE }
-    body.end = { dateTime: `${eventRow.start_date}T${eventRow.end_time || '23:59:59'}${TH_UTC_OFFSET}`, timeZone: TH_TIME_ZONE }
+    body.start = { dateTime: toGoogleDateTime(eventRow.start_date, eventRow.start_time || '00:00:00'), timeZone: TH_TIME_ZONE }
+    body.end = { dateTime: toGoogleDateTime(eventRow.start_date, eventRow.end_time || '23:59:59'), timeZone: TH_TIME_ZONE }
   } else {
     const endDate = eventRow.end_date || eventRow.start_date
-    body.start = { dateTime: `${eventRow.start_date}T${eventRow.start_time || '00:00:00'}${TH_UTC_OFFSET}`, timeZone: TH_TIME_ZONE }
-    body.end = { dateTime: `${endDate}T${eventRow.end_time || '23:59:59'}${TH_UTC_OFFSET}`, timeZone: TH_TIME_ZONE }
+    body.start = { dateTime: toGoogleDateTime(eventRow.start_date, eventRow.start_time || '00:00:00'), timeZone: TH_TIME_ZONE }
+    body.end = { dateTime: toGoogleDateTime(endDate, eventRow.end_time || '23:59:59'), timeZone: TH_TIME_ZONE }
   }
 
   body.reminders = eventRow.reminder_minutes
@@ -335,7 +345,16 @@ export const upsertGoogleCalendarEvent = async (
   }
 
   if (!response.ok) {
-    throw new Error(`Google Calendar upsert failed (${response.status}): ${await response.text()}`)
+    const responseText = await response.text()
+    console.error('Google Calendar rejected event payload:', {
+      method,
+      eventType: eventRow.event_type,
+      start: body.start,
+      end: body.end,
+      responseStatus: response.status,
+      response: responseText,
+    })
+    throw new Error(`Google Calendar upsert failed (${response.status}): ${responseText}`)
   }
 
   const data = await response.json() as { id: string }
