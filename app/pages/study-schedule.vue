@@ -17,7 +17,7 @@
           </div>
           <button type="button" class="ss-icon" :disabled="isLoading" title="รีเฟรช" @click="loadSchedules">↻</button>
           <button type="button" class="ss-btn" @click="openCreateTermModal">ภาคเรียนใหม่</button>
-          <button type="button" class="ss-btn ss-primary" :disabled="!selectedTermId" @click="openCreateScheduleModal">+ เพิ่มคาบเรียน</button>
+          <button type="button" class="ss-btn ss-primary" :disabled="!selectedTermId" @click="openCreateScheduleModal()">+ เพิ่มคาบเรียน</button>
         </div>
       </header>
 
@@ -104,29 +104,180 @@
 
           <div v-if="!schedules.length" class="ss-empty small">
             <p>ยังไม่มีคาบเรียนในภาคนี้</p>
-            <button type="button" class="ss-btn" @click="openCreateScheduleModal">เพิ่มคาบแรก</button>
+            <button type="button" class="ss-btn" @click="openCreateScheduleModal()">เพิ่มคาบแรก</button>
           </div>
-          <div v-else class="ss-board">
-            <div v-for="day in gridDays" :key="day.value" class="ss-col" :class="{ today: day.value === todayWeekday }">
-              <div class="ss-col-head">
-                <span>{{ day.label }}</span>
-                <i>{{ getSchedulesForDay(day.value).length }}</i>
+          <template v-else>
+            <!-- Mobile Day Tabs View (visible on mobile screens) -->
+            <div class="ss-mobile-view">
+              <!-- Day Selector Tabs -->
+              <div class="ss-day-tabs" role="tablist" aria-label="เลือกวันสำหรับตารางเรียน">
+                <button
+                  v-for="day in gridDays"
+                  :key="day.value"
+                  type="button"
+                  role="tab"
+                  class="ss-day-tab"
+                  :class="{
+                    active: activeMobileDay === day.value,
+                    today: day.value === todayWeekday
+                  }"
+                  :aria-selected="activeMobileDay === day.value"
+                  @click="selectedMobileDay = day.value"
+                >
+                  <span class="ss-day-tab-label">{{ getDayLabelAbbr(day.value) }}</span>
+                  <span
+                    v-if="getSchedulesForDay(day.value).length"
+                    class="ss-day-tab-count"
+                    :class="{ active: activeMobileDay === day.value }"
+                  >
+                    {{ getSchedulesForDay(day.value).length }}
+                  </span>
+                  <span v-if="day.value === todayWeekday" class="ss-day-tab-today-dot"></span>
+                </button>
+
+                <button
+                  type="button"
+                  role="tab"
+                  class="ss-day-tab ss-day-tab-all"
+                  :class="{ active: activeMobileDay === 'all' }"
+                  :aria-selected="activeMobileDay === 'all'"
+                  @click="selectedMobileDay = 'all'"
+                >
+                  <span class="ss-day-tab-label">ทั้งหมด</span>
+                  <span class="ss-day-tab-count">{{ totalClasses }}</span>
+                </button>
               </div>
-              <button
-                v-for="item in getSchedulesForDay(day.value)"
-                :key="item.id"
-                type="button"
-                class="ss-card"
-                :style="{ '--c': courseTint(item.course_name) }"
-                @click="openEditScheduleModal(item)"
-              >
-                <time>{{ formatTimeRange(item.start_time, item.end_time) }}</time>
-                <strong>{{ item.course_name }}</strong>
-                <small v-if="item.location">{{ item.location }}</small>
-              </button>
-              <p v-if="!getSchedulesForDay(day.value).length" class="ss-free">ว่าง</p>
+
+              <!-- Day Content for Selected Day -->
+              <div v-if="activeMobileDay !== 'all'" class="ss-mobile-day-panel">
+                <div class="ss-mobile-day-header">
+                  <div class="flex items-center gap-2">
+                    <span class="font-bold text-sm" style="color: var(--text-primary);">
+                      วัน{{ getDayLabel(activeMobileDay as number) }}
+                    </span>
+                    <span v-if="activeMobileDay === todayWeekday" class="ss-today-badge">วันนี้</span>
+                  </div>
+                  <span class="text-xs font-semibold" style="color: var(--text-muted);">
+                    {{ getSchedulesForDay(activeMobileDay as number).length }} คาบ
+                  </span>
+                </div>
+
+                <!-- Classes List -->
+                <div v-if="getSchedulesForDay(activeMobileDay as number).length" class="ss-mobile-cards">
+                  <button
+                    v-for="item in getSchedulesForDay(activeMobileDay as number)"
+                    :key="item.id"
+                    type="button"
+                    class="ss-mobile-card"
+                    :style="{ '--c': courseTint(item.course_name) }"
+                    @click="openEditScheduleModal(item)"
+                  >
+                    <span class="ss-mobile-card-stripe"></span>
+                    <div class="ss-mobile-card-content">
+                      <div class="ss-mobile-card-top">
+                        <time class="ss-mobile-card-time">{{ formatTimeRange(item.start_time, item.end_time) }} น.</time>
+                        <span class="ss-mobile-card-badge">แก้ไข ✎</span>
+                      </div>
+                      <div class="ss-mobile-card-title">{{ item.course_name }}</div>
+                      <div v-if="item.location" class="ss-mobile-card-location">
+                        <svg class="w-3.5 h-3.5 shrink-0 opacity-70" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <path d="M12 2a8 8 0 0 0-8 8c0 5.25 8 12 8 12s8-6.75 8-12a8 8 0 0 0-8-8z"/>
+                          <circle cx="12" cy="10" r="3"/>
+                        </svg>
+                        <span>{{ item.location }}</span>
+                      </div>
+                    </div>
+                  </button>
+                </div>
+
+                <!-- Empty Day State -->
+                <div v-else class="ss-mobile-empty-day">
+                  <span class="text-2xl">☕</span>
+                  <p class="text-xs" style="color: var(--text-muted);">ไม่มีคาบเรียนในวัน{{ getDayLabel(activeMobileDay as number) }}</p>
+                  <button
+                    type="button"
+                    class="ss-btn ss-btn-sm"
+                    @click="openCreateScheduleModal(activeMobileDay as number)"
+                  >
+                    + เพิ่มคาบเรียนวันนี้
+                  </button>
+                </div>
+              </div>
+
+              <!-- All Days List (when "ทั้งหมด" is selected) -->
+              <div v-else class="ss-mobile-all-days">
+                <div
+                  v-for="day in gridDays"
+                  :key="day.value"
+                  class="ss-mobile-all-day-group"
+                  :class="{ today: day.value === todayWeekday }"
+                >
+                  <div class="ss-mobile-day-header">
+                    <div class="flex items-center gap-2">
+                      <span class="font-bold text-sm" style="color: var(--text-primary);">วัน{{ day.label }}</span>
+                      <span v-if="day.value === todayWeekday" class="ss-today-badge">วันนี้</span>
+                    </div>
+                    <span class="text-xs font-semibold" style="color: var(--text-muted);">
+                      {{ getSchedulesForDay(day.value).length }} คาบ
+                    </span>
+                  </div>
+
+                  <div v-if="getSchedulesForDay(day.value).length" class="ss-mobile-cards">
+                    <button
+                      v-for="item in getSchedulesForDay(day.value)"
+                      :key="item.id"
+                      type="button"
+                      class="ss-mobile-card"
+                      :style="{ '--c': courseTint(item.course_name) }"
+                      @click="openEditScheduleModal(item)"
+                    >
+                      <span class="ss-mobile-card-stripe"></span>
+                      <div class="ss-mobile-card-content">
+                        <div class="ss-mobile-card-top">
+                          <time class="ss-mobile-card-time">{{ formatTimeRange(item.start_time, item.end_time) }} น.</time>
+                          <span class="ss-mobile-card-badge">แก้ไข ✎</span>
+                        </div>
+                        <div class="ss-mobile-card-title">{{ item.course_name }}</div>
+                        <div v-if="item.location" class="ss-mobile-card-location">
+                          <svg class="w-3.5 h-3.5 shrink-0 opacity-70" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 2a8 8 0 0 0-8 8c0 5.25 8 12 8 12s8-6.75 8-12a8 8 0 0 0-8-8z"/>
+                            <circle cx="12" cy="10" r="3"/>
+                          </svg>
+                          <span>{{ item.location }}</span>
+                        </div>
+                      </div>
+                    </button>
+                  </div>
+                  <div v-else class="ss-mobile-day-empty-inline">
+                    <span>ไม่มีคาบเรียน</span>
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
+
+            <!-- Desktop Board View (visible on desktop) -->
+            <div class="ss-board ss-desktop-view">
+              <div v-for="day in gridDays" :key="day.value" class="ss-col" :class="{ today: day.value === todayWeekday }">
+                <div class="ss-col-head">
+                  <span>{{ day.label }}</span>
+                  <i>{{ getSchedulesForDay(day.value).length }}</i>
+                </div>
+                <button
+                  v-for="item in getSchedulesForDay(day.value)"
+                  :key="item.id"
+                  type="button"
+                  class="ss-card"
+                  :style="{ '--c': courseTint(item.course_name) }"
+                  @click="openEditScheduleModal(item)"
+                >
+                  <time>{{ formatTimeRange(item.start_time, item.end_time) }}</time>
+                  <strong>{{ item.course_name }}</strong>
+                  <small v-if="item.location">{{ item.location }}</small>
+                </button>
+                <p v-if="!getSchedulesForDay(day.value).length" class="ss-free">ว่าง</p>
+              </div>
+            </div>
+          </template>
         </section>
 
         <!-- All sessions -->
@@ -590,7 +741,15 @@ const todayWeekday = computed(() => {
   return day === 0 ? 7 : day
 })
 
-const selectedMobileDay = ref<number>(todayWeekday.value)
+const selectedMobileDay = ref<number | 'all'>(todayWeekday.value)
+
+const activeMobileDay = computed<number | 'all'>(() => {
+  if (selectedMobileDay.value === 'all') return 'all'
+  const val = Number(selectedMobileDay.value)
+  if (gridDays.value.some(d => d.value === val)) return val
+  if (gridDays.value.some(d => d.value === todayWeekday.value)) return todayWeekday.value
+  return gridDays.value[0]?.value ?? 1
+})
 
 const getDayLabelAbbr = (dayValue: number) => {
   const abbrMap: Record<number, string> = {
@@ -896,10 +1055,14 @@ const resetForm = () => {
   multiSessions.value = [{ dayOfWeek: 1, startTime: '08:00', endTime: '09:00', location: '' }]
 }
 
-const openCreateScheduleModal = () => {
+const openCreateScheduleModal = (preferredDay?: number | unknown) => {
   const { toastWarning } = useAlert()
   if (!selectedTermId.value) { toastWarning('กรุณาเลือกหรือสร้างภาคเรียนก่อน'); return }
-  resetForm(); errorMessage.value = ''; isScheduleModalOpen.value = true
+  resetForm(); errorMessage.value = ''
+  if (typeof preferredDay === 'number' && preferredDay >= 1 && preferredDay <= 7) {
+    form.dayOfWeek = preferredDay
+  }
+  isScheduleModalOpen.value = true
 }
 
 const openEditScheduleModal = (item: ScheduleRow) => {
@@ -1288,7 +1451,11 @@ onUnmounted(() => {
 @keyframes ss-pulse { 50% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--c) 30%, transparent); } }
 @media (prefers-reduced-motion: reduce) { .ss-steps li.focus .ss-step { animation: none; } }
 
-/* week board */
+/* mobile view vs desktop view */
+.ss-mobile-view { display: none; }
+.ss-desktop-view { display: grid; }
+
+/* week board (desktop) */
 .ss-board { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(150px, 1fr); gap: 10px; overflow-x: auto; padding-bottom: 6px; }
 .ss-col { display: flex; flex-direction: column; gap: 8px; padding: 10px; border-radius: 16px; background: var(--bg-elevated); }
 .ss-col.today { background: color-mix(in srgb, var(--brand) 8%, var(--bg-elevated)); border: 2px solid color-mix(in srgb, var(--brand) 50%, transparent); }
@@ -1297,9 +1464,226 @@ onUnmounted(() => {
 .ss-card { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; text-align: left; border-radius: 10px; background: var(--bg-card); border-top: 3px solid var(--c); color: var(--text-primary); transition: transform .15s; }
 .ss-card:hover { transform: translateY(-2px); }
 .ss-card time { font-size: 11px; font-weight: 800; color: var(--c); }
-.ss-card strong { font-size: 13px; overflow-wrap: anywhere; }
-.ss-card small { font-size: 11px; color: var(--text-muted); }
+.ss-card strong { font-size: 13px; overflow-wrap: anywhere; word-break: break-word; }
+.ss-card small { font-size: 11px; color: var(--text-muted); overflow-wrap: anywhere; word-break: break-word; line-height: 1.35; }
 .ss-free { padding: 10px 0; text-align: center; font-size: 12px; color: var(--text-muted); }
+
+/* Day Tabs (Mobile) */
+.ss-day-tabs {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  overflow-x: auto;
+  padding: 4px;
+  background: var(--bg-elevated);
+  border-radius: 14px;
+  border: 1px solid var(--border-subtle);
+  scrollbar-width: none;
+}
+.ss-day-tabs::-webkit-scrollbar { display: none; }
+
+.ss-day-tab {
+  flex: 1;
+  min-width: 44px;
+  padding: 8px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+.ss-day-tab:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+.ss-day-tab.active {
+  background: var(--brand);
+  color: #fff;
+  box-shadow: 0 2px 8px -2px rgba(37, 99, 168, 0.4);
+}
+.ss-day-tab.today:not(.active) {
+  border-color: color-mix(in srgb, var(--brand) 40%, transparent);
+  background: color-mix(in srgb, var(--brand) 10%, transparent);
+  color: var(--brand-ink);
+}
+.ss-day-tab-count {
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 99px;
+  background: var(--bg-card);
+  color: var(--text-muted);
+  font-weight: 800;
+  line-height: 1.2;
+}
+.ss-day-tab.active .ss-day-tab-count {
+  background: rgba(255, 255, 255, 0.25);
+  color: #fff;
+}
+.ss-day-tab-today-dot {
+  position: absolute;
+  top: 3px;
+  right: 4px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--brand);
+}
+.ss-day-tab.active .ss-day-tab-today-dot {
+  background: #fff;
+}
+.ss-day-tab-all {
+  flex: 0 0 auto;
+  padding: 8px 10px;
+}
+
+/* Mobile Day Panel */
+.ss-mobile-day-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.ss-mobile-day-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 2px 4px;
+}
+.ss-today-badge {
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--brand) 15%, transparent);
+  color: var(--brand-ink);
+  border: 1px solid color-mix(in srgb, var(--brand) 30%, transparent);
+}
+
+/* Mobile Cards */
+.ss-mobile-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.ss-mobile-card {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+  padding: 12px 14px 12px 0;
+  border-radius: 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  text-align: left;
+  overflow: hidden;
+  transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+  box-shadow: 0 2px 6px -1px rgba(0, 0, 0, 0.05);
+}
+.ss-mobile-card:hover {
+  transform: translateY(-1px);
+  border-color: var(--border-default);
+}
+.ss-mobile-card-stripe {
+  width: 5px;
+  flex-shrink: 0;
+  border-radius: 0 4px 4px 0;
+  background: var(--c);
+  margin-right: 12px;
+}
+.ss-mobile-card-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ss-mobile-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.ss-mobile-card-time {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--c);
+  letter-spacing: -0.01em;
+}
+.ss-mobile-card-badge {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  opacity: 0.8;
+}
+.ss-mobile-card-title {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.ss-mobile-card-location {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.ss-mobile-empty-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 32px 16px;
+  border-radius: 14px;
+  border: 1px dashed var(--border-default);
+  background: var(--bg-card);
+  text-align: center;
+}
+.ss-btn-sm {
+  padding: 6px 14px;
+  font-size: 12px;
+  border-radius: 8px;
+}
+.ss-mobile-all-days {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.ss-mobile-all-day-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 16px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+}
+.ss-mobile-all-day-group.today {
+  border-color: color-mix(in srgb, var(--brand) 40%, transparent);
+}
+.ss-mobile-day-empty-inline {
+  padding: 10px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-muted);
+}
 
 /* rows */
 .ss-rows { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; border-radius: 16px; overflow: hidden; border: 1px solid var(--border-subtle); background: var(--bg-card); }
@@ -1335,7 +1719,8 @@ onUnmounted(() => {
 
 @media (max-width: 860px) {
   .ss-hero-row { grid-template-columns: 1fr; }
-  .ss-board { grid-auto-flow: row; grid-template-columns: 1fr; overflow: visible; }
+  .ss-mobile-view { display: flex; flex-direction: column; gap: 14px; }
+  .ss-desktop-view { display: none !important; }
 }
 @media (max-width: 560px) {
   .ss { padding: 16px 12px 80px; }
