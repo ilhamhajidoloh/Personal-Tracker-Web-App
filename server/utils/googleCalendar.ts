@@ -5,6 +5,7 @@ const GOOGLE_AUTH_ENDPOINT = 'https://accounts.google.com/o/oauth2/v2/auth'
 const GOOGLE_CALENDAR_EVENTS_ENDPOINT = 'https://www.googleapis.com/calendar/v3/calendars/primary/events'
 const GOOGLE_CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.events'
 const TH_TIME_ZONE = 'Asia/Bangkok'
+const TH_UTC_OFFSET = '+07:00'
 const TOKEN_REFRESH_BUFFER_MS = 60_000
 
 const textEncoder = new TextEncoder()
@@ -48,19 +49,42 @@ export type BackendActivityForSync = {
   googleEventId: string | null
 }
 
+const parseBackendDateTime = (value: string | null, fieldName: string) => {
+  if (!value) throw new Error(`Invalid Google Calendar ${fieldName}: value is empty`)
+
+  // The backend normally returns an ISO string, but some database drivers use a
+  // space between the date and time. Only keep the local wall-clock value because
+  // activities in MyLife are stored and displayed in Asia/Bangkok time.
+  const match = value.trim().match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?/)
+  if (!match) throw new Error(`Invalid Google Calendar ${fieldName}: ${value}`)
+
+  const [, year, month, day, hour, minute, second = '00'] = match
+  const utcDate = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)))
+  const hasValidDate = utcDate.getUTCFullYear() === Number(year)
+    && utcDate.getUTCMonth() === Number(month) - 1
+    && utcDate.getUTCDate() === Number(day)
+  const hasValidTime = Number(hour) <= 23 && Number(minute) <= 59 && Number(second) <= 59
+
+  if (!hasValidDate || !hasValidTime) {
+    throw new Error(`Invalid Google Calendar ${fieldName}: ${value}`)
+  }
+
+  return { date: `${year}-${month}-${day}`, time: `${hour}:${minute}:${second}` }
+}
+
 export const activityToGoogleEventRow = (a: BackendActivityForSync): GoogleEventRow => {
   const eventType: GoogleEventType = a.isAllDay ? 'same_day_all_day' : a.isMultiDay ? 'multi_day' : 'same_day_time'
-  const startDate = a.startTime ? a.startTime.slice(0, 10) : ''
-  const endDate = a.endTime ? a.endTime.slice(0, 10) : null
+  const start = parseBackendDateTime(a.startTime, 'start time')
+  const end = parseBackendDateTime(a.endTime, 'end time')
   return {
     id: a.id,
     title: a.title,
     description: a.description,
     event_type: eventType,
-    start_date: startDate,
-    start_time: eventType === 'same_day_all_day' ? null : (a.startTime ? a.startTime.slice(11, 19) : null),
-    end_date: eventType === 'same_day_time' ? null : endDate,
-    end_time: eventType === 'same_day_all_day' ? null : (a.endTime ? a.endTime.slice(11, 19) : null),
+    start_date: start.date,
+    start_time: eventType === 'same_day_all_day' ? null : start.time,
+    end_date: eventType === 'same_day_time' ? null : end.date,
+    end_time: eventType === 'same_day_all_day' ? null : end.time,
     reminder_minutes: a.reminderMinutes,
   }
 }
@@ -237,12 +261,12 @@ export const toGoogleCalendarEvent = (eventRow: GoogleEventRow) => {
     body.start = { date: eventRow.start_date }
     body.end = { date: addDays(eventRow.start_date, 1) }
   } else if (eventRow.event_type === 'same_day_time') {
-    body.start = { dateTime: `${eventRow.start_date}T${eventRow.start_time || '00:00:00'}`, timeZone: TH_TIME_ZONE }
-    body.end = { dateTime: `${eventRow.start_date}T${eventRow.end_time || '23:59:59'}`, timeZone: TH_TIME_ZONE }
+    body.start = { dateTime: `${eventRow.start_date}T${eventRow.start_time || '00:00:00'}${TH_UTC_OFFSET}`, timeZone: TH_TIME_ZONE }
+    body.end = { dateTime: `${eventRow.start_date}T${eventRow.end_time || '23:59:59'}${TH_UTC_OFFSET}`, timeZone: TH_TIME_ZONE }
   } else {
     const endDate = eventRow.end_date || eventRow.start_date
-    body.start = { dateTime: `${eventRow.start_date}T${eventRow.start_time || '00:00:00'}`, timeZone: TH_TIME_ZONE }
-    body.end = { dateTime: `${endDate}T${eventRow.end_time || '23:59:59'}`, timeZone: TH_TIME_ZONE }
+    body.start = { dateTime: `${eventRow.start_date}T${eventRow.start_time || '00:00:00'}${TH_UTC_OFFSET}`, timeZone: TH_TIME_ZONE }
+    body.end = { dateTime: `${endDate}T${eventRow.end_time || '23:59:59'}${TH_UTC_OFFSET}`, timeZone: TH_TIME_ZONE }
   }
 
   body.reminders = eventRow.reminder_minutes
