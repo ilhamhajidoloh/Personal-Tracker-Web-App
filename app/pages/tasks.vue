@@ -72,7 +72,7 @@
             </button>
           </div>
           <button
-            @click="loadTasks"
+            @click="refreshData"
             :disabled="isLoading"
             class="w-10 h-10 rounded-full flex items-center justify-center shrink-0 disabled:opacity-50 tap-scale"
             style="background: var(--bg-elevated); border: 1px solid var(--border-subtle); color: var(--text-secondary);"
@@ -111,14 +111,16 @@
         >
           <span
             class="absolute top-0 left-6 right-6 h-1 rounded-b-full"
-            :style="{ background: item.isCompleted ? 'var(--ink-emerald)' : item.isUrgent ? 'var(--ink-rose)' : 'var(--brand)' }"
+            :style="{ background: item.isCompleted ? 'var(--ink-emerald)' : isTaskUrgent(item) ? 'var(--ink-rose)' : 'var(--brand)' }"
           ></span>
 
           <div class="flex items-center justify-between gap-2 pt-1">
             <span class="text-[11px] px-2.5 py-1 rounded-full font-semibold truncate" style="background: var(--brand-soft); color: var(--brand);">
               {{ item.subject || 'ทั่วไป' }}
             </span>
-            <span v-if="item.isUrgent && !item.isCompleted" class="text-[11px] px-2.5 py-1 rounded-full font-bold shrink-0" style="background: rgba(208,39,72,0.12); color: var(--ink-rose);">🔥 ด่วน</span>
+            <span v-if="isTaskUrgent(item) && !item.isCompleted" class="text-[11px] px-2.5 py-1 rounded-full font-bold shrink-0" style="background: rgba(208,39,72,0.12); color: var(--ink-rose);">
+              {{ item.isUrgent ? '🔥 ด่วน' : '⏰ ใกล้ส่ง (1 วัน)' }}
+            </span>
             <span v-else-if="item.isCompleted" class="text-[11px] px-2.5 py-1 rounded-full font-bold shrink-0" style="background: rgba(16,185,129,0.12); color: var(--ink-emerald);">เสร็จแล้ว</span>
           </div>
 
@@ -208,14 +210,150 @@
                   class="w-full text-base font-semibold px-4 py-3 rounded-2xl outline-none"
                   style="background: var(--bg-elevated); border: 1px solid var(--border-subtle); color: var(--text-primary);"
                 />
-                <input
-                  v-model="form.subject"
-                  type="text"
-                  maxlength="100"
-                  placeholder="วิชา / หมวดหมู่"
-                  class="w-full text-sm px-4 py-3 rounded-2xl outline-none"
-                  style="background: var(--bg-elevated); border: 1px solid var(--border-subtle); color: var(--text-primary);"
-                />
+                <!-- Subject / Category Selector with Source Mode Toggle -->
+                <div class="space-y-1.5">
+                  <div class="flex items-center justify-between px-1">
+                    <p class="text-[11px] font-semibold" style="color: var(--text-muted);">วิชา / หมวดหมู่</p>
+                    <!-- Mode Switcher -->
+                    <div class="inline-flex p-0.5 rounded-xl border text-[11px] font-semibold" style="background: var(--bg-elevated); border-color: var(--border-subtle);">
+                      <button
+                        type="button"
+                        @click="subjectMode = 'schedule'"
+                        class="px-2.5 py-1 rounded-lg transition-all tap-scale flex items-center gap-1"
+                        :style="subjectMode === 'schedule'
+                          ? { background: 'var(--bg-card)', color: 'var(--brand)', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }
+                          : { color: 'var(--text-muted)' }"
+                      >
+                        <span>📚</span>
+                        <span>จากตารางเรียน</span>
+                      </button>
+                      <button
+                        type="button"
+                        @click="subjectMode = 'custom'"
+                        class="px-2.5 py-1 rounded-lg transition-all tap-scale flex items-center gap-1"
+                        :style="subjectMode === 'custom'
+                          ? { background: 'var(--bg-card)', color: 'var(--brand)', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }
+                          : { color: 'var(--text-muted)' }"
+                      >
+                        <span>✍️</span>
+                        <span>เขียนใหม่</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Option A: From Schedule -->
+                  <div v-if="subjectMode === 'schedule'" class="space-y-2">
+                    <!-- Term Selector & Indicator -->
+                    <div class="flex items-center justify-between text-[11px] px-1 py-0.5">
+                      <div class="flex items-center gap-1.5 min-w-0">
+                        <span style="color: var(--text-muted);">ภาคเรียน:</span>
+                        <span class="font-bold truncate" style="color: var(--brand-ink);">
+                          {{ selectedTermFilter === 'current' ? (currentTerm?.termName ? `${currentTerm.termName} (ปัจจุบัน)` : 'ภาคเรียนปัจจุบัน') : 'ทุกภาคเรียน' }}
+                        </span>
+                      </div>
+                      <div v-if="academicTerms.length > 1" class="flex items-center gap-1 shrink-0">
+                        <button
+                          type="button"
+                          @click="selectedTermFilter = 'current'"
+                          class="px-2 py-0.5 rounded-lg text-[10px] font-bold transition-all tap-scale"
+                          :style="selectedTermFilter === 'current'
+                            ? { background: 'var(--brand)', color: '#ffffff' }
+                            : { background: 'var(--bg-elevated)', color: 'var(--text-muted)', border: '1px solid var(--border-subtle)' }"
+                        >
+                          ภาคปัจจุบัน
+                        </button>
+                        <button
+                          type="button"
+                          @click="selectedTermFilter = 'all'"
+                          class="px-2 py-0.5 rounded-lg text-[10px] font-bold transition-all tap-scale"
+                          :style="selectedTermFilter === 'all'
+                            ? { background: 'var(--brand)', color: '#ffffff' }
+                            : { background: 'var(--bg-elevated)', color: 'var(--text-muted)', border: '1px solid var(--border-subtle)' }"
+                        >
+                          ทั้งหมด
+                        </button>
+                      </div>
+                    </div>
+
+                    <div class="relative">
+                      <select
+                        v-if="scheduleCourses.length"
+                        v-model="form.subject"
+                        class="w-full text-sm px-4 py-3 rounded-2xl outline-none appearance-none pr-10 cursor-pointer"
+                        style="background: var(--bg-elevated); border: 1px solid var(--border-subtle); color: var(--text-primary);"
+                      >
+                        <option value="">-- ไม่ระบุวิชา / ทั่วไป --</option>
+                        <option v-for="course in scheduleCourses" :key="course" :value="course">
+                          {{ course }}
+                        </option>
+                      </select>
+                      <div
+                        v-else
+                        class="text-xs px-4 py-3 rounded-2xl border flex items-center justify-between gap-2"
+                        style="background: var(--bg-elevated); border-color: var(--border-subtle); color: var(--text-muted);"
+                      >
+                        <span class="truncate">
+                          {{
+                            isLoadingCourses
+                              ? 'กำลังโหลดวิชาจากตาราง...'
+                              : selectedTermFilter === 'current' && allTermsCourses.length
+                                ? `ไม่พบวิชาในภาคปัจจุบัน (มี ${allTermsCourses.length} วิชาในภาคอื่น)`
+                                : 'ยังไม่มีวิชาในตารางเรียน'
+                          }}
+                        </span>
+                        <button
+                          v-if="selectedTermFilter === 'current' && allTermsCourses.length"
+                          type="button"
+                          @click="selectedTermFilter = 'all'"
+                          class="font-bold underline shrink-0"
+                          style="color: var(--brand);"
+                        >
+                          ดูทุกภาคเรียน
+                        </button>
+                        <button
+                          v-else
+                          type="button"
+                          @click="subjectMode = 'custom'"
+                          class="font-bold underline shrink-0"
+                          style="color: var(--brand);"
+                        >
+                          สลับไปเขียนใหม่
+                        </button>
+                      </div>
+                      <div v-if="scheduleCourses.length" class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-xs opacity-60">
+                        ▼
+                      </div>
+                    </div>
+
+                    <!-- Quick pills for tapping directly -->
+                    <div v-if="scheduleCourses.length" class="flex flex-wrap gap-1.5 px-0.5 max-h-24 overflow-y-auto">
+                      <button
+                        v-for="course in scheduleCourses"
+                        :key="course"
+                        type="button"
+                        @click="form.subject = course"
+                        class="text-[11px] px-2.5 py-1 rounded-lg border font-semibold transition-all tap-scale truncate max-w-[160px]"
+                        :style="form.subject === course
+                          ? { background: 'var(--brand)', color: '#ffffff', borderColor: 'var(--brand)' }
+                          : { background: 'var(--bg-card)', color: 'var(--text-secondary)', borderColor: 'var(--border-subtle)' }"
+                      >
+                        {{ course }}
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Option B: Custom / Freeform -->
+                  <div v-else>
+                    <input
+                      v-model="form.subject"
+                      type="text"
+                      maxlength="100"
+                      placeholder="พิมพ์วิชา หรืองานนอกตาราง (เช่น โครงการ, งานส่วนตัว, กิจกรรม)"
+                      class="w-full text-sm px-4 py-3 rounded-2xl outline-none"
+                      style="background: var(--bg-elevated); border: 1px solid var(--border-subtle); color: var(--text-primary);"
+                    />
+                  </div>
+                </div>
                 <div>
                   <p class="text-[11px] font-semibold mb-1.5 px-1" style="color: var(--text-muted);">กำหนดส่ง *</p>
                   <input
@@ -263,6 +401,24 @@
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
+import { getTodayTH } from '~/utils/date'
+
+type BackendCourse = {
+  id: string
+  termId: string
+  courseCode: string
+  courseName: string
+  room: string | null
+}
+
+type BackendTerm = {
+  id: string
+  userId: string
+  termName: string
+  startDate: string
+  endDate: string
+  courses: BackendCourse[]
+}
 
 type AssignmentTask = {
   id: string
@@ -293,6 +449,44 @@ const searchQuery = ref('')
 
 const isModalOpen = ref(false)
 const editingId = ref('')
+const subjectMode = ref<'schedule' | 'custom'>('schedule')
+const academicTerms = ref<BackendTerm[]>([])
+const currentTerm = ref<BackendTerm | null>(null)
+const selectedTermFilter = ref<'current' | 'all'>('current')
+const isLoadingCourses = ref(false)
+
+const scheduleCourses = computed(() => {
+  if (!academicTerms.value.length) return []
+
+  let targetTerms = academicTerms.value
+  if (selectedTermFilter.value === 'current' && currentTerm.value) {
+    targetTerms = [currentTerm.value]
+  }
+
+  const names = new Set<string>()
+  for (const term of targetTerms) {
+    if (Array.isArray(term.courses)) {
+      for (const c of term.courses) {
+        const name = (c.courseName || '').trim()
+        if (name) names.add(name)
+      }
+    }
+  }
+  return Array.from(names).sort((a, b) => a.localeCompare(b, 'th'))
+})
+
+const allTermsCourses = computed(() => {
+  const names = new Set<string>()
+  for (const term of academicTerms.value) {
+    if (Array.isArray(term.courses)) {
+      for (const c of term.courses) {
+        const name = (c.courseName || '').trim()
+        if (name) names.add(name)
+      }
+    }
+  }
+  return Array.from(names).sort((a, b) => a.localeCompare(b, 'th'))
+})
 
 const form = reactive({
   title: '',
@@ -301,15 +495,31 @@ const form = reactive({
   isUrgent: false,
 })
 
+const isTaskUrgent = (task: AssignmentTask): boolean => {
+  if (task.isCompleted) return false
+  // กรณี 1: ผู้ใช้กำหนดเองว่าเป็นงานด่วน
+  if (task.isUrgent) return true
+  // กรณี 2: ระยะเวลา deadline เหลือน้อยมาก (<= 1 วัน หรือ 24 ชั่วโมง ก่อนส่ง หรือเกินกำหนดแล้ว)
+  if (!task.deadline) return false
+  try {
+    const deadlineTime = new Date(task.deadline).getTime()
+    if (Number.isNaN(deadlineTime)) return false
+    const diffHours = (deadlineTime - Date.now()) / (1000 * 60 * 60)
+    return diffHours <= 24
+  } catch {
+    return false
+  }
+}
+
 const pendingTasks = computed(() => tasks.value.filter(t => !t.isCompleted))
-const urgentTasks = computed(() => tasks.value.filter(t => t.isUrgent && !t.isCompleted))
+const urgentTasks = computed(() => tasks.value.filter(isTaskUrgent))
 const completedTasks = computed(() => tasks.value.filter(t => t.isCompleted))
 
 const completionPercent = computed(() =>
   tasks.value.length ? Math.round((completedTasks.value.length / tasks.value.length) * 100) : 0,
 )
 
-const filterOptions =computed<{ label: string; value: FilterType; count: number }[]>(() => [
+const filterOptions = computed<{ label: string; value: FilterType; count: number }[]>(() => [
   { label: 'ทั้งหมด', value: 'all', count: tasks.value.length },
   { label: 'ค้างส่ง', value: 'pending', count: pendingTasks.value.length },
   { label: '🔥 งานด่วน', value: 'urgent', count: urgentTasks.value.length },
@@ -322,7 +532,7 @@ const filteredTasks = computed(() => {
   if (activeFilter.value === 'pending') {
     list = list.filter(t => !t.isCompleted)
   } else if (activeFilter.value === 'urgent') {
-    list = list.filter(t => t.isUrgent && !t.isCompleted)
+    list = list.filter(isTaskUrgent)
   } else if (activeFilter.value === 'completed') {
     list = list.filter(t => t.isCompleted)
   }
@@ -427,10 +637,65 @@ const loadTasks = async () => {
   }
 }
 
+const findCurrentTerm = (termList: BackendTerm[]): BackendTerm | null => {
+  if (!termList || !termList.length) return null
+  const todayStr = getTodayTH()
+
+  // 1. Term active today (startDate <= todayStr <= endDate)
+  const activeTerm = termList.find(t => {
+    const start = t.startDate ? t.startDate.slice(0, 10) : ''
+    const end = t.endDate ? t.endDate.slice(0, 10) : ''
+    return start <= todayStr && end >= todayStr
+  })
+  if (activeTerm) return activeTerm
+
+  // 2. Outside a term, show the next upcoming term
+  const upcomingTerm = termList
+    .filter(t => (t.startDate ? t.startDate.slice(0, 10) : '') > todayStr)
+    .sort((a, b) => (a.startDate || '').localeCompare(b.startDate || ''))[0]
+  if (upcomingTerm) return upcomingTerm
+
+  // 3. Fall back to most recently started term
+  const sorted = [...termList].sort((a, b) => {
+    const startA = a.startDate ? a.startDate.slice(0, 10) : ''
+    const startB = b.startDate ? b.startDate.slice(0, 10) : ''
+    return startB.localeCompare(startA)
+  })
+
+  return sorted[0] || null
+}
+
+const loadScheduleCourses = async () => {
+  if (!userId.value) return
+  isLoadingCourses.value = true
+  try {
+    const data = await apiFetch<BackendTerm[]>(`/api/Schedule/terms/${userId.value}`)
+    academicTerms.value = Array.isArray(data) ? data : []
+    currentTerm.value = findCurrentTerm(academicTerms.value)
+  } catch (err) {
+    console.error('Failed to load schedule courses for tasks:', err)
+  } finally {
+    isLoadingCourses.value = false
+  }
+}
+
+const refreshData = async () => {
+  await Promise.all([loadTasks(), loadScheduleCourses()])
+}
+
 const openCreateTaskModal = () => {
   editingId.value = ''
   form.title = ''
   form.subject = ''
+  selectedTermFilter.value = 'current'
+  if (scheduleCourses.value.length > 0) {
+    subjectMode.value = 'schedule'
+  } else if (allTermsCourses.value.length > 0) {
+    selectedTermFilter.value = 'all'
+    subjectMode.value = 'schedule'
+  } else {
+    subjectMode.value = 'custom'
+  }
   // Default to tomorrow 17:00
   const now = new Date()
   now.setDate(now.getDate() + 1)
@@ -444,6 +709,23 @@ const openEditTaskModal = (item: AssignmentTask) => {
   editingId.value = item.id
   form.title = item.title
   form.subject = item.subject || ''
+
+  const trimmed = (item.subject || '').trim()
+  if (trimmed) {
+    if (scheduleCourses.value.includes(trimmed)) {
+      selectedTermFilter.value = 'current'
+      subjectMode.value = 'schedule'
+    } else if (allTermsCourses.value.includes(trimmed)) {
+      selectedTermFilter.value = 'all'
+      subjectMode.value = 'schedule'
+    } else {
+      subjectMode.value = 'custom'
+    }
+  } else {
+    selectedTermFilter.value = 'current'
+    subjectMode.value = scheduleCourses.value.length > 0 ? 'schedule' : 'custom'
+  }
+
   try {
     form.deadline = toBangkokDateTimeLocal(item.deadline)
   } catch {
@@ -550,6 +832,6 @@ const deleteTask = async (taskId: string) => {
 }
 
 onMounted(() => {
-  loadTasks()
+  refreshData()
 })
 </script>
