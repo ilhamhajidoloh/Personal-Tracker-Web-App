@@ -300,9 +300,10 @@ export const upsertGoogleCalendarEvent = async (
         headers: { Authorization: `Bearer ${accessToken}` },
       })
       if (checkRes.ok) {
-        const checkData = await checkRes.json() as { status?: string }
-        if (checkData.status === 'cancelled') {
-          // Event was cancelled/deleted on Google. Treat as a new event creation.
+        const checkData = await checkRes.json() as { status?: string, eventType?: string }
+        if (checkData.status === 'cancelled' || (checkData.eventType && checkData.eventType !== 'default')) {
+          // Cancelled and special Google event types cannot reliably be converted
+          // into a normal timed event. Create a fresh default event instead.
           activeGoogleEventId = null
         }
       } else if (checkRes.status === 404 || checkRes.status === 410) {
@@ -329,9 +330,23 @@ export const upsertGoogleCalendarEvent = async (
     body: JSON.stringify(body),
   })
 
-  // If the update (PATCH) failed because the event was deleted on Google Calendar (404/410),
-  // retry as a new event creation (POST)
-  if (!response.ok && activeGoogleEventId && (response.status === 404 || response.status === 410)) {
+  const patchErrorText = !response.ok && activeGoogleEventId
+    ? await response.clone().text()
+    : ''
+  const shouldRecreateEvent = Boolean(activeGoogleEventId) && (
+    response.status === 404
+    || response.status === 410
+    || (response.status === 400 && /invalid start time/i.test(patchErrorText))
+  )
+
+  // Some existing Google events reject otherwise valid start/end updates. When
+  // that happens, create a normal event and let the caller persist its new ID.
+  if (!response.ok && shouldRecreateEvent) {
+    console.warn('Google Calendar event could not be updated; recreating it:', {
+      googleEventId: activeGoogleEventId,
+      responseStatus: response.status,
+      response: patchErrorText,
+    })
     url = GOOGLE_CALENDAR_EVENTS_ENDPOINT
     method = 'POST'
     response = await fetch(url, {
