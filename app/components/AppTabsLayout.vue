@@ -292,7 +292,7 @@
     </header>
 
     <!-- ========== Main Content Container ========== -->
-    <main class="flex-1 flex flex-col pb-[calc(5rem+env(safe-area-inset-bottom,0px))] md:pb-8">
+    <main class="flex-1 flex flex-col w-full min-w-0 max-w-full overflow-x-hidden pb-[calc(5rem+env(safe-area-inset-bottom,0px))] md:pb-8">
       <slot />
     </main>
 
