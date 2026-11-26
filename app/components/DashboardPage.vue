@@ -985,6 +985,157 @@
               </NuxtLink>
             </div>
           </article>
+
+          <!-- ----------------------------------------------------
+               REMINDER NOTES: Notes & Live Countdown (span-12)
+               ---------------------------------------------------- -->
+          <article
+            v-if="isModuleEnabled('notes')"
+            class="md:col-span-12 lg:col-span-12 p-5 sm:p-6 rounded-3xl border shadow-sm transition-all duration-200"
+            style="background: var(--bg-card); border-color: var(--border-default);"
+          >
+            <div class="flex flex-wrap items-center justify-between gap-3 pb-3 border-b" style="border-color: var(--border-subtle);">
+              <div class="min-w-0">
+                <span class="text-[11px] font-bold uppercase tracking-wider inline-flex items-center gap-1.5" style="color: var(--brand-ink);">
+                  <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <path d="M14 2v6h6M8 13h8M8 17h5" />
+                  </svg>
+                  Reminder Notes
+                </span>
+                <h2 class="text-base font-bold tracking-tight mt-0.5" style="color: var(--text-primary);">
+                  Note & การแจ้งเตือน
+                </h2>
+              </div>
+
+              <div class="flex items-center gap-2.5 shrink-0">
+                <span
+                  v-if="upcomingNotesCount > 0"
+                  class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold"
+                  style="background: var(--brand-soft); color: var(--brand-ink);"
+                >
+                  <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />
+                    <path d="M10 21h4" />
+                  </svg>
+                  รอแจ้งเตือน {{ upcomingNotesCount }}
+                </span>
+                <NuxtLink to="/notes" class="text-xs font-bold hover:underline" style="color: var(--brand-ink);">
+                  ดูทั้งหมด
+                </NuxtLink>
+              </div>
+            </div>
+
+            <div v-if="notesErrorMessage" class="p-3 my-3 rounded-xl text-xs" style="background: color-mix(in srgb, var(--ink-rose) 10%, transparent); color: var(--ink-rose);">
+              {{ notesErrorMessage }}
+            </div>
+
+            <div v-if="isNotesLoading" class="py-10 text-center text-xs" style="color: var(--text-muted);">
+              กำลังโหลดข้อมูล…
+            </div>
+
+            <div v-else-if="!dashboardNotes.length" class="py-10 text-center space-y-2">
+              <div class="w-11 h-11 rounded-2xl mx-auto flex items-center justify-center" style="background: var(--brand-soft); color: var(--brand-ink);">
+                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />
+                  <path d="M10 21h4" />
+                </svg>
+              </div>
+              <p class="text-xs" style="color: var(--text-muted);">ยังไม่มี Note ที่บันทึกไว้</p>
+              <NuxtLink
+                to="/notes"
+                class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold border transition-colors"
+                style="background: var(--brand-soft); border-color: var(--brand-border); color: var(--brand-ink);"
+              >
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" aria-hidden="true">
+                  <path d="M12 5v14M5 12h14" />
+                </svg>
+                เพิ่ม Note ใหม่
+              </NuxtLink>
+            </div>
+
+            <div v-else class="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              <NuxtLink
+                v-for="note in dashboardNotes"
+                :key="note.id"
+                to="/notes"
+                class="relative p-4 rounded-2xl border flex flex-col gap-2.5 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-sm min-w-0"
+                style="background: var(--bg-elevated); border-color: var(--border-subtle);"
+              >
+                <!-- Status Row -->
+                <div class="flex items-center justify-between gap-2 min-w-0">
+                  <span
+                    class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold truncate"
+                    :style="getDashboardNoteStatusStyle(note)"
+                  >
+                    <svg v-if="getDashboardNoteState(note) === 'sent'" class="w-3 h-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <circle cx="12" cy="12" r="9" />
+                      <path d="m8.5 12.5 2.5 2.5 4.5-5" />
+                    </svg>
+                    <svg v-else-if="getDashboardNoteState(note) === 'overdue'" class="w-3 h-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <circle cx="12" cy="12" r="9" />
+                      <path d="M12 8v4M12 16h.01" />
+                    </svg>
+                    <svg v-else-if="getDashboardNoteState(note) === 'upcoming'" class="w-3 h-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />
+                      <path d="M10 21h4" />
+                    </svg>
+                    <svg v-else class="w-3 h-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                      <path d="M14 2v6h6" />
+                    </svg>
+                    <span class="truncate">{{ getDashboardNoteStatusLabel(note) }}</span>
+                  </span>
+
+                  <svg class="w-3.5 h-3.5 shrink-0" style="color: var(--text-muted);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="m9 18 6-6-6-6" />
+                  </svg>
+                </div>
+
+                <!-- Title & Content -->
+                <div class="min-w-0">
+                  <h3 class="text-sm font-bold leading-snug line-clamp-1" style="color: var(--text-primary);">
+                    {{ note.title }}
+                  </h3>
+                  <p
+                    class="text-xs mt-1 line-clamp-2 leading-relaxed"
+                    :style="{ color: note.content ? 'var(--text-secondary)' : 'var(--text-muted)' }"
+                  >
+                    {{ note.content || 'ไม่มีข้อความเพิ่มเติม' }}
+                  </p>
+                </div>
+
+                <!-- Live Countdown Pill -->
+                <div
+                  v-if="note.remindAt"
+                  class="mt-auto pt-2.5 flex items-center justify-between gap-2 px-3 py-2 rounded-xl border text-[11px]"
+                  :style="getDashboardNoteCountdownStyle(note)"
+                >
+                  <span class="inline-flex items-center gap-1.5 font-semibold truncate">
+                    <svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <circle cx="12" cy="12" r="9" />
+                      <path d="M12 7v5l3 2" />
+                    </svg>
+                    <span class="truncate">{{ getDashboardNoteCountdown(note).label }}</span>
+                  </span>
+                  <strong class="font-bold tabular shrink-0">{{ getDashboardNoteCountdown(note).value }}</strong>
+                </div>
+
+                <!-- Plain Note Footer -->
+                <div
+                  v-else
+                  class="mt-auto pt-2 border-t flex items-center gap-1.5 text-[10px] font-medium"
+                  style="border-color: var(--border-subtle); color: var(--text-muted);"
+                >
+                  <svg class="w-3 h-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="12" cy="12" r="9" />
+                    <path d="M12 7v5l2.5 1.5" />
+                  </svg>
+                  <span class="truncate">อัปเดต {{ formatDashboardNoteTime(note.updatedAt) }}</span>
+                </div>
+              </NuxtLink>
+            </div>
+          </article>
         </div>
 
         <!-- ========================================================
@@ -2422,6 +2573,155 @@ watch(selectedBookId, () => {
   }
 })
 
+type DashboardNoteRow = {
+  id: string
+  userId: string
+  title: string
+  content: string | null
+  remindAt: string | null
+  reminderMinutes: number
+  reminderSentAt: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+const dashboardAllNotes = ref<DashboardNoteRow[]>([])
+const isNotesLoading = ref(false)
+const notesErrorMessage = ref('')
+const noteNowMs = ref(Date.now())
+
+const parseNoteApiDate = (value: string) => {
+  const hasTimeZone = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(value)
+  return new Date(hasTimeZone ? value : `${value}Z`)
+}
+
+const loadNotes = async () => {
+  if (!userId.value) {
+    dashboardAllNotes.value = []
+    return
+  }
+  isNotesLoading.value = true
+  notesErrorMessage.value = ''
+  try {
+    const data = await apiFetch<DashboardNoteRow[]>(`/api/Note/${userId.value}`)
+    dashboardAllNotes.value = Array.isArray(data) ? data : []
+  } catch (error: any) {
+    console.error('Load dashboard notes error:', error)
+    notesErrorMessage.value = getApiErrorMessage(error, 'โหลดข้อมูล Note ไม่สำเร็จ')
+  } finally {
+    isNotesLoading.value = false
+  }
+}
+
+const upcomingNotesCount = computed(() =>
+  dashboardAllNotes.value.filter(
+    note => note.remindAt && !note.reminderSentAt && parseNoteApiDate(note.remindAt).getTime() >= noteNowMs.value,
+  ).length,
+)
+
+const dashboardNotes = computed(() => {
+  const now = noteNowMs.value
+  return [...dashboardAllNotes.value]
+    .sort((a, b) => {
+      const aTime = a.remindAt ? parseNoteApiDate(a.remindAt).getTime() : null
+      const bTime = b.remindAt ? parseNoteApiDate(b.remindAt).getTime() : null
+      const aRank = aTime !== null && !a.reminderSentAt ? (aTime >= now ? 0 : 1) : 2
+      const bRank = bTime !== null && !b.reminderSentAt ? (bTime >= now ? 0 : 1) : 2
+      if (aRank !== bRank) return aRank - bRank
+      if (aRank === 0 && aTime !== null && bTime !== null) return aTime - bTime
+      if (aRank === 1 && aTime !== null && bTime !== null) return bTime - aTime
+      return parseNoteApiDate(b.updatedAt).getTime() - parseNoteApiDate(a.updatedAt).getTime()
+    })
+    .slice(0, 6)
+})
+
+const getDashboardNoteState = (note: DashboardNoteRow) => {
+  if (!note.remindAt) return 'plain'
+  if (note.reminderSentAt) return 'sent'
+  if (parseNoteApiDate(note.remindAt).getTime() < noteNowMs.value) return 'overdue'
+  return 'upcoming'
+}
+
+const formatDashboardNoteTime = (value: string) => new Intl.DateTimeFormat('th-TH', {
+  day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Bangkok',
+}).format(parseNoteApiDate(value))
+
+const getDashboardNoteStatusLabel = (note: DashboardNoteRow) => {
+  const state = getDashboardNoteState(note)
+  if (state === 'plain') return 'Note ธรรมดา'
+  if (state === 'sent') return `แจ้งแล้ว · ${formatDashboardNoteTime(note.remindAt!)}`
+  if (state === 'overdue') return `เลยเวลา · ${formatDashboardNoteTime(note.remindAt!)}`
+  return formatDashboardNoteTime(note.remindAt!)
+}
+
+const getDashboardNoteStatusStyle = (note: DashboardNoteRow) => {
+  const state = getDashboardNoteState(note)
+  if (state === 'sent') return { background: 'color-mix(in srgb, var(--ink-emerald) 13%, transparent)', color: 'var(--ink-emerald)' }
+  if (state === 'overdue') return { background: 'color-mix(in srgb, var(--ink-rose) 12%, transparent)', color: 'var(--ink-rose)' }
+  if (state === 'upcoming') return { background: 'var(--brand-soft)', color: 'var(--brand-ink)' }
+  return { background: 'var(--bg-card)', color: 'var(--text-muted)' }
+}
+
+const getDashboardNoteCountdown = (note: DashboardNoteRow) => {
+  if (!note.remindAt) return { label: 'นับถอยหลัง', value: '-', tone: 'normal' as const }
+  const diffMs = parseNoteApiDate(note.remindAt).getTime() - noteNowMs.value
+  const pad = (n: number) => String(n).padStart(2, '0')
+  if (diffMs > 0) {
+    const totalSec = Math.floor(diffMs / 1000)
+    const days = Math.floor(totalSec / 86400)
+    const hours = Math.floor((totalSec % 86400) / 3600)
+    const mins = Math.floor((totalSec % 3600) / 60)
+    const secs = totalSec % 60
+    const value = days > 0
+      ? `${days} วัน ${pad(hours)}:${pad(mins)}:${pad(secs)}`
+      : hours > 0
+        ? `${pad(hours)}:${pad(mins)}:${pad(secs)}`
+        : `${pad(mins)}:${pad(secs)}`
+    const tone = diffMs <= 15 * 60 * 1000 ? 'imminent' : diffMs <= 60 * 60 * 1000 ? 'soon' : 'normal'
+    return { label: note.reminderSentAt ? 'ถึงเวลาในอีก' : 'นับถอยหลัง', value, tone }
+  }
+  if (note.reminderSentAt) {
+    return { label: 'สถานะเวลา', value: 'ถึงเวลาแล้ว', tone: 'sent' as const }
+  }
+  const totalMin = Math.max(1, Math.floor(Math.abs(diffMs) / 60000))
+  const value = totalMin < 60
+    ? `${totalMin} นาที`
+    : totalMin < 1440
+      ? `${Math.floor(totalMin / 60)} ชม. ${totalMin % 60} น.`
+      : `${Math.floor(totalMin / 1440)} วัน`
+  return { label: 'เลยเวลามาแล้ว', value, tone: 'overdue' as const }
+}
+
+const getDashboardNoteCountdownStyle = (note: DashboardNoteRow) => {
+  const { tone } = getDashboardNoteCountdown(note)
+  if (tone === 'imminent' || tone === 'overdue') {
+    return {
+      background: 'color-mix(in srgb, var(--ink-rose) 10%, transparent)',
+      borderColor: 'color-mix(in srgb, var(--ink-rose) 26%, transparent)',
+      color: 'var(--ink-rose)',
+    }
+  }
+  if (tone === 'soon') {
+    return {
+      background: 'color-mix(in srgb, var(--ink-amber) 11%, transparent)',
+      borderColor: 'color-mix(in srgb, var(--ink-amber) 28%, transparent)',
+      color: 'var(--ink-amber)',
+    }
+  }
+  if (tone === 'sent') {
+    return {
+      background: 'color-mix(in srgb, var(--ink-emerald) 10%, transparent)',
+      borderColor: 'color-mix(in srgb, var(--ink-emerald) 26%, transparent)',
+      color: 'var(--ink-emerald)',
+    }
+  }
+  return {
+    background: 'var(--brand-soft)',
+    borderColor: 'var(--brand-border)',
+    color: 'var(--brand-ink)',
+  }
+}
+
 const refreshOverview = async () => {
   const promises: Promise<any>[] = []
   if (isModuleEnabled('cashflow')) {
@@ -2439,6 +2739,9 @@ const refreshOverview = async () => {
   if (isModuleEnabled('events')) {
     promises.push(loadEvents())
   }
+  if (isModuleEnabled('notes')) {
+    promises.push(loadNotes())
+  }
   await Promise.all(promises)
   lastUpdateTime.value = nowTH().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) + ' น.'
 }
@@ -2449,6 +2752,7 @@ onMounted(() => {
   refreshOverview()
   clockTimer = setInterval(() => {
     currentTime.value = nowTH()
+    noteNowMs.value = Date.now()
   }, 1000)
 
   recurringCountdownTimer = setInterval(() => {
