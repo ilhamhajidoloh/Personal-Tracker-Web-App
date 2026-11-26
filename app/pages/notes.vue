@@ -124,8 +124,12 @@
                   ><i /></button>
                 </div>
                 <label v-if="form.reminderEnabled" class="note-datetime">
-                  <span>วันและเวลาที่แจ้งเตือน</span>
+                  <span>วันและเวลาของ Note</span>
                   <input v-model="form.remindAt" type="datetime-local" :min="minimumReminderTime" />
+                  <span>แจ้งเตือนล่วงหน้า</span>
+                  <select v-model.number="form.reminderMinutes">
+                    <option v-for="option in reminderOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+                  </select>
                 </label>
               </div>
             </div>
@@ -154,6 +158,7 @@ type NoteRow = {
   title: string
   content: string | null
   remindAt: string | null
+  reminderMinutes: number
   reminderSentAt: string | null
   createdAt: string
   updatedAt: string
@@ -181,7 +186,20 @@ const form = reactive({
   content: '',
   reminderEnabled: false,
   remindAt: '',
+  reminderMinutes: 15,
 })
+
+const reminderOptions = [
+  { value: 5, label: '5 นาทีก่อน' },
+  { value: 15, label: '15 นาทีก่อน' },
+  { value: 30, label: '30 นาทีก่อน' },
+  { value: 60, label: '1 ชั่วโมงก่อน' },
+  { value: 120, label: '2 ชั่วโมงก่อน' },
+  { value: 1440, label: '1 วันก่อน' },
+]
+
+const reminderAdvanceLabel = (minutes: number) =>
+  reminderOptions.find(option => option.value === minutes)?.label || `${minutes} นาทีก่อน`
 
 const filterOptions: Array<{ label: string, value: NoteFilter }> = [
   { label: 'ทั้งหมด', value: 'all' },
@@ -246,7 +264,7 @@ const reminderLabel = (note: NoteRow) => {
   if (state === 'plain') return 'ไม่ตั้งเวลา'
   if (state === 'sent') return `แจ้งแล้ว · ${formatReminder(note.remindAt!)}`
   if (state === 'overdue') return `เลยเวลา · ${formatReminder(note.remindAt!)}`
-  return formatReminder(note.remindAt!)
+  return `${reminderAdvanceLabel(note.reminderMinutes ?? 15)} · ${formatReminder(note.remindAt!)}`
 }
 
 const getErrorMessage = (error: any, fallback: string) =>
@@ -273,6 +291,7 @@ const openCreateModal = () => {
   form.content = ''
   form.reminderEnabled = false
   form.remindAt = defaultReminderTime()
+  form.reminderMinutes = 15
   isModalOpen.value = true
 }
 
@@ -282,6 +301,7 @@ const openEditModal = (note: NoteRow) => {
   form.content = note.content || ''
   form.reminderEnabled = Boolean(note.remindAt)
   form.remindAt = note.remindAt ? toLocalInput(note.remindAt) : defaultReminderTime()
+  form.reminderMinutes = note.reminderMinutes ?? 15
   isModalOpen.value = true
 }
 
@@ -307,6 +327,7 @@ const submitNote = async () => {
       title: form.title.trim(),
       content: form.content.trim() || null,
       remindAt: form.reminderEnabled ? new Date(form.remindAt).toISOString() : null,
+      reminderMinutes: form.reminderEnabled ? form.reminderMinutes : 15,
     }
     if (editingId.value) {
       await apiFetch(`/api/Note/${editingId.value}`, { method: 'PUT', body })
@@ -407,9 +428,9 @@ onMounted(loadNotes)
 .note-form-body { display: grid; gap: 18px; padding: 22px 24px; }
 .note-form-body > label { position: relative; display: grid; gap: 8px; color: var(--text-secondary); font-size: 11px; font-weight: 800; }
 .note-form-body label em { color: var(--ink-rose); font-style: normal; }
-.note-form-body input, .note-form-body textarea { width: 100%; padding: 11px 13px; border: 1px solid var(--border-default); border-radius: 12px; outline: none; resize: vertical; background: var(--bg-elevated); color: var(--text-primary); font: inherit; font-size: 13px; }
+.note-form-body input, .note-form-body textarea, .note-form-body select { width: 100%; padding: 11px 13px; border: 1px solid var(--border-default); border-radius: 12px; outline: none; resize: vertical; background: var(--bg-elevated); color: var(--text-primary); font: inherit; font-size: 13px; }
 .note-form-body input { min-height: 44px; }
-.note-form-body input:focus, .note-form-body textarea:focus { border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-ring); }
+.note-form-body input:focus, .note-form-body textarea:focus, .note-form-body select:focus { border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-ring); }
 .note-form-body > label small { position: absolute; right: 9px; bottom: 7px; color: var(--text-muted); font-size: 8px; }
 .note-reminder-box { padding: 15px; border: 1px solid var(--border-subtle); border-radius: 16px; background: var(--bg-elevated); }
 .note-reminder-box > div { display: flex; align-items: center; gap: 11px; }

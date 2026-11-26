@@ -72,11 +72,17 @@ export type NoteEmailPayload = {
   title: string
   content?: string | null
   remindAt: string
+  reminderMinutes: number
 }
 
 const escapeHtml = (value: string) => value.replace(/[&<>"']/g, char => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;',
 }[char] || char))
+
+const formatReminderAdvance = (minutes: number) => ({
+  5: '5 นาที', 15: '15 นาที', 30: '30 นาที', 60: '1 ชั่วโมง',
+  120: '2 ชั่วโมง', 1440: '1 วัน',
+} as Record<number, string>)[minutes] || `${minutes} นาที`
 
 const formatThaiDate = (dateString?: string | null) => {
   if (!dateString) return 'ยังไม่กำหนด'
@@ -558,11 +564,16 @@ export const buildNoteReminderEmail = (payload: NoteEmailPayload, appUrl?: strin
       <span class="item-label">🕐 เวลาที่ตั้งไว้</span>
       <span class="item-val">${remindAt} น.</span>
     </div>
+    <div class="item-row">
+      <span class="item-label">⏰ แจ้งเตือนล่วงหน้า</span>
+      <span class="item-val">${formatReminderAdvance(payload.reminderMinutes)}</span>
+    </div>
   `, `${appUrl || 'http://localhost:3000'}/notes`)
 
   const text = [
     `🔔 [MyLife] Note เตือนความจำ: ${payload.title}`,
     payload.content ? `รายละเอียด: ${payload.content}` : '',
+    `แจ้งเตือนล่วงหน้า: ${formatReminderAdvance(payload.reminderMinutes)}`,
     `เวลาที่ตั้งไว้: ${remindAt} น.`,
     `\nเปิด Note: ${appUrl || 'http://localhost:3000'}/notes`,
   ].filter(Boolean).join('\n')

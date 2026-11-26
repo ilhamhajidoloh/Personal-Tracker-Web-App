@@ -251,7 +251,8 @@ export default defineEventHandler(async (event) => {
           const email = buildNoteReminderEmail({
             title: note.title,
             content: note.content,
-            remindAt: reminderTime.toISOString(),
+            remindAt: new Date(reminderTime.getTime() + (note.reminderMinutes || 0) * 60_000).toISOString(),
+            reminderMinutes: note.reminderMinutes || 0,
           }, appUrl)
           await sendEmail({ to: userEmail, subject: email.subject, html: email.html, text: email.text }, config)
           sentAny = true

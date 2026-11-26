@@ -54,6 +54,7 @@ export type ReminderNote = {
   title: string
   content: string | null
   remindAt: string | null
+  reminderMinutes: number
   reminderSentAt: string | null
 }
 
@@ -108,8 +109,11 @@ export const getTodoReminderTime = (todo: ReminderTodo): Date | null => {
   return new Date(`${dateOnly}T${hour}`)
 }
 
-export const getNoteReminderTime = (note: ReminderNote): Date | null =>
-  note.remindAt ? parseBackendUtcDate(note.remindAt) : null
+export const getNoteReminderTime = (note: ReminderNote): Date | null => {
+  if (!note.remindAt) return null
+  const noteTime = parseBackendUtcDate(note.remindAt)
+  return new Date(noteTime.getTime() - (note.reminderMinutes || 0) * 60_000)
+}
 
 const formatNoteReminderTime = (value: string) =>
   parseBackendUtcDate(value).toLocaleString('th-TH', {
@@ -159,5 +163,6 @@ export const buildNoteReminderText = (note: ReminderNote): string => [
   `🔔 Note เตือนความจำ`,
   `เรื่อง: ${note.title}`,
   note.content ? `รายละเอียด: ${note.content.slice(0, 3000)}` : '',
+  note.reminderMinutes ? `แจ้งเตือนล่วงหน้า: ${getReminderLabel(note.reminderMinutes)}` : '',
   note.remindAt ? `เวลาที่ตั้งไว้: ${formatNoteReminderTime(note.remindAt)} น.` : '',
 ].filter(Boolean).join('\n')
