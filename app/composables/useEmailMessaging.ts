@@ -6,6 +6,7 @@
   eventReminders: boolean
   taskReminders: boolean
   billReminders: boolean
+  noteReminders: boolean
 }
 
 export type EmailStatus = {
@@ -26,6 +27,7 @@ const defaultPreferences: EmailNotificationPreferences = {
   eventReminders: true,
   taskReminders: true,
   billReminders: true,
+  noteReminders: true,
 }
 
 export const useEmailMessaging = () => {
@@ -109,7 +111,7 @@ export const useEmailMessaging = () => {
     })
   }
 
-  const notify = async (type: 'class' | 'event' | 'todo' | 'task' | 'bill', payload: any, to?: string) => {
+  const notify = async (type: 'class' | 'event' | 'todo' | 'task' | 'bill' | 'note', payload: any, to?: string) => {
     if (!import.meta.client) return { sent: false, skipped: true }
 
     const prefs = getPreferences()
@@ -120,6 +122,7 @@ export const useEmailMessaging = () => {
     if (type === 'todo' && !prefs.taskReminders) return { sent: false, skipped: true, reason: 'todo_disabled' }
     if (type === 'task' && !prefs.taskReminders) return { sent: false, skipped: true, reason: 'task_disabled' }
     if (type === 'bill' && !prefs.billReminders) return { sent: false, skipped: true, reason: 'bill_disabled' }
+    if (type === 'note' && !prefs.noteReminders) return { sent: false, skipped: true, reason: 'note_disabled' }
 
     const recipient = to || prefs.recipientEmail
 

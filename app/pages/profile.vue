@@ -560,6 +560,14 @@
                         <p class="text-[10px] text-gray-500 mt-0.5">แจ้งเตือนบิลรายเดือน</p>
                       </div>
                     </label>
+
+                    <label class="flex items-start gap-2 p-2.5 rounded-lg bg-gray-800/40 cursor-pointer hover:bg-gray-800/60 transition">
+                      <input v-model="emailPrefs.noteReminders" type="checkbox" class="mt-0.5 accent-violet-500">
+                      <div class="flex-1">
+                        <span class="text-xs text-gray-200 font-medium">🔔 Note เตือนความจำ</span>
+                        <p class="text-[10px] text-gray-500 mt-0.5">แจ้ง Note ตามวันและเวลาที่ตั้งไว้</p>
+                      </div>
+                    </label>
                   </div>
                 </div>
 
@@ -1277,6 +1285,19 @@
                         <div class="flex-1">
                           <span class="text-xs text-gray-200 font-medium">💳 บิลและรายจ่ายประจำ (Recurring Bills)</span>
                           <p class="text-[11px] text-gray-500 mt-0.5">แจ้งเตือนบิลที่ใกล้ถึงรอบชำระประจำเดือน</p>
+                        </div>
+                      </label>
+
+                      <!-- Reminder Notes -->
+                      <label class="flex items-start gap-3 p-2.5 border border-gray-800/60 rounded-xl bg-gray-800/30 cursor-pointer hover:bg-gray-800/50 transition-all">
+                        <input
+                          v-model="emailPrefs.noteReminders"
+                          type="checkbox"
+                          class="mt-0.5 accent-violet-500"
+                        >
+                        <div class="flex-1">
+                          <span class="text-xs text-gray-200 font-medium">🔔 Note เตือนความจำ (Reminder Notes)</span>
+                          <p class="text-[11px] text-gray-500 mt-0.5">แจ้ง Note เมื่อถึงวันและเวลาที่กำหนด</p>
                         </div>
                       </label>
                     </div>

@@ -2,17 +2,21 @@
 import {
   buildClassReminderEmail,
   buildEventReminderEmail,
+  buildNoteReminderEmail,
   buildTodoReminderEmail,
   sendEmail,
 } from '../../utils/email'
 import { pushLineTextMessage } from '../../utils/line'
 import {
   buildEventReminderText,
+  buildNoteReminderText,
   buildTodoReminderText,
   getEventReminderTime,
+  getNoteReminderTime,
   getNowTH,
   getTodoReminderTime,
   type ReminderEvent,
+  type ReminderNote,
   type ReminderTodo,
 } from '../../utils/reminder'
 
@@ -30,10 +34,12 @@ type ConnectedUser = {
   emailEventRemindersEnabled?: boolean
   emailTaskRemindersEnabled?: boolean
   emailBillRemindersEnabled?: boolean
+  emailNoteRemindersEnabled?: boolean
 }
 
 type BackendActivity = ReminderEvent & { reminderSentAt: string | null; location?: string | null; description?: string | null }
 type BackendTodo = ReminderTodo & { reminderSentAt: string | null }
+type BackendNote = ReminderNote
 
 type BackendCourse = {
   id: string
@@ -110,9 +116,10 @@ export default defineEventHandler(async (event) => {
 
   for (const user of connectedUsers) {
     const userHeaders = await getCronAuthHeaders(user.userId)
-    const [activities, todos, scheduleData] = await Promise.all([
+    const [activities, todos, notes, scheduleData] = await Promise.all([
       $fetch<BackendActivity[]>(`${apiBase}/api/Activity/${user.userId}`, { headers: userHeaders }).catch(() => []),
       $fetch<BackendTodo[]>(`${apiBase}/api/Todo/${user.userId}`, { headers: userHeaders }).catch(() => []),
+      $fetch<BackendNote[]>(`${apiBase}/api/Note/${user.userId}`, { headers: userHeaders }).catch(() => []),
       $fetch<{ allToday?: BackendCourse[] }>(`${apiBase}/api/Schedule/today-classes/${user.userId}`, { headers: userHeaders }).catch(() => null),
     ])
 
@@ -216,7 +223,53 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // ── 3. Class schedule reminders (Today) ──────────────────────────────────
+    // ── 3. Note reminders ───────────────────────────────────────────────────
+    const pendingNotes = notes.filter(note => note.remindAt && !note.reminderSentAt)
+    totalChecked += pendingNotes.length
+
+    for (const note of pendingNotes) {
+      const reminderTime = getNoteReminderTime(note)
+      if (!reminderTime || Date.now() < reminderTime.getTime()) continue
+
+      let sentAny = false
+
+      if (hasLine && user.lineUserId && user.lineNotificationsEnabled) {
+        try {
+          await pushLineTextMessage(
+            config.line.channelAccessToken,
+            user.lineUserId,
+            buildNoteReminderText(note),
+          )
+          sentAny = true
+        } catch (err) {
+          console.error(`LINE Note reminder failed for ${note.id}:`, err)
+        }
+      }
+
+      if (hasSmtp && userEmail && user.emailNotificationsEnabled && user.emailNoteRemindersEnabled) {
+        try {
+          const email = buildNoteReminderEmail({
+            title: note.title,
+            content: note.content,
+            remindAt: reminderTime.toISOString(),
+          }, appUrl)
+          await sendEmail({ to: userEmail, subject: email.subject, html: email.html, text: email.text }, config)
+          sentAny = true
+        } catch (err) {
+          console.error(`Email Note reminder failed for ${note.id}:`, err)
+        }
+      }
+
+      if (sentAny) {
+        await $fetch(`${apiBase}/api/Note/${note.id}/reminder-sent`, {
+          method: 'PUT',
+          headers: userHeaders,
+        }).catch(() => null)
+        totalSent++
+      }
+    }
+
+    // ── 4. Class schedule reminders (Today) ──────────────────────────────────
     const todayClasses = Array.isArray(scheduleData?.allToday) ? scheduleData.allToday : []
     if (todayClasses.length && (user.lineClassRemindersEnabled || (user.emailNotificationsEnabled && user.emailClassRemindersEnabled))) {
       const lineReminderMins = user.lineClassReminderMinutes || 15

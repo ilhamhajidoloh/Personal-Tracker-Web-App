@@ -3,13 +3,14 @@ import {
   buildBillReminderEmail,
   buildClassReminderEmail,
   buildEventReminderEmail,
+  buildNoteReminderEmail,
   buildTaskReminderEmail,
   buildTodoReminderEmail,
   sendEmail,
 } from '../../utils/email'
 
 type NotifyBody = {
-  type: 'class' | 'event' | 'todo' | 'task' | 'bill' | 'custom'
+  type: 'class' | 'event' | 'todo' | 'task' | 'bill' | 'note' | 'custom'
   to?: string
   payload?: any
   subject?: string
@@ -77,6 +78,9 @@ export default defineEventHandler(async (event) => {
       break
     case 'bill':
       emailContent = buildBillReminderEmail(body.payload, appUrl)
+      break
+    case 'note':
+      emailContent = buildNoteReminderEmail(body.payload, appUrl)
       break
     case 'custom':
       emailContent = {

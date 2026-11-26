@@ -48,6 +48,20 @@ export type ReminderTodo = {
   status: string
 }
 
+export type ReminderNote = {
+  id: string
+  userId: string
+  title: string
+  content: string | null
+  remindAt: string | null
+  reminderSentAt: string | null
+}
+
+const parseBackendUtcDate = (value: string): Date => {
+  const hasTimeZone = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(value)
+  return new Date(hasTimeZone ? value : `${value}Z`)
+}
+
 export const getNowTH = (): Date => {
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone: TH_TIME_ZONE,
@@ -94,6 +108,16 @@ export const getTodoReminderTime = (todo: ReminderTodo): Date | null => {
   return new Date(`${dateOnly}T${hour}`)
 }
 
+export const getNoteReminderTime = (note: ReminderNote): Date | null =>
+  note.remindAt ? parseBackendUtcDate(note.remindAt) : null
+
+const formatNoteReminderTime = (value: string) =>
+  parseBackendUtcDate(value).toLocaleString('th-TH', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+    timeZone: TH_TIME_ZONE,
+  })
+
 export const buildEventReminderText = (event: ReminderEvent): string => {
   const label = getReminderLabel(event.reminderMinutes || 0)
   const startDate = event.startTime ? event.startTime.slice(0, 10) : ''
@@ -130,3 +154,10 @@ export const buildTodoReminderText = (todo: ReminderTodo): string => {
     `กำหนดส่ง: ${formatThaiDate(todo.targetDate.slice(0, 10))}`,
   ].join('\n')
 }
+
+export const buildNoteReminderText = (note: ReminderNote): string => [
+  `🔔 Note เตือนความจำ`,
+  `เรื่อง: ${note.title}`,
+  note.content ? `รายละเอียด: ${note.content.slice(0, 3000)}` : '',
+  note.remindAt ? `เวลาที่ตั้งไว้: ${formatNoteReminderTime(note.remindAt)} น.` : '',
+].filter(Boolean).join('\n')

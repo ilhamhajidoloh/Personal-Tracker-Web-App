@@ -11,6 +11,7 @@ export type EmailConnectionStatus = {
   eventRemindersEnabled: boolean
   taskRemindersEnabled: boolean
   billRemindersEnabled: boolean
+  noteRemindersEnabled: boolean
 }
 
 export type SendEmailOptions = {
@@ -66,6 +67,16 @@ export type BillEmailPayload = {
   dueDateFormatted: string
   isIncome?: boolean
 }
+
+export type NoteEmailPayload = {
+  title: string
+  content?: string | null
+  remindAt: string
+}
+
+const escapeHtml = (value: string) => value.replace(/[&<>"']/g, char => ({
+  '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;',
+}[char] || char))
 
 const formatThaiDate = (dateString?: string | null) => {
   if (!dateString) return 'ยังไม่กำหนด'
@@ -529,6 +540,35 @@ export const buildBillReminderEmail = (payload: BillEmailPayload, appUrl?: strin
     html,
     text,
   }
+}
+
+export const buildNoteReminderEmail = (payload: NoteEmailPayload, appUrl?: string) => {
+  const title = escapeHtml(payload.title)
+  const content = payload.content ? escapeHtml(payload.content).replace(/\n/g, '<br>') : ''
+  const remindAt = new Date(payload.remindAt).toLocaleString('th-TH', {
+    dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Bangkok',
+  })
+  const html = wrapEmailLayout(`
+    <span class="badge" style="background: rgba(99, 102, 241, 0.2); color: #a5b4fc; border: 1px solid rgba(99, 102, 241, 0.4);">
+      🔔 Note เตือนความจำ
+    </span>
+    <h2 style="margin: 0 0 8px; font-size: 20px; color: #ffffff; font-weight: 800;">${title}</h2>
+    ${content ? `<div class="card-box" style="color: #cbd5e1; line-height: 1.7;">${content}</div>` : ''}
+    <div class="item-row">
+      <span class="item-label">🕐 เวลาที่ตั้งไว้</span>
+      <span class="item-val">${remindAt} น.</span>
+    </div>
+  `, `${appUrl || 'http://localhost:3000'}/notes`)
+
+  const text = [
+    `🔔 [MyLife] Note เตือนความจำ: ${payload.title}`,
+    payload.content ? `รายละเอียด: ${payload.content}` : '',
+    `เวลาที่ตั้งไว้: ${remindAt} น.`,
+    `\nเปิด Note: ${appUrl || 'http://localhost:3000'}/notes`,
+  ].filter(Boolean).join('\n')
+
+  const subjectTitle = payload.title.length > 120 ? `${payload.title.slice(0, 117)}...` : payload.title
+  return { subject: `🔔 [MyLife] ${subjectTitle}`, html, text }
 }
 
 export const buildTestEmail = (targetEmail: string, appUrl?: string) => {

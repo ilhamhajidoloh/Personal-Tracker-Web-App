@@ -482,6 +482,13 @@ const allNavDefinitions: (NavItem & { moduleId?: string })[] = [
     to: '/events',
     svg: '<path d="M4 4h16v3.5l-6 5.5v6l-4 2v-8L4 7.5z"/>',
   },
+  {
+    moduleId: 'notes',
+    label: 'Note',
+    shortLabel: 'Note',
+    to: '/notes',
+    svg: '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/>',
+  },
 ]
 
 const navItems = computed(() => {

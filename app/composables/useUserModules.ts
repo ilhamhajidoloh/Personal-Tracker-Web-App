@@ -1,4 +1,4 @@
-export type AppModuleId = 'cashflow' | 'study-schedule' | 'todos' | 'tasks' | 'events'
+export type AppModuleId = 'cashflow' | 'study-schedule' | 'todos' | 'tasks' | 'events' | 'notes'
 
 export type AppModuleMeta = {
   id: AppModuleId
@@ -60,6 +60,16 @@ export const ALL_APP_MODULES: AppModuleMeta[] = [
     description: 'ปฏิทินกิจกรรม นัดหมายสำคัญ และนับถอยหลังสู่เหตุการณ์สำคัญ',
     path: '/events',
     badgeColor: 'rose',
+    defaultEnabled: true,
+  },
+  {
+    id: 'notes',
+    label: 'Note & การแจ้งเตือน',
+    shortLabel: 'Note',
+    icon: '🔔',
+    description: 'บันทึกช่วยจำแบบอิสระ พร้อมกำหนดวันและเวลาให้ระบบแจ้งเตือนได้',
+    path: '/notes',
+    badgeColor: 'sky',
     defaultEnabled: true,
   },
 ]
